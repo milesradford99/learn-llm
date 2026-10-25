@@ -8,6 +8,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
     from learn_llm.plot import chart
 
     LOCALE = "zh-CN"
@@ -371,6 +372,12 @@ def _():
     <!-- go-deeper -->
     **深入阅读（可选）：**这种方法叫*线性回归*（linear regression），是统计学里最古老的工具之一。
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("01", LOCALE)
     return
 
 

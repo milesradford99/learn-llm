@@ -8,6 +8,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
     from learn_llm.diagrams import one_day
     from learn_llm.plot import chart
 
@@ -598,6 +599,12 @@ def _():
     **Go deeper (optional):** this kind of engine is called *automatic differentiation* (reverse
     mode), or *autograd*. The order we get from the book is a *topological order*.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("04", LOCALE)
     return
 
 

@@ -11,6 +11,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
 
     LOCALE = "zh-CN"
     temps = [14, 17, 20, 22, 25, 28, 31, 33]
@@ -532,6 +533,12 @@ def _():
     **深入阅读（可选）：**这样的模型叫作*多元线性回归*。`向量 @ 矩阵` 和 `矩阵.T @ 向量` 是一样的，其中 `.T` 是*转置*
     （行和列互换）；书里常写作 `Xᵀ e`。
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("05", LOCALE)
     return
 
 

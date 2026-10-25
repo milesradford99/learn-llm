@@ -10,6 +10,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
     from learn_llm.diagrams import one_day
     from learn_llm.plot import chart
 
@@ -531,6 +532,12 @@ def _():
     **Go deeper (optional):** in textbooks, the blame of a value is its *partial derivative*,
     written ∂L/∂w ("the slope of L with respect to w, with everything else held still").
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("03", LOCALE)
     return
 
 

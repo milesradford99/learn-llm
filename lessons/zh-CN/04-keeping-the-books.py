@@ -8,6 +8,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
     from learn_llm.diagrams import one_day
     from learn_llm.plot import chart
 
@@ -537,6 +538,12 @@ def _():
     <!-- go-deeper -->
     **深入阅读（可选）：**这种引擎叫作*自动微分*（反向模式），也叫 *autograd*。从账本里得到的这种顺序叫作*拓扑序*。
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("04", LOCALE)
     return
 
 

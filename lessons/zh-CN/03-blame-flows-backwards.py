@@ -10,6 +10,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
     from learn_llm.diagrams import one_day
     from learn_llm.plot import chart
 
@@ -486,6 +487,12 @@ def _():
     <!-- go-deeper -->
     **深入阅读（可选）：**在教材里，一个值的责任叫作它的*偏导数*，写作 ∂L/∂w（“其他一切保持不动时，L 对 w 的斜率”）。
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("03", LOCALE)
     return
 
 

@@ -117,5 +117,9 @@
   "ch05.gradient_np.line": "米娅的数据，在 w = [10, 0, 0]、b = -60 处：([-94, 6.25, -2.75], 2.5)",
   "ch05.gradient_np.close": "米娅的数据，在 w = [12, -8, 4]、b = -105 处：([90.5, 1.5, 0.75], 3.5)",
   "ch05.gradient_np.hint": "提示：`e = X @ w + b - y`；`grad_w = (2 * e) @ X / len(y)`（向量 `2 * e` 在前，矩阵 `X` 在后）；`grad_b = np.mean(2 * e)`；`return grad_w, grad_b`。",
-  "error.AttributeError.append": "`list.append(x)` 把 `x` 加到列表里，自己什么也不返回（None）。`guesses.append(...)` 要单独写一行，不要写成 `guesses = guesses.append(...)`。"
+  "error.AttributeError.append": "`list.append(x)` 把 `x` 加到列表里，自己什么也不返回（None）。`guesses.append(...)` 要单独写一行，不要写成 `guesses = guesses.append(...)`。",
+  "nav.previous": "← {title}",
+  "nav.home": "全部章节",
+  "nav.next": "下一章：{title} →",
+  "nav.last": "更多章节正在编写中"
 }

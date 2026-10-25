@@ -1,8 +1,8 @@
 {
-  "00-first-program.py": "sha256:6ca920727723885d3cb3666c29c6b2dc466b86d382f809aff5b35496248b75c3",
-  "01-fitting-a-line.py": "sha256:dd6fdd48123f6736e3c40e23765efa67c5539247afb8978c36811b2a6d44aae7",
-  "02-going-downhill.py": "sha256:3dadb6289a92106d88ab17ac659402a31e65764c2b12297130afaf394ea67c3b",
-  "03-blame-flows-backwards.py": "sha256:1aa9907951cf567b4da013193b26f4ae6033630f30cfaa1ad7d37eea5f20c49f",
-  "04-keeping-the-books.py": "sha256:c4367b0660545e782548c58032c92b4332d11e280e2a2df4dad97c6cbc2b255f",
-  "05-many-numbers-at-once.py": "sha256:cdf80bd779eadea2b26dd6169a65260996bbf5d1ef9fc3eb7ab477dc5209738c"
+  "00-first-program.py": "sha256:84032b1a4cf9bb7e0f6fe32dfb16273b927184ceba46875ac09c1d849d8ace79",
+  "01-fitting-a-line.py": "sha256:6127f59d4f87cd4380f9dcd5b818df88065cc7907481d80e02d71b5e8886778e",
+  "02-going-downhill.py": "sha256:48bd0471dd0f0a056795e028751be5ba928e73251b151d09275fe14e7fcc5278",
+  "03-blame-flows-backwards.py": "sha256:3e2c335197d0b252d319531d47bae4e310a6e4ff19bccabd932dab1f441238b9",
+  "04-keeping-the-books.py": "sha256:866a383aee53def70ca013450e8f626da0fa0ad97eb7d526adee5dc451f5156d",
+  "05-many-numbers-at-once.py": "sha256:47af9e65034c8ea89134bf92b3c0bed6c987058cb030e730431e7d4238ed0e23"
 }

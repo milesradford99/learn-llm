@@ -8,6 +8,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
     from learn_llm.plot import chart
 
     LOCALE = "en"
@@ -630,6 +631,12 @@ def _():
     **Go deeper (optional):** in maths textbooks, the "smaller and smaller nudge" idea is called
     a *limit*, and the nudge method is the *finite difference*.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("02", LOCALE)
     return
 
 

@@ -8,6 +8,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
     from learn_llm.plot import chart
 
     LOCALE = "en"
@@ -400,6 +401,12 @@ def _():
     **Go deeper (optional):** this method is called *linear regression*, one of the oldest
     tools in statistics.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("01", LOCALE)
     return
 
 

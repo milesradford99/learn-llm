@@ -8,6 +8,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
 
     LOCALE = "zh-CN"
 
@@ -346,6 +347,12 @@ def _():
     **深入阅读（可选，学这门课用不到）：**官方
     [Python 教程](https://docs.python.org/zh-cn/3/tutorial/) 对这些概念讲得更详细。
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("00", LOCALE)
     return
 
 

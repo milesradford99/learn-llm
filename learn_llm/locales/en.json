@@ -117,5 +117,9 @@
   "ch05.gradient_np.line": "Mia at w = [10, 0, 0], b = -60: ([-94, 6.25, -2.75], 2.5)",
   "ch05.gradient_np.close": "Mia at w = [12, -8, 4], b = -105: ([90.5, 1.5, 0.75], 3.5)",
   "ch05.gradient_np.hint": "Tip: `e = X @ w + b - y`; `grad_w = (2 * e) @ X / len(y)` (the vector `2 * e` goes first, then the matrix `X`); `grad_b = np.mean(2 * e)`; `return grad_w, grad_b`.",
-  "error.AttributeError.append": "`list.append(x)` adds `x` to the list and gives back nothing (None). Write `guesses.append(...)` on its own line, not `guesses = guesses.append(...)`."
+  "error.AttributeError.append": "`list.append(x)` adds `x` to the list and gives back nothing (None). Write `guesses.append(...)` on its own line, not `guesses = guesses.append(...)`.",
+  "nav.previous": "← {title}",
+  "nav.home": "All chapters",
+  "nav.next": "Next: {title} →",
+  "nav.last": "More chapters are on the way"
 }

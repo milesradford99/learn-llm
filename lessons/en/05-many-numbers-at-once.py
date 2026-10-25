@@ -11,6 +11,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
 
     LOCALE = "en"
     temps = [14, 17, 20, 22, 25, 28, 31, 33]
@@ -590,6 +591,12 @@ def _():
     features*. `vector @ matrix` is the same as `matrix.T @ vector`, where `.T` is the
     *transpose* (rows and columns swapped); you'll see it written as `Xᵀ e` in books.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("05", LOCALE)
     return
 
 

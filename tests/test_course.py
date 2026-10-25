@@ -178,3 +178,17 @@ def test_errors_keep_the_exercise_tip():
     line = explain(run(exercises("05")["predict_all"], append_returns_nothing)[0], "en")
     assert "on its own line" in line  # the specific AttributeError hint
     assert "Tip:" in line  # and the exercise's own tip
+
+
+@pytest.mark.parametrize("path", NOTEBOOKS, ids=ids(NOTEBOOKS))
+def test_every_lesson_links_to_its_neighbours(path):
+    assert f'nav("{path.name[:2]}", LOCALE)' in path.read_text(encoding="utf-8")
+
+
+def test_chapter_links():
+    from learn_llm.nav import links
+
+    first, last = links(CHAPTERS[0], "en"), links(CHAPTERS[-1], "en")
+    assert [href for _, href in first][0] == "?file=home.py"  # no previous chapter
+    assert first[-1][1] == f"?file={chapters('en')[1].path.relative_to(LESSONS).as_posix()}"
+    assert last[-1][1] == ""  # nothing after the last chapter yet

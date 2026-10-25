@@ -8,6 +8,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
 
     LOCALE = "en"
 
@@ -370,6 +371,12 @@ def _():
     **Go deeper (optional, not needed for the course):** the official
     [Python tutorial](https://docs.python.org/3/tutorial/) covers these ideas in more detail.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("00", LOCALE)
     return
 
 

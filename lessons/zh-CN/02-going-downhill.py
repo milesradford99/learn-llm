@@ -8,6 +8,7 @@ with app.setup(hide_code=True):
 
     from learn_llm import todo
     from learn_llm.checks import check
+    from learn_llm.nav import nav
     from learn_llm.plot import chart
 
     LOCALE = "zh-CN"
@@ -581,6 +582,12 @@ def _():
     <!-- go-deeper -->
     **深入阅读（可选）：**在数学教材里，“轻推量越来越小”的思想叫作*极限*，轻推测斜率的方法叫作*有限差分*。
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    nav("02", LOCALE)
     return
 
 
