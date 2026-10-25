@@ -43,7 +43,7 @@ def _(language):
 
     mo.vstack([
         mo.hstack([mo.md(f"# {t('home.title', _locale)}"), language], justify="space-between"),
-        mo.md(f"## {t('home.chapters', _locale)}\n\n| | | |\n|---|---|---|\n" + "\n".join(_rows)),
+        mo.md(f"## {t('home.chapters', _locale)}\n\n| | | |\n|---|:---|---|\n" + "\n".join(_rows)),
     ])
     return
 
