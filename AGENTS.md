@@ -18,5 +18,8 @@ checks and UI strings live in `learn_llm/`. Scope, chapter map and decisions: `S
   are free). After editing an `en` lesson, its translations go stale; after updating a
   translation, run `uv run python -m learn_llm.i18n_stamp zh-CN/<file>`.
 - New UI strings go in every `learn_llm/locales/*.json` with identical keys and `{fields}`.
+- Page styling: `learn_llm/course.css`, loaded on every page via `custom_css` in
+  `pyproject.toml` (not per lesson). marimo reads it at server start: restart to see edits.
+  Visual rules (colours, type, radii) come from `DESIGN.md`; read it before changing UI.
 - Lesson text: no required external links. Links go after `<!-- go-deeper -->`.
 - Lesson text is original. Never copy course notes, slides or assignment text.

@@ -81,6 +81,16 @@ def test_marimo_check_is_clean():
     assert out.returncode == 0, out.stdout + out.stderr
 
 
+def test_course_css_exists():
+    # marimo skips a missing custom_css file silently, so the pages would just lose their look.
+    import tomllib
+
+    root = LESSONS.parent
+    config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    paths = config["tool"]["marimo"]["display"]["custom_css"]
+    assert paths and all((root / p).is_file() for p in paths), paths
+
+
 def test_checks_report_common_mistakes():
     def forgot_return(numbers):
         sum(numbers)
