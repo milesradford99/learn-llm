@@ -1,0 +1,351 @@
+/* Course-wide look for every notebook, loaded through `custom_css` in pyproject.toml.
+   The style follows DESIGN.md (Notion-inspired): warm paper canvas, white cards with
+   hairline edges, near-black Inter type with tight headings, one blue for links.
+   Fonts fall back to system fonts, so it works offline. */
+
+:root {
+  --lln-canvas: #f6f5f4;
+  --lln-surface: #ffffff;
+  --lln-ink: rgb(0 0 0 / 95%);
+  --lln-text: #37352f;
+  --lln-code-bg: #f7f6f3;
+  --lln-ink-secondary: #31302e;
+  --lln-ink-muted: #615d59;
+  --lln-ink-faint: #a39e98;
+  --lln-hairline: #e6e6e6;
+  --lln-blue: #0075de;
+  --lln-chip: rgb(135 131 120 / 15%);
+  --lln-row-hover: rgb(55 53 47 / 4%);
+  --lln-green: #1aae39;
+  --lln-orange: #dd5b00;
+  --lln-red: #e03e3e;
+  --lln-shadow: rgb(0 0 0 / 1%) 0 0.175px 1.041px, rgb(0 0 0 / 2%) 0 0.8px 2.925px,
+    rgb(0 0 0 / 2.7%) 0 2.025px 7.847px, rgb(0 0 0 / 4%) 0 4px 18px;
+
+  --marimo-text-font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --marimo-heading-font: var(--marimo-text-font);
+  --marimo-monospace-font: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono",
+    Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* marimo's dark theme puts these classes on the page and inside callouts. */
+.dark,
+.dark-theme {
+  --lln-canvas: #191919;
+  --lln-surface: #202020;
+  --lln-ink: rgb(255 255 255 / 90%);
+  --lln-text: rgb(255 255 255 / 84%);
+  --lln-code-bg: #262626;
+  --lln-ink-secondary: #d3d3d1;
+  --lln-ink-muted: #9b9a97;
+  --lln-ink-faint: #6f6e69;
+  --lln-hairline: #2f2f2f;
+  --lln-blue: #529cca;
+  --lln-chip: rgb(135 131 120 / 20%);
+  --lln-row-hover: rgb(255 255 255 / 4%);
+  --lln-green: #4dab6f;
+  --lln-orange: #e07c3e;
+  --lln-red: #e86a6a;
+  --lln-shadow: rgb(0 0 0 / 20%) 0 2px 8px;
+}
+
+/* marimo's own tokens, so its chrome and the chapter navigation share the palette. */
+:root,
+.light,
+.light-theme,
+.dark,
+.dark-theme {
+  --link: var(--lln-blue);
+  --border: var(--lln-hairline);
+}
+
+/* One sheet of paper: the column of cells is a single white page on the warm canvas,
+   and the cells inside it have no frames, so text, code and results read as one document. */
+body,
+#App {
+  background: var(--lln-canvas);
+}
+
+[class~="gap-(--notebook-cell-gap)"] {
+  --notebook-cell-gap: 0.25rem;
+  padding: 2.75rem 3rem 3.5rem;
+  border: 1px solid var(--lln-hairline);
+  border-radius: 12px;
+  background: var(--lln-surface);
+  box-shadow: var(--lln-shadow);
+}
+
+.marimo-cell,
+.marimo-cell.borderless {
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Code reads as a tinted block on the page, like a code block in a document. */
+.marimo-cell .cm-editor,
+.marimo-cell .cm-gutters {
+  background: var(--lln-code-bg);
+}
+
+.marimo-cell .cm-editor {
+  border-radius: 6px;
+}
+
+/* Printed results sit straight on the page, under the code that made them. */
+.marimo-cell .console-output-area {
+  background: transparent;
+}
+
+/* Hovering or working in a cell still shows where it starts and ends. */
+.marimo-cell:hover:not(.borderless),
+.marimo-cell:focus-within {
+  border-color: var(--lln-hairline);
+}
+
+/* Reading text: tutorial-sized, generous line height, ~70 characters per line. */
+.markdown.prose {
+  color: var(--lln-text);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  font-feature-settings: "lnum", "locl";
+}
+
+.markdown.prose :where(p, .paragraph, ul, ol) {
+  margin-block: 0.85em;
+}
+
+/* Long lines are hard to follow; code and charts keep the full width. */
+.markdown.prose > :where(p, .paragraph, ul, ol, blockquote) {
+  max-width: 40rem;
+}
+
+.markdown.prose :where(li) {
+  margin-block: 0.35em;
+}
+
+.markdown.prose :where(li > p, li > .paragraph) {
+  margin-block: 0.35em;
+}
+
+.markdown.prose :where(strong) {
+  color: var(--lln-ink);
+  font-weight: 600;
+}
+
+/* Headings: heavy and tightly tracked; the body stays at 400. */
+.markdown.prose :where(h1, h2, h3, h4) {
+  font-family: var(--marimo-heading-font);
+  color: var(--lln-ink);
+  font-weight: 700;
+}
+
+.markdown.prose :where(h1) {
+  margin: 0.2em 0 0.5em;
+  font-size: 2.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.0625rem;
+}
+
+.markdown.prose :where(h2) {
+  margin: 1.5em 0 0.45em;
+  font-size: 1.625rem;
+  line-height: 1.23;
+  letter-spacing: -0.039rem;
+}
+
+.markdown.prose :where(h3) {
+  margin: 1.3em 0 0.35em;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.008rem;
+}
+
+/* A section that opens a cell needs no extra space above it. */
+.markdown.prose > :where(h1, h2, h3):first-child {
+  margin-top: 0.15em;
+}
+
+.markdown.prose :where(a) {
+  color: var(--lln-blue);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--lln-blue) 35%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.markdown.prose :where(a):hover {
+  text-decoration-color: currentColor;
+}
+
+/* Inline code: a small warm-grey chip, without the quote marks prose styles add. */
+.markdown.prose :where(code):not(pre code) {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  background: var(--lln-chip);
+  color: var(--lln-ink-secondary);
+  font-family: var(--marimo-monospace-font);
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
+.markdown.prose :where(code):not(pre code)::before,
+.markdown.prose :where(code):not(pre code)::after {
+  content: none;
+}
+
+.markdown.prose :where(pre) {
+  border-radius: 8px;
+}
+
+.markdown.prose :where(blockquote) {
+  border-left: 3px solid var(--lln-ink);
+  color: var(--lln-ink-secondary);
+  font-style: normal;
+}
+
+.markdown.prose :where(hr) {
+  margin-block: 2em;
+  border-color: var(--lln-hairline);
+}
+
+/* Tables keep their natural width and scroll sideways when too wide. */
+.markdown.prose :where(table) {
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.markdown.prose :where(th, td) {
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--lln-hairline);
+  color: var(--lln-ink);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.markdown.prose :where(thead th) {
+  background: var(--lln-canvas);
+  color: var(--lln-ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.008rem;
+}
+
+/* A table with an all-blank header row (the chapter list) shows no header. */
+.markdown.prose :where(thead):not(:has(th:not(:empty))) {
+  display: none;
+}
+
+/* No zebra stripes: rows are separated by hairlines. */
+.markdown.prose tbody tr:nth-child(n) {
+  background: transparent;
+}
+
+.markdown.prose tbody tr:nth-child(n):hover {
+  background: var(--lln-row-hover);
+}
+
+/* Callouts (check results, hints, toolbox notes): tinted blocks on the page, like callouts
+   in a document. Status shows as a coloured edge and a faint tint, never as a heavy fill. */
+.admonition {
+  --lln-status: var(--lln-ink-faint);
+  margin-block: 0.75rem 1rem;
+  padding: 0.875rem 1.125rem;
+  border: none;
+  border-left: 3px solid var(--lln-status);
+  border-radius: 6px;
+  background: var(--lln-code-bg);
+  color: var(--lln-text);
+  --admonition-heading-color: var(--lln-ink);
+}
+
+.admonition.success,
+.admonition.tip {
+  --lln-status: var(--lln-green);
+  background: color-mix(in srgb, var(--lln-green) 7%, var(--lln-surface));
+}
+
+.admonition.warn,
+.admonition.warning,
+.admonition.attention {
+  --lln-status: var(--lln-orange);
+  background: color-mix(in srgb, var(--lln-orange) 7%, var(--lln-surface));
+}
+
+.admonition.danger,
+.admonition.error,
+.admonition.caution {
+  --lln-status: var(--lln-red);
+  background: color-mix(in srgb, var(--lln-red) 7%, var(--lln-surface));
+}
+
+.admonition .admonition-title {
+  color: var(--lln-ink);
+}
+
+.admonition .markdown.prose {
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.admonition .markdown.prose > :first-child {
+  margin-top: 0;
+}
+
+.admonition .markdown.prose > :last-child {
+  margin-bottom: 0;
+}
+
+/* Check results start every line with ✅ ❌ ⬜, so the list needs no bullets. */
+.admonition .markdown.prose :where(ul) {
+  padding-left: 0;
+  list-style: none;
+}
+
+/* Hanging indent: a wrapped line starts under the text, not under the icon. */
+.admonition .markdown.prose :where(ul > li) {
+  padding-left: 1.6em;
+  text-indent: -1.6em;
+}
+
+.admonition .markdown.prose :where(ul > li)::before,
+.admonition .markdown.prose :where(ul > li)::marker {
+  content: none;
+}
+
+/* A quieter peek at code the lesson keeps hidden. */
+.marimo-cell .cm.opacity-20 {
+  height: 1.5rem;
+  opacity: 0.12;
+}
+
+.marimo-cell:hover .cm.opacity-20 {
+  opacity: 0.45;
+}
+
+/* Phones: a narrower margin on the sheet, slightly smaller text and headings. */
+@media (max-width: 640px) {
+  [class~="gap-(--notebook-cell-gap)"] {
+    padding: 1.25rem 0.75rem 2rem;
+  }
+
+  .markdown.prose {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+
+  .markdown.prose :where(h1) {
+    font-size: 2rem;
+    letter-spacing: -0.04rem;
+  }
+
+  .markdown.prose :where(h2) {
+    font-size: 1.375rem;
+  }
+}

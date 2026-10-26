@@ -34,6 +34,8 @@ on_cell_change = "autorun"
 # Results show under the code that made them, as the lessons describe.
 [tool.marimo.display]
 cell_output = "below"
+# The course's own look (fonts, text, callouts) on every page.
+custom_css = ["learn_llm/course.css"]
 
 [tool.marimo.save]
 autosave = "after_delay"
