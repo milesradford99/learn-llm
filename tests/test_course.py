@@ -188,3 +188,23 @@ def test_errors_keep_the_exercise_tip():
     line = explain(run(exercises("05")["predict_all"], append_returns_nothing)[0], "en")
     assert "on its own line" in line  # the specific AttributeError hint
     assert "Tip:" in line  # and the exercise's own tip
+
+
+def test_leaderboard_keeps_one_score_per_model(tmp_path, monkeypatch):
+    from learn_llm import leaderboard
+
+    monkeypatch.setattr(leaderboard, "BOARD", tmp_path / "board.json")
+    leaderboard.record("bigram", 54.0)
+    leaderboard.record("lstm", 40.0)
+    leaderboard.record("lstm", 31.2)
+    table = leaderboard.show("en").text
+    assert "31.2" in table and "40" not in table
+    assert table.index("LSTM") < table.index("Bigram")  # best first
+
+
+def test_every_leaderboard_model_has_a_name():
+    import re
+
+    for path in (LESSONS / SOURCE_LOCALE).glob("*.py"):
+        for model in re.findall(r'record\("(\w+)"', path.read_text(encoding="utf-8")):
+            assert f"board.{model}" in catalog(SOURCE_LOCALE)

@@ -126,5 +126,7 @@ On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
 
 - Chapters 09–11 batch: PyTorch is the third runtime dependency, CPU builds on Linux and Windows through uv's CPU index (default builds bring several GB of GPU libraries); ch 10 uses the bundled digits pasted at random spots instead of CIFAR, which has no clear licence and is bigger and slower (it also shows directly why convolutions help); the course's text is a bundled 13,000-story TinyStories subset, CDLA-Sharing-1.0, with its own notice (user, 2026-10-31)
 
+- Chapters 12–14 batch: the leaderboard scores perplexity per word on a 2,002-entry word vocabulary and lives in each learner's `my-work/.leaderboard.json`; chapter 14 teaches attention on reversing text instead of translation, since the course has no bundled translated text and every answer can be checked at a glance (agent-default, 2026-11-01)
+
 ## Open decisions
 - (none)
