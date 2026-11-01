@@ -42,7 +42,7 @@ that covers the essential knowledge of CS231n → CS224N → CS336 → tiny-llm.
 | 07 | Neural networks | One-hidden-layer network with matrix backprop (about 94%) | ReLU, hidden layers, blame through matrices, random start | 231n NN, A1/A2 |
 | 08 | Training that works | Mini-batches, He start, momentum, Adam, weight decay | Variance, slicing, moving averages, overfitting | 231n training, A2 |
 | 09 | Hello PyTorch | Port your engine, compare to torch | Tensors, modules, GPU concept | 231n PyTorch |
-| 10 | Seeing with convolutions | Small CNN / ResNet on CIFAR | Convolution, residuals | 231n CNNs (condensed) |
+| 10 | Seeing with convolutions | Small CNN and residual blocks on shifted digits | Convolution, pooling, residuals | 231n CNNs (condensed) |
 | **Part 2 — Language** (CS224N core) |
 | 11 | Words as vectors | word2vec (skip-gram, neg. sampling) | Dot product as similarity, sampling | 224N word vectors |
 | 12 | Predicting the next word | n-gram LM, perplexity, sampling | Conditional probability, log-likelihood | 224N LMs |
@@ -123,6 +123,8 @@ On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
   every gradient auto-checked against nudging; d/dx notation from ch 02 (user, 2026-10-24)
 - Text dataset from ch 11: the same English text for every language edition (user, 2026-10-24)
 - Every chapter passes the novice-review gate (docs/design/novice-review.md) with zero blockers
+
+- Chapters 09–11 batch: PyTorch is the third runtime dependency, CPU builds on Linux and Windows through uv's CPU index (default builds bring several GB of GPU libraries); ch 10 uses the bundled digits pasted at random spots instead of CIFAR, which has no clear licence and is bigger and slower (it also shows directly why convolutions help); the course's text is a bundled 13,000-story TinyStories subset, CDLA-Sharing-1.0, with its own notice (user, 2026-10-31)
 
 ## Open decisions
 - (none)

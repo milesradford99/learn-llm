@@ -145,6 +145,25 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   scale is about √(2 / inputs). Moving averages → momentum (ch 02's crawling `b`, fixed);
   dividing by the size of recent slopes → Adam.
 
+## Step plan: chapters 09–11 (written 2026-10-31)
+
+- **09 Hello PyTorch.** Not a new subject: each piece is compared with the learner's own. Tensors
+  and dtypes (32 against 64 bits, why last digits differ); `requires_grad` and `backward()` as
+  chapter 04's book, with Mia's 476 and 34 again; blame adds up, so it must be cleared. Chapter
+  07's network computed by hand and by PyTorch, slopes equal to rounding. `nn.Linear`,
+  `nn.Sequential`, then `torch.optim.Adam` against the learner's `adam_step`: the same knobs.
+  Clear, forward, backward, step. GPU and device in words only: the install is CPU-only.
+- **10 Seeing with convolutions.** Digits pasted at random spots on a 40 × 40 canvas: a flat
+  network memorises (412,426 knobs, 100% train, 88% test). Convolution by hand, then in loops;
+  feature maps; it moves with the picture; max pooling; `nn.Conv2d` checked against the learner's
+  own; a CNN with 6,218 knobs gets 96%. Blame fades through depth: with 10 blocks, about 1e-12
+  reaches the first layer, about 0.015 with `x + f(x)`; 10% against about 80%. Own layers as classes.
+- **11 Words as vectors.** TinyStories from here on. One-hot rows carry no meaning; neighbours do.
+  Dictionaries to count, ids, cosine similarity, skip-gram pairs. Softmax over 2,000 words is too
+  slow, so a yes/no question: the sigmoid is softmax over `s` and 0, and negative sampling reuses
+  chapter 06's surprise. `nn.Embedding`, then nearest words and analogies, with their limits. The
+  leaderboard starts in chapter 12, once there is a language model to score.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a

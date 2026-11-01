@@ -59,3 +59,8 @@ def digits(images, captions, size: int = 84):
 def weight_maps(columns, captions, size: int = 84):
     """Weight columns of length 784, each shown as a 28 × 28 map (blue +, red −)."""
     return row([_tag(_signed(np.reshape(col, (28, 28))), str(c), size) for col, c in zip(columns, captions)])
+
+
+def maps(arrays, captions, size: int = 84):
+    """Grids of any shape, shown as maps (blue +, red −)."""
+    return row([_tag(_signed(a), str(c), size) for a, c in zip(arrays, captions)])

@@ -108,6 +108,50 @@ uses = [
     "derivative-rules", "centering-inputs", "elementwise", "function", "return-pair",
 ]
 
+[chapters.09]
+introduces = [
+    "library", "tensor", "bits-and-precision", "dtype", "dim", "requires-grad", "torch-backward",
+    "item", "grads-accumulate", "fresh-forward", "torch-relu", "torch-cross-entropy",
+    "list-comprehension", "numpy-from-tensor", "builtin-max", "nn-linear", "manual-seed",
+    "nn-sequential", "parameters", "optimizer", "detach", "training-loop", "randperm",
+    "float-method", "no-grad", "gpu", "device", "pytorch",
+]
+uses = [
+    "numpy-array", "matmul-operator", "shape", "indexing", "slicing", "axis", "recording-book",
+    "blame", "backpropagation", "gradient-check", "softmax", "cross-entropy", "two-layer-backprop",
+    "adam", "mini-batch", "epoch", "accuracy", "test-set", "broadcasting", "argument-unpacking",
+    "class", "attribute", "numpy-abs", "builtin-zip", "numpy-mean", "random-generator",
+    "he-init", "neural-network", "relu",
+]
+
+[chapters.10]
+introduces = [
+    "translation-problem", "rng-integers", "two-way-slice", "kernel", "convolution",
+    "convolution-output-size", "feature-map", "numpy-roll", "knob-sharing", "max-pooling",
+    "floor-division", "nn-conv2d", "maps-dimension", "unsqueeze", "padding", "global-pooling",
+    "residual", "skip-connection", "nn-module-subclass", "builtin-super", "resnet",
+]
+uses = [
+    "overfitting", "tensor", "dtype", "nn-linear", "nn-sequential", "optimizer", "training-loop",
+    "no-grad", "dot-product", "elementwise", "chain-rule", "derivative-rules", "vanishing-exploding",
+    "class", "init-and-self", "function-as-value", "manual-seed", "detach", "list-append",
+    "argument-unpacking", "parameters", "if",
+]
+
+[chapters.11]
+introduces = [
+    "text-dataset", "one-hot-words", "word-vector", "distributional-idea", "string-lower",
+    "string-join", "dict", "dict-get", "builtin-sorted", "vocabulary", "word-id", "filtered-list",
+    "vector-length", "cosine-similarity", "skip-gram", "not-equal", "negative-sampling", "sigmoid",
+    "logsigmoid", "nn-embedding", "noise-distribution", "argsort", "not-in",
+    "word-analogy", "builtin-min", "fractional-power",
+]
+uses = [
+    "one-hot", "dot-product", "softmax", "surprise", "log", "unsqueeze", "broadcasting", "tensor",
+    "optimizer", "training-loop", "list-comprehension", "numpy-sqrt", "builtin-max", "keepdims",
+    "matmul-operator", "epoch", "mini-batch",
+]
+
 [concepts]
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
 error-message = "a red error box means Python couldn't follow an instruction; read the last line, fix, re-run"
@@ -245,3 +289,78 @@ overfitting = "perfect on training data, worse on new data: the model memorised"
 weight-decay = "add decay × knob to every slope (a penalty on big knobs) so knobs shrink unless the data needs them"
 numpy-eye = "np.eye(10) is the 10 × 10 table with 1s on the diagonal; np.eye(10)[labels] gives one-hot rows"
 numpy-abs = "np.abs makes every number positive"
+library = "a toolbox of code other people wrote and tested, like NumPy and PyTorch"
+tensor = "PyTorch's array: torch.tensor([...]) has a shape and works with @, *, .T, slices"
+bits-and-precision = "numbers are stored in a fixed number of bits: 32 keeps about 7 digits, 64 about 16"
+dtype = "the kind of number stored: torch.float32, torch.float64, torch.long; @ won't mix them"
+dim = "PyTorch's word for NumPy's axis: torch.sum(A, dim=1)"
+requires-grad = "requires_grad=True marks a tensor as a knob: keep the books on everything made from it"
+torch-backward = "loss.backward() reads the book in reverse order and fills in .grad on every knob"
+item = "x.item() turns a one-number tensor into a plain Python number"
+grads-accumulate = "backward() adds to .grad, so old blame must be cleared before each step"
+fresh-forward = "each backward needs a fresh forward pass: PyTorch throws the book away after using it"
+torch-relu = "torch.relu(Z): the bend, for tensors"
+torch-cross-entropy = "F.cross_entropy(S, labels): cross-entropy from raw scores and whole-number labels"
+list-comprehension = "[f(k) for k in items] builds a list by running the expression once per item"
+numpy-from-tensor = "t.numpy() turns a tensor into a NumPy array; torch.tensor(a) goes the other way"
+builtin-max = "max(a, b) is the larger of two numbers"
+nn-linear = "nn.Linear(784, 64): a layer holding weights (64, 784) and biases; layer(X) computes X @ W.T + b"
+manual-seed = "torch.manual_seed(0) makes PyTorch's random numbers repeatable"
+nn-sequential = "nn.Sequential(a, b, c): each layer's output is the next one's input"
+parameters = "model.parameters() goes through a model's knobs; p.numel() counts the numbers in one"
+optimizer = "an object holding the knobs and a step rule: torch.optim.Adam(model.parameters(), lr=0.001)"
+detach = "t.detach() gives the same numbers without the book"
+training-loop = "clear, forward, backward, step: optimizer.zero_grad(), loss.backward(), optimizer.step()"
+randperm = "torch.randperm(n) is rng.permutation(n) for tensors"
+float-method = ".float() turns True/False values into 1s and 0s with a point"
+no-grad = "with torch.no_grad(): runs the indented lines without keeping the books"
+gpu = "a processor with thousands of simple workers, well suited to matrix products"
+device = "where tensors live; everything in one calculation must be on the same device"
+pytorch = "the library most of the field uses for training networks; import torch"
+translation-problem = "a flat network ties each knob to one spot, so it must learn a shape again at every position"
+rng-integers = "rng.integers(0, n) gives a random whole number from 0 up to, not including, n"
+two-way-slice = "M[r:r + 3, c:c + 3] is a 3 × 3 square of M"
+kernel = "a small grid of knobs that slides over a picture"
+convolution = "at every position, the dot product of the kernel with the patch under it"
+convolution-output-size = "a kernel of size k gives h − k + 1 rows for a picture of height h"
+feature-map = "the output of a convolution: a map of where a shape was found"
+numpy-roll = "np.roll(a, 3, axis=1) shifts an array 3 columns along"
+knob-sharing = "the same few knobs are reused at every position, so what's learned anywhere works everywhere"
+max-pooling = "cut a map into 2 × 2 squares and keep each one's largest number"
+floor-division = "7 // 2 is 3: division that drops what's after the point"
+nn-conv2d = "nn.Conv2d(8, 16, 3): 8 maps in, 16 kernels of size 3 × 3 × 8, 16 maps out"
+maps-dimension = "convolution layers take the shape (pictures, maps, height, width)"
+unsqueeze = "X.unsqueeze(1) inserts a dimension of size 1 at position 1"
+padding = "padding=1 adds a one-pixel margin of zeros, so a 3 × 3 kernel keeps the map's size"
+global-pooling = "nn.AdaptiveMaxPool2d(1) keeps each whole map's largest number"
+residual = "out = x + f(x): f learns a correction to x"
+skip-connection = "the x + road: the slope 1 + f' lets blame pass through a block"
+nn-module-subclass = "class Block(nn.Module): your own layer, with super().__init__() first and a forward method"
+resnet = "a deep stack of residual blocks"
+builtin-super = "super().__init__() runs the parent class's setup first"
+text-dataset = "TinyStories: short simple stories, used from here to the end of the course"
+one-hot-words = "one-hot rows make any two different words equally unalike: their dot product is 0"
+word-vector = "a short list of numbers for a word, similar for words with similar meanings"
+distributional-idea = "words that appear among the same neighbours tend to mean similar things"
+string-lower = "text.lower() gives the text in lower case"
+string-join = "' '.join(list) glues strings together with a space between each"
+dict = "{} is a dictionary: pairs of key and value; d[key] = v stores, d[key] reads"
+dict-get = "d.get(key, 0) reads a key, giving 0 if it isn't there"
+builtin-sorted = "sorted(counts, key=counts.get, reverse=True) lists keys, largest count first"
+vocabulary = "the fixed list of words a model knows"
+word-id = "a word's position in the vocabulary"
+filtered-list = "[f(x) for x in items if test] skips the items that fail the test"
+vector-length = "the length of a is √(a · a)"
+cosine-similarity = "(a · b) / (length of a × length of b): 1 same direction, 0 unrelated, −1 opposite"
+skip-gram = "predict the words around a centre word; training pairs are (centre, context)"
+not-equal = "a != b is True when a and b differ"
+negative-sampling = "instead of scoring every word, tell the real context from a few random noise words"
+sigmoid = "σ(s) = e^s / (e^s + 1): softmax over s and 0; 1 − σ(s) = σ(−s)"
+logsigmoid = "F.logsigmoid(s) computes log σ(s) safely"
+nn-embedding = "nn.Embedding(2000, 32): a table of learned rows, looked up by id"
+noise-distribution = "noise words are drawn with chances proportional to count^0.75"
+argsort = "np.argsort(v) gives the positions that would sort v, smallest first"
+not-in = "x not in items is True when x isn't among items"
+word-analogy = "b − a + c lands near the word that is to c as b is to a"
+builtin-min = "min(a, b) is the smaller of two numbers"
+fractional-power = "a power below 1 pulls big numbers down more than small ones: 100 ** 0.75 is about 32"

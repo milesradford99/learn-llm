@@ -90,3 +90,31 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | weight | 权重 | 08 |
 | bias | 偏置 | 08 |
 | weight decay | 权重衰减 | 08 |
+| tensor | 张量 | 09 |
+| bit | 位 | 09 |
+| dtype | 数据类型（dtype） | 09 |
+| optimizer | 优化器 | 09 |
+| layer | 层 | 09 |
+| training loop | 训练循环 | 09 |
+| GPU | GPU（显卡） | 09 |
+| device | 设备 | 09 |
+| convolution | 卷积 | 10 |
+| kernel | 卷积核 | 10 |
+| feature map | 特征图 | 10 |
+| max pooling | 最大池化 | 10 |
+| padding | 填充 | 10 |
+| residual | 残差 | 10 |
+| skip connection | 跳跃连接 | 10 |
+| word vector | 词向量 | 11 |
+| vocabulary | 词表 | 11 |
+| dictionary (Python) | 字典 | 11 |
+| key / value | 键 / 值 | 11 |
+| id (of a word) | 编号 | 11 |
+| cosine similarity | 余弦相似度 | 11 |
+| centre word / context word | 中心词 / 上下文词 | 11 |
+| skip-gram | skip-gram | 11 |
+| negative sampling | 负采样 | 11 |
+| noise word | 噪声词 | 11 |
+| sigmoid | sigmoid | 11 |
+| perplexity | 困惑度 | 12 |
+| leaderboard | 排行榜 | 11 |
