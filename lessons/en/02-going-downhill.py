@@ -133,21 +133,21 @@ def _():
 
     /// admonition | 🧰 Toolbox: "per", dividing two changes
     Dividing one amount by another tells you "how much of this **per** one of that". If 3 kg of
-    apples cost 6 euros, the price is 6 ÷ 3 = 2 euros **per** kg. Buy twice as much and you pay
+    apples cost 6 euros, the price is $6 \div 3 = 2$ euros **per** kg. Buy twice as much and you pay
     twice as much, but the price per kg stays 2.
     ///
 
     Here we divide the change in the loss by the change in `w` (the nudge):
 
-    > slope = (loss after the nudge − loss before) ÷ nudge
+    > $$\text{slope} = \frac{\text{loss after the nudge} - \text{loss before}}{\text{nudge}}$$
 
     The result is the **slope**: how much the loss changes **per** unit of `w`, right where you
     stand. It's the same idea as the steepness `w` of Mia's line in chapter 01: there, `w` said
     how many more ice creams per extra degree; here, the slope says how much more loss per
     extra unit of `w`.
 
-    (Short notation you'll see from here on: `x²` means `x × x`, in Python `x ** 2`; and `2x`
-    means `2 × x`. Maths books leave out the × sign; in Python you must always write `*`.)
+    (Short notation you'll see from here on: $x^2$ means $x \times x$, in Python `x ** 2`; and $2x$
+    means $2 \times x$. Maths books leave out the $\times$ sign; in Python you must always write `*`.)
 
     Read the slope like this:
 
@@ -251,11 +251,11 @@ def _():
 
     Now we know which way is downhill and how steep it is. Here is the rule for one step:
 
-    > new w = w − rate × slope
+    > $$\text{new } w = w - \text{rate} \times \text{slope}$$
 
     In Python: `w - rate * slope`. Why a **minus**? Check all the cases:
 
-    | slope | means | − rate × slope | so w... |
+    | slope | means | $-\text{rate} \times \text{slope}$ | so w... |
     |---|---|---|---|
     | negative (e.g. −2000) | downhill is to the right | positive | grows: moves right ✓ |
     | positive (e.g. +2000) | downhill is to the left | negative | shrinks: moves left ✓ |
@@ -275,8 +275,8 @@ def _():
 
     ## Exercise 2: one step
 
-    Write `step(w, slope, rate)`: it gives back the new `w` after one step downhill. Type the
-    Python form, `w - rate * slope`, with `-` and `*` from the keyboard; the `−` and `×` in the
+    Write `step(w, slope, rate)`: it gives back the new $w$ after one step downhill. Type the
+    Python form, `w - rate * slope`, with `-` and `*` from the keyboard; the $-$ and $\times$ in the
     rule above are maths symbols that Python doesn't accept.
     """)
     return
@@ -442,10 +442,10 @@ def _():
     So we want a way to get the **exact** slope from a formula, with no nudging. For that, let's
     look closely at what happens during a nudge, starting with the simplest curve there is.
 
-    ## The slope of x², exactly
+    ## The slope of $x^2$, exactly
 
-    Take `square(x) = x × x`. Nudge `x` by a small amount `h`. The new value is `(x + h) × (x + h)`.
-    How much bigger is that than `x × x`? A picture answers it: a square with side `x + h` is made
+    Take $\operatorname{square}(x) = x \times x$. Nudge $x$ by a small amount $h$. The new value is $(x + h) \times (x + h)$.
+    How much bigger is that than $x \times x$? A picture answers it: a square with side $x + h$ is made
     of four pieces.
     """)
     return
@@ -476,32 +476,32 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The big blue square is the old value, `x × x`. The nudge adds two strips of `x × h` each,
-    plus a tiny corner `h × h`. So:
+    The big blue square is the old value, $x \times x$. The nudge adds two strips of $x \times h$ each,
+    plus a tiny corner $h \times h$. So:
 
-    > change = 2 × x × h + h × h
+    > $$\text{change} = 2 \times x \times h + h \times h$$
 
     Now divide by the nudge `h` to get the slope, exactly as `nudge_slope` does:
 
-    > slope = (2 × x × h + h × h) ÷ h = 2 × x + h
+    > $$\text{slope} = (2 \times x \times h + h \times h) \div h = 2 \times x + h$$
 
-    Dividing a sum divides each part: (6 + 4) ÷ 2 = 3 + 2. Each part here has an `h` in it, so
-    dividing by `h` removes one `h` from each: `2 × x × h ÷ h` is `2 × x`, and `h × h ÷ h` is `h`.
+    Dividing a sum divides each part: $(6 + 4) \div 2 = 3 + 2$. Each part here has an $h$ in it, so
+    dividing by $h$ removes one $h$ from each: $2 \times x \times h \div h$ is $2 \times x$, and $h \times h \div h$ is $h$.
 
-    So the measured slope is always `2 × x + h`: the true steepness plus a small extra that comes
-    from the nudge's own size. Watch what happens at `x = 3` as the nudge shrinks:
+    So the measured slope is always $2 \times x + h$: the true steepness plus a small extra that comes
+    from the nudge's own size. Watch what happens at $x = 3$ as the nudge shrinks:
 
-    | nudge h | measured slope 2 × 3 + h |
+    | nudge h | measured slope $2 \times 3 + h$ |
     |---|---|
     | 0.1 | 6.1 |
     | 0.01 | 6.01 |
     | 0.001 | 6.001 |
     | 0.0001 | 6.0001 |
 
-    We can't simply set `h = 0`: the change would be 0 and we'd be dividing 0 by 0, which means
+    We can't simply set $h = 0$: the change would be 0 and we'd be dividing 0 by 0, which means
     nothing. But the measurements clearly **close in** on one number, 6, getting as close as we
-    like when `h` is small enough. That number is what we call the **exact** slope. Since the
-    measured slope is always `2 × x + h`, the number it closes in on is **`2 × x`**.
+    like when $h$ is small enough. That number is what we call the **exact** slope. Since the
+    measured slope is always $2 \times x + h$, the number it closes in on is **$2 \times x$**.
 
     Check it against your `nudge_slope`, which still carries its `h = 0.0001`:
     """)
@@ -513,7 +513,7 @@ def _():
     try:
         _out = mo.md(
             f"`nudge_slope(square, 3)` = **{nudge_slope(square, 3):.6f}**, and the formula says "
-            f"`2 × 3` = **6**. The difference is the leftover `h` = 0.0001."
+            f"$2 \\times 3$ = **6**. The difference is the leftover `h` = 0.0001."
         )
     except Exception:
         _out = mo.md("*Finish Exercise 1 to compare.*")
@@ -526,47 +526,46 @@ def _():
     mo.md(r"""
     That exact slope has a name: the **derivative**. Mathematicians write it like this:
 
-    > d/dx (x²) = 2x
+    > $$\frac{d}{dx} (x^2) = 2x$$
 
-    Read it as: "the derivative of x² with respect to x is 2x", or simply, "the slope of x² at any
-    `x` is `2x`". The `d/dx` is shorthand for "the exact slope, as `x` gets a vanishing nudge". From
+    Read it as: "the derivative of $x^2$ with respect to $x$ is $2x$", or simply, "the slope of $x^2$ at any
+    $x$ is $2x$". The $\frac{d}{dx}$ is shorthand for "the exact slope, as $x$ gets a vanishing nudge". From
     now on, **slope** and **derivative** mean the same thing in this course.
 
     ## More rules, the same way
 
-    Every rule below comes from nudging, just like `x²` did. One fact about multiplication first:
-    **multiplying a sum multiplies each part**. Seven bags of (3 apples + 2 pears) hold 7 × 3 apples
-    and 7 × 2 pears: 7 × (3 + 2) = 7 × 3 + 7 × 2 = 35.
+    Every rule below comes from nudging, just like $x^2$ did. One fact about multiplication first:
+    **multiplying a sum multiplies each part**. Seven bags of (3 apples + 2 pears) hold $7 \times 3$ apples
+    and $7 \times 2$ pears: $7 \times (3 + 2) = 7 \times 3 + 7 \times 2 = 35$.
 
     - **A constant**, like `5`. It doesn't depend on `x` at all: nudging `x` changes nothing.
       Change 0, so the slope is **0**.
-    - **`c × x`**, like `7 × x`. Nudging gives `7 × (x + h)` = `7 × x + 7 × h`. The change is
-      `7 × h`; divide by `h`: the slope is **7**. In numbers at `x = 3`: 7 × 3.0001 − 7 × 3
-      = 0.0007, and 0.0007 ÷ 0.0001 = 7. In general, the slope of `c × x` is **c**.
-    - **`x × x`**: slope **2 × x**, from the square picture. (The picture uses lengths, so
-      positive numbers, but the multiplying-out it shows, `(x + h) × (x + h)` = `x × x + 2 × x × h + h × h`,
+    - **$c \times x$**, like $7 \times x$. Nudging gives $7 \times (x + h)$ = $7 \times x + 7 \times h$. The change is
+      $7 \times h$; divide by $h$: the slope is **7**. In numbers at $x = 3$: $7 \times 3.0001 - 7 \times 3 = 0.0007$, and $0.0007 \div 0.0001 = 7$. In general, the slope of $c \times x$ is **$c$**.
+    - **$x \times x$**: slope **$2 \times x$**, from the square picture. (The picture uses lengths, so
+      positive numbers, but the multiplying-out it shows, $(x + h) \times (x + h)$ = $x \times x + 2 \times x \times h + h \times h$,
       works for any numbers, negative ones too.)
-    - **`c` times a function.** After the nudge, the function's value is its old value plus some
-      change. So `c` times it is `c × (old + change)` = `c × old + c × change`: the change got
-      multiplied by `c`. Dividing by `h` then gives **c times the function's slope**. In numbers,
-      with `c = 4` and `x × x` at `x = 3`: 4 × 3.0001² − 4 × 3² = 4 × 0.00060001 = 0.00240004, and
-      0.00240004 ÷ 0.0001 ≈ 24 = 4 × 6. So `4 × x × x` has slope `4 × 2 × x = 8 × x`.
+    - **$c$ times a function.** After the nudge, the function's value is its old value plus some
+      change. So $c$ times it is $c \times (\text{old} + \text{change})$ = $c \times \text{old} + c \times \text{change}$: the change got
+      multiplied by $c$. Dividing by $h$ then gives **$c$ times the function's slope**. In numbers,
+      with $c = 4$ and $x \times x$ at $x = 3$: $4 \times 3.0001^2 - 4 \times 3^2 = 4 \times 0.00060001 = 0.00240004$, and
+      $0.00240004 \div 0.0001 \approx 24 = 4 \times 6$. So $4 \times x \times x$ has slope $4 \times 2 \times x = 8 \times x$.
     - **One function plus another.** If one function rises by 0.3 and the other by 0.5 for the same
-      nudge, their sum rises by 0.3 + 0.5 = 0.8: the rises stack. So the slope of a sum is **the two
+      nudge, their sum rises by $0.3 + 0.5 = 0.8$: the rises stack. So the slope of a sum is **the two
       slopes added**.
 
     | function | slope |
     |---|---|
     | a constant | 0 |
-    | `c × x` | c |
-    | `x × x` | 2 × x |
-    | `c` × a function | c × that function's slope |
+    | $c \times x$ | $c$ |
+    | $x \times x$ | $2 \times x$ |
+    | $c \times$ a function | $c \times$ that function's slope |
     | a function + another | the two slopes added |
 
     ## Exercise 4: an exact slope
 
-    Take `f(x) = 3 × x × x + 5 × x + 2`. (This `f` is a new function with its own name; it has
-    nothing to do with the input called `f` inside `nudge_slope`.) Using the rules, work out its
+    Take $f(x) = 3 \times x \times x + 5 \times x + 2$. (This $f$ is a new function with its own name; it has
+    nothing to do with the input called $f$ inside `nudge_slope`.) Using the rules, work out its
     slope **on paper** first:
     take each of the three parts, find its slope, add them up. Then write `slope_f(x)` to return
     that formula. In Python write `6 * x`, never `6x`: without the `*`, the cell shows a red
@@ -612,15 +611,15 @@ def _():
 
     ## What's still missing
 
-    Mia's loss is an average of things like `(w × 14 + b − 63)²`: a square, but of something that
-    itself depends on `w`. None of our rules covers "a square of a recipe that contains `w`" yet.
+    Mia's loss is an average of things like $(w \times 14 + b - 63)^2$: a square, but of something that
+    itself depends on $w$. None of our rules covers "a square of a recipe that contains $w$" yet.
     In **Chapter 03** you'll split such recipes into small steps, find each step's slope, and see
     how the slopes combine, passing blame backwards from the loss to every knob.
 
     ## What you can do now
 
     - find the downhill direction and steepness by nudging: the slope
-    - walk downhill with `new w = w − rate × slope`, and pick a learning rate
+    - walk downhill with $\text{new } w = w - \text{rate} \times \text{slope}$, and pick a learning rate
     - pass a function to another function, and repeat with `range`
     - derive exact slopes (derivatives) with the nudge rules, and check them by nudging
 

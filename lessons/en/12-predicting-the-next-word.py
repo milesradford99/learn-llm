@@ -99,8 +99,8 @@ def _():
 
     > the dog ran . the dog sat . the cat ran .
 
-    `the` appears 3 times; twice `dog` came next, and once `cat`. So P(dog | the) = 2 / 3,
-    P(cat | the) = 1 / 3, and every other word gets 0. A table of these counts, with one row for each
+    `the` appears 3 times; twice `dog` came next, and once `cat`. So $P(\text{dog} \mid \text{the}) = 2 / 3$,
+    $P(\text{cat} \mid \text{the}) = 1 / 3$, and every other word gets 0. A table of these counts, with one row for each
     word and one column for each possible next word, is called a **bigram** model ("bi" for two: it
     looks at pairs).
 
@@ -135,7 +135,7 @@ def _():
     ## The trouble with zero
 
     To turn a row of counts into chances, divide by the row's total. But any pair never seen in
-    training then gets a chance of exactly 0, and chapter 06's surprise, −log 0, is infinite. One unseen pair
+    training then gets a chance of exactly 0, and chapter 06's surprise, $-\log 0$, is infinite. One unseen pair
     in the test stories would make the whole score infinite, as if the model had called it impossible.
 
     The usual fix is to pretend every pair was seen a tiny number of extra times, `k`. This is called
@@ -195,7 +195,7 @@ def _():
     and repeat. Drawing **at random**, rather than always taking the likeliest word, matters: the likeliest word after
     `the` might always be the same, and the text would soon go round in circles.
 
-    `rng.choice(n, p=p)` draws one number from 0 to n − 1, with the chances in `p`.
+    `rng.choice(n, p=p)` draws one number from $0$ to $n - 1$, with the chances in `p`.
 
     ## Exercise 3: sample_next
 
@@ -244,18 +244,18 @@ def _():
     through the test stories and ask: what chance did the model give to the word that really came next?
 
     Multiplying all those chances gives the chance of the whole text, but with 159,000 small numbers
-    that's too tiny for a computer to store. Logs fix this, because log(a × b) = log a + log b: instead of multiplying
+    that's too tiny for a computer to store. Logs fix this, because $\log(a \times b) = \log a + \log b$: instead of multiplying
     chances, we add their logs. Divide by the number of words and flip the sign, and you have
     a quantity you already know:
 
-    > mean surprise = −(mean of log p), chapter 06's cross-entropy
+    > mean surprise = $-$(mean of $\log p$), chapter 06's cross-entropy
 
-    To make it easier to read, we undo the log with e^. That gives the **perplexity**:
+    To make it easier to read, we undo the log with $e^{\square}$. That gives the **perplexity**:
 
-    > perplexity = e^(mean surprise)
+    > $$\text{perplexity} = e^{\text{mean surprise}}$$
 
-    Here's what that number means. Suppose a model knows nothing, and gives each of `N` words the chance 1 / N. Since log(1 / N) = log 1 − log N = −log N,
-    every surprise is log N, so the mean is log N, and the perplexity is e^(log N) = N. So
+    Here's what that number means. Suppose a model knows nothing, and gives each of $N$ words the chance $1 / N$. Since $\log(1 / N) = \log 1 - \log N = -\log N$,
+    every surprise is $\log N$, so the mean is $\log N$, and the perplexity is $e^{\log N} = N$. So
     **a perplexity of N means the model is as unsure as if it were choosing among N equally likely words.**
     A perfect model scores 1. Lower is better.
 
@@ -333,7 +333,7 @@ def _():
     ## Looking two words back
 
     One word of memory isn't much. A **trigram** model looks at the two previous words, P(next | a, b).
-    A table for that would need 2,002 × 2,002 × 2,002 entries, about 8 billion, but almost all of them would be 0. So
+    A table for that would need $2{,}002 \times 2{,}002 \times 2{,}002$ entries, about 8 billion, but almost all of them would be 0. So
     we use a dictionary instead, storing only what we actually saw: each pair `(a, b)` is a key, and its value
     is a smaller dictionary counting what came next. (A key can be a pair in round brackets.) In the function below, `followers` isn't a copy: it's the same smaller
     dictionary that sits inside `table`, so changing it changes the table. And `zip` can pair three lists as easily as two.

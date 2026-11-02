@@ -64,7 +64,7 @@ def _():
     **A word on precision.** A computer stores each number in a fixed amount of memory, measured in
     **bits**. NumPy normally uses 64 bits per number, which keeps about 16 digits correct.
     PyTorch normally uses 32, which keeps about 7: half the memory, and plenty for training. So
-    the same sum can differ in its last digits. Here's 0.1 × 3 both ways. (Neither is exactly 0.3.
+    the same sum can differ in its last digits. Here's $0.1 \times 3$ both ways. (Neither is exactly 0.3.
     That's normal: computers store numbers in binary, and 0.1 can't be stored exactly.)
     """)
     return
@@ -390,7 +390,7 @@ def _():
 def _():
     mo.md(r"""
     PyTorch prints the model layer by layer (`bias=True` just says the layer has biases), then our count:
-    50,890 knobs: 784 × 64 weights, then 64 biases, then 64 × 10 weights, then 10 biases.
+    50,890 knobs: $784 \times 64$ weights, then 64 biases, then $64 \times 10$ weights, then 10 biases.
 
     ## Your Adam, built in
 

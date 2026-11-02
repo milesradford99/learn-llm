@@ -37,7 +37,7 @@ def _():
     this box moves, for a tiny nudge), and walking backwards:
 
     > blame of a box = the sum, over every arrow leaving it, of
-    > (local slope of that arrow × blame of the box the arrow points to)
+    > (local slope of that arrow $\times$ blame of the box the arrow points to)
 
     So for every box, the engine must remember three things: its **value**, the boxes it was
     **made from**, and the **local slope** towards each of them. That calls for a new kind of
@@ -157,8 +157,8 @@ def _():
     mo.md(r"""
     - `out = Value(a.data * b.data)`: a new box holding the product of the two values.
     - `out.parents = [a, b]`: it was made from `a` and `b`.
-    - `out.local_slopes = [b.data, a.data]`: the local slopes from chapter 03. In `a × b`, nudging
-      `a` moves the result by `b` per unit, and nudging `b` moves it by `a` per unit. The order
+    - `out.local_slopes = [b.data, a.data]`: the local slopes from chapter 03. In $a \times b$, nudging
+      $a$ moves the result by $b$ per unit, and nudging $b$ moves it by $a$ per unit. The order
       matches `parents`: the first slope goes with the first parent.
     - `book.append(out)`: write the step in the book.
     - `return out`: hand back the new box, so it can be used in the next step.
@@ -231,9 +231,9 @@ def _():
     mo.md(r"""
     ## Exercise 3: square
 
-    Write `square(a, book)` for `a × a`. It has only **one** parent, `a` (so `out.parents = [a]`),
-    and one local slope: chapter 02's slope of `x × x`, which is `2 × x`. Here `x` is `a.data`.
-    (On the keyboard, `×` is `*`: Python doesn't know the `×` sign.)
+    Write `square(a, book)` for $a \times a$. It has only **one** parent, $a$ (so `out.parents = [a]`),
+    and one local slope: chapter 02's slope of $x \times x$, which is $2 \times x$. Here $x$ is `a.data`.
+    (On the keyboard, $\times$ is `*`: Python doesn't know the $\times$ sign.)
     """)
     return
 
@@ -260,7 +260,7 @@ def _():
 
     1. The loss blames itself 1: `loss.grad = 1`.
     2. Go through the book **from the last entry to the first**. For each entry, pass blame to each
-       of its parents: add (local slope × this entry's blame) to the parent's blame.
+       of its parents: add (local slope $\times$ this entry's blame) to the parent's blame.
 
     We **add** to the parent's blame because blames add up when a box feeds several arrows
     (chapter 03): each arrow out of a box brings its own share.
@@ -271,21 +271,21 @@ def _():
     have already passed their share of blame to it: its blame is complete, and it's safe to pass
     it on.
 
-    Here it is on Mia's day 1 from chapter 03. Recording `p = w × t`, `g = p + b`, `e = g − s`,
-    `L = e × e` writes the book in this order: entry 0 is `p`, then `g`, then `e`, then `L`. With
-    day 1's numbers, `p = 140`, `g = 80`, `e = 17` and `L = 289`, so the local slope of `e × e`
-    is `2 × 17 = 34`. Reading the book backwards:
+    Here it is on Mia's day 1 from chapter 03. Recording $p = w \times t$, $g = p + b$, $e = g - s$,
+    $L = e \times e$ writes the book in this order: entry 0 is $p$, then $g$, then $e$, then $L$. With
+    day 1's numbers, $p = 140$, $g = 80$, $e = 17$ and $L = 289$, so the local slope of $e \times e$
+    is $2 \times 17 = 34$. Reading the book backwards:
 
     | step | entry | its blame is complete because… | it passes on |
     |---|---|---|---|
     | start | `L` | it is the loss: blame 1 | |
-    | 1 | `L` | | `e` gets 34 × 1 = 34 |
-    | 2 | `e` | its only user, `L`, is done | `g` gets 1 × 34, `s` gets −1 × 34 |
-    | 3 | `g` | its only user, `e`, is done | `p` gets 1 × 34, `b` gets 1 × 34 |
-    | 4 | `p` | its only user, `g`, is done | `w` gets 14 × 34 = 476, `t` gets 10 × 34 |
+    | 1 | $L$ | | $e$ gets $34 \times 1 = 34$ |
+    | 2 | $e$ | its only user, $L$, is done | $g$ gets $1 \times 34$, $s$ gets $-1 \times 34$ |
+    | 3 | $g$ | its only user, $e$, is done | $p$ gets $1 \times 34$, $b$ gets $1 \times 34$ |
+    | 4 | $p$ | its only user, $g$, is done | $w$ gets $14 \times 34 = 476$, $t$ gets $10 \times 34$ |
 
-    Here is what goes wrong in the other order. Take `x × x + x` at `x = 3`. Its slope is
-    `2 × 3 + 1 = 7` (slope of `x × x` plus slope of `x`). The cell below records it, then reads the
+    Here is what goes wrong in the other order. Take $x \times x + x$ at $x = 3$. Its slope is
+    $2 \times 3 + 1 = 7$ (slope of $x \times x$ plus slope of $x$). The cell below records it, then reads the
     book **front to back** instead. (It uses your `add`, so it shows an error until Exercise 1
     passes.)
     """)
@@ -310,19 +310,19 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    It says `1`, not `7`. (Below, `x` is the cell's `x3`, the product is `product` and the total
+    It says `1`, not `7`. (Below, $x$ is the cell's $x_3$, the product is `product` and the total
     is `total3`.) The book holds two entries: first the product (`mul(x3, x3)`, whose parents
-    list is `[x3, x3]`: the **same** box twice, once per side of the `×`), then the total.
+    list is `[x3, x3]`: the **same** box twice, once per side of the $\times$), then the total.
     Front to back:
 
     1. The product comes first. Its blame is still 0, because the total hasn't passed it any
-       yet. So `x` gets 3 × 0 from the first side and 3 × 0 from the second: nothing.
-    2. Then the total (blame 1) passes 1 × 1 to the product and 1 × 1 to `x`. `x` now has 1. The
+       yet. So $x$ gets $3 \times 0$ from the first side and $3 \times 0$ from the second: nothing.
+    2. Then the total (blame 1) passes $1 \times 1$ to the product and $1 \times 1$ to $x$. $x$ now has 1. The
        product finally has its blame, 1, but its entry has already been read, so that blame is
        never passed on.
 
-    Backwards, the total comes first: the product gets 1 and `x` gets 1. Then the product, now
-    holding its complete blame 1, passes 3 × 1 + 3 × 1 = 6 more to `x`. Total: 1 + 6 = 7.
+    Backwards, the total comes first: the product gets 1 and $x$ gets 1. Then the product, now
+    holding its complete blame 1, passes $3 \times 1 + 3 \times 1 = 6$ more to $x$. Total: $1 + 6 = 7$.
 
     To go through a list from last to first, Python has `reversed`: `for entry in reversed(book):`.
 
@@ -468,10 +468,10 @@ def _():
     down the book:
 
     - `L` is set to 1 again (that line stores, it doesn't add).
-    - `e` had 34 and gets 34 × 1 more: 68.
-    - `g` had 34 and gets 1 × 68 more: 102.
-    - `p` had 34 and gets 1 × 102 more: 136.
-    - `w` had 476 and gets 14 × 136 = 1904 more: 2380.
+    - $e$ had 34 and gets $34 \times 1$ more: 68.
+    - $g$ had 34 and gets $1 \times 68$ more: 102.
+    - $p$ had 34 and gets $1 \times 102$ more: 136.
+    - $w$ had 476 and gets $14 \times 136 = 1904$ more: 2380.
 
     Each box passes on its whole, already-wrong blame, so the mistake grows at every step. That's
     why `engine_gradient` makes **fresh** `Value` boxes, with a fresh book, every
@@ -499,27 +499,27 @@ def _():
     mo.md(r"""
     A straight line can't go up and then come down. A **curve** can:
 
-    > guess = a × x × x + w × x + b
+    > $$\text{guess} = a \times x \times x + w \times x + b$$
 
     with three knobs `a`, `w` and `b`. With `a` negative, the curve bends downwards, like a hill.
 
-    One practical detail: here `x` is the temperature measured **from 25 °C, in tens of degrees**:
+    One practical detail: here $x$ is the temperature measured **from 25 °C, in tens of degrees**:
     `x = (t - 25) / 10`, so 14 °C becomes -1.1 and 39 °C becomes 1.4. Why? In chapter 02 you saw
-    `b` creep along because the loss reacts more strongly to a knob that gets multiplied by big
-    numbers, so one learning rate was safe for `w` but timid for `b`. Here `a` gets multiplied by
-    `x × x`:
+    $b$ creep along because the loss reacts more strongly to a knob that gets multiplied by big
+    numbers, so one learning rate was safe for $w$ but timid for $b$. Here $a$ gets multiplied by
+    $x \times x$:
 
-    | `x` | `x × x` runs from | to |
+    | $x$ | $x \times x$ runs from | to |
     |---|---|---|
-    | raw temperature `t` | 14 × 14 = 196 | 39 × 39 = 1521 |
-    | `t / 10` | 1.4 × 1.4 = 1.96 | 3.9 × 3.9 = 15.21 |
-    | `(t - 25) / 10` | 0 | 1.4 × 1.4 = 1.96 |
+    | raw temperature $t$ | $14 \times 14 = 196$ | $39 \times 39 = 1521$ |
+    | `t / 10` | $1.4 \times 1.4 = 1.96$ | $3.9 \times 3.9 = 15.21$ |
+    | `(t - 25) / 10` | 0 | $1.4 \times 1.4 = 1.96$ |
 
-    With raw temperatures, `a` would be multiplied by numbers up to 1521 and `b` by 1: a learning
-    rate small enough for `a` would leave `b` almost frozen. Dividing by 10 helps, but `x × x`
+    With raw temperatures, $a$ would be multiplied by numbers up to 1521 and $b$ by 1: a learning
+    rate small enough for $a$ would leave $b$ almost frozen. Dividing by 10 helps, but $x \times x$
     still reaches 15. Subtracting 25 first puts the middle of the
-    temperatures at 0, so `x` runs from about -1 to 1.5 and `x × x` from 0 to 2. Now all three knobs
-    are multiplied by numbers of similar size (`x × x`, `x`, and 1), and one learning rate suits
+    temperatures at 0, so $x$ runs from about -1 to 1.5 and $x \times x$ from 0 to 2. Now all three knobs
+    are multiplied by numbers of similar size ($x \times x$, $x$, and 1), and one learning rate suits
     all of them.
 
     For a curve, chapter 03 would have meant working out new backward steps by hand. With your

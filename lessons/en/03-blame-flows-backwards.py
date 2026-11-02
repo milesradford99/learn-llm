@@ -23,8 +23,8 @@ def _():
     mo.md(r"""
     # 03 · Blame flows backwards
 
-    Chapter 02 ended with a gap. Mia's loss is built from pieces like `(w × 14 + b − 63)²` (the `²` means "times itself"):
-    a square of something that itself depends on `w`. Our slope rules don't cover that yet. In
+    Chapter 02 ended with a gap. Mia's loss is built from pieces like $(w \times 14 + b - 63)^2$ (the $^2$ means "times itself"):
+    a square of something that itself depends on $w$. Our slope rules don't cover that yet. In
     this chapter you'll find the exact slope of anything built from small steps, and you'll see
     the idea that trains every neural network, including the language models at the end of this
     course.
@@ -117,17 +117,17 @@ def _():
 
     | step | nudge this | the result moves, per unit | why (chapter 02 rule) | here |
     |---|---|---|---|---|
-    | `L = e × e` | `e` | `2 × e` | slope of x × x is 2 × x | 2 × 17 = **34** |
-    | `e = g − s` | `g` | `1` | `g` goes up by h, so `e` goes up by h | **1** |
-    | `g = p + b` | `p` | `1` | `p` goes up by h, so `g` goes up by h | **1** |
-    | `g = p + b` | `b` | `1` | same, for `b` | **1** |
-    | `p = w × t` | `w` | `t` | slope of c × x is c (here c is `t`, which stays fixed) | **14** |
+    | $L = e \times e$ | $e$ | $2 \times e$ | slope of $x \times x$ is $2 \times x$ | $2 \times 17 = \boldsymbol{34}$ |
+    | $e = g - s$ | $g$ | `1` | $g$ goes up by h, so $e$ goes up by h | **1** |
+    | $g = p + b$ | $p$ | `1` | $p$ goes up by h, so $g$ goes up by h | **1** |
+    | $g = p + b$ | $b$ | `1` | same, for $b$ | **1** |
+    | $p = w \times t$ | $w$ | $t$ | slope of $c \times x$ is $c$ (here $c$ is $t$, which stays fixed) | **14** |
 
     ## Exchange rates multiply
 
     /// admonition | 🧰 Toolbox: chaining exchange rates
     Suppose 1 euro buys 8 yuan, and 1 yuan buys 20 yen. How many yen does 1 euro buy? Change the
-    euro into 8 yuan, then each of those 8 yuan into 20 yen: 8 × 20 = **160** yen. When you convert
+    euro into 8 yuan, then each of those 8 yuan into 20 yen: $8 \times 20 = \boldsymbol{160}$ yen. When you convert
     through a chain, the rates **multiply**.
     ///
 
@@ -137,29 +137,29 @@ def _():
     | value | moves by |
     |---|---|
     | `w` | `h` |
-    | `p` | `14 × h` (rate 14) |
-    | `g` | `1 × 14 × h` = `14 × h` (rate 1) |
-    | `e` | `1 × 14 × h` = `14 × h` (rate 1) |
-    | `L` | about `34 × 14 × h` = `476 × h` (rate 34; the tiny leftover is explained below) |
+    | $p$ | $14 \times h$ (rate 14) |
+    | $g$ | $1 \times 14 \times h$ = $14 \times h$ (rate 1) |
+    | $e$ | $1 \times 14 \times h$ = $14 \times h$ (rate 1) |
+    | $L$ | about $34 \times 14 \times h$ = $476 \times h$ (rate 34; the tiny leftover is explained below) |
 
-    So `L` moves 476 times as much as `w`: the slope of `L` with respect to `w` is
-    **14 × 1 × 1 × 34 = 476**. Multiplying local slopes along the path is called the
+    So $L$ moves 476 times as much as $w$: the slope of $L$ with respect to $w$ is
+    **$14 \times 1 \times 1 \times 34 = 476$**. Multiplying local slopes along the path is called the
     **chain rule**.
 
     Is it really exact? Look at where a leftover could come from. The first three steps are
-    "straight-line" steps (`× 14`, `+ b`, `− s`): for those, the change is **exactly** the rate
-    times the nudge, with nothing left over (like `7 × (x + h) = 7 × x + 7 × h` in chapter 02).
-    So `e` moves by exactly `14 × h`. Only the last step, the square, leaves something over. Use
-    chapter 02's square picture with side `e = 17`, nudged by `14 × h` instead of `h`: it grows by
-    two strips of `17 × 14 × h` (together `2 × 17 × 14 × h` = `476 × h`) plus the small corner
-    `(14 × h) × (14 × h)` = `196 × h × h`. Divide by `h`:
+    "straight-line" steps ($\times 14$, $+ b$, $- s$): for those, the change is **exactly** the rate
+    times the nudge, with nothing left over (like $7 \times (x + h) = 7 \times x + 7 \times h$ in chapter 02).
+    So $e$ moves by exactly $14 \times h$. Only the last step, the square, leaves something over. Use
+    chapter 02's square picture with side $e = 17$, nudged by $14 \times h$ instead of $h$: it grows by
+    two strips of $17 \times 14 \times h$ (together $2 \times 17 \times 14 \times h$ = $476 \times h$) plus the small corner
+    $(14 \times h) \times (14 \times h)$ = $196 \times h \times h$. Divide by $h$:
 
-    > measured slope = 476 + 196 × h
+    > $$\text{measured slope} = 476 + 196 \times h$$
 
-    The same pattern as `2 × x + h` in chapter 02: as the nudge shrinks, the measurements close in
+    The same pattern as $2 \times x + h$ in chapter 02: as the nudge shrinks, the measurements close in
     on **476**. (What if a bending step sits in the middle, with a straight-line step after it?
-    Take `3 × (x × x)`. The square leaves a corner `h × h`; the `× 3` afterwards makes it `3 × h × h`;
-    divided by `h` that's `3 × h`, which still vanishes as `h` shrinks. Straight-line steps only
+    Take $3 \times (x \times x)$. The square leaves a corner $h \times h$; the $\times 3$ afterwards makes it $3 \times h \times h$;
+    divided by $h$ that's $3 \times h$, which still vanishes as $h$ shrinks. Straight-line steps only
     scale a leftover, they never stop it vanishing.) Check it by nudging:
     """)
     return
@@ -177,8 +177,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Nudging with `h = 0.0001` gives about `476.0196` (the long tail of digits after that is the
-    computer's rounding noise), which is `476 + 196 × 0.0001`: exactly the chain rule's 476, plus
+    Nudging with $h = 0.0001$ gives about `476.0196` (the long tail of digits after that is the
+    computer's rounding noise), which is $476 + 196 \times 0.0001$: exactly the chain rule's 476, plus
     the leftover we just predicted. Smaller nudges get closer still:
 
     | nudge h | 0.1 | 0.01 | 0.001 | 0.0001 |
@@ -194,19 +194,19 @@ def _():
     move `L` by 35, the 34 plus the square's leftover.)
 
     - `L` itself: moving `L` by 1 moves `L` by 1. Blame **1**.
-    - `e`: one unit of `e` moves `L` by 34 (the local slope), and each unit of `L` is worth 1.
-      Blame 34 × 1 = **34**.
-    - `g`: one unit of `g` moves `e` by 1, and each unit of `e` is worth 34. Blame 1 × 34 = **34**.
-    - `p`: one unit of `p` moves `g` by 1. Blame 1 × 34 = **34**.
-    - `b`: one unit of `b` also moves `g` by 1. Blame 1 × 34 = **34**.
-    - `w`: one unit of `w` moves `p` by 14, and each unit of `p` is worth 34. Blame 14 × 34 = **476**.
+    - $e$: one unit of $e$ moves $L$ by 34 (the local slope), and each unit of $L$ is worth 1.
+      Blame $34 \times 1 = \boldsymbol{34}$.
+    - $g$: one unit of $g$ moves $e$ by 1, and each unit of $e$ is worth 34. Blame $1 \times 34 = \boldsymbol{34}$.
+    - $p$: one unit of $p$ moves $g$ by 1. Blame $1 \times 34 = \boldsymbol{34}$.
+    - $b$: one unit of $b$ also moves $g$ by 1. Blame $1 \times 34 = \boldsymbol{34}$.
+    - $w$: one unit of $w$ moves $p$ by 14, and each unit of $p$ is worth 34. Blame $14 \times 34 = \boldsymbol{476}$.
 
     (Blames can be negative too. A negative blame means raising that box *lowers* the loss; the
     step rule's minus then pushes the knob up, which is downhill.)
 
     One rule did all of it:
 
-    > blame of a box = local slope of its arrow × blame of the box the arrow points to
+    > blame of a box = local slope of its arrow $\times$ blame of the box the arrow points to
 
     Here are the blames, in red, under each box:
     """)
@@ -223,9 +223,9 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The blame of `w` is its slope, 476, the same as the chain rule's answer. That's no coincidence:
-    forwards we multiplied 14 × 1 × 1 × 34, backwards 34 × 1 × 1 × 14, the same numbers in the
-    other order, and the order of a multiplication doesn't change its result. The blame of `b` is
+    The blame of $w$ is its slope, 476, the same as the chain rule's answer. That's no coincidence:
+    forwards we multiplied $14 \times 1 \times 1 \times 34$, backwards $34 \times 1 \times 1 \times 14$, the same numbers in the
+    other order, and the order of a multiplication doesn't change its result. The blame of $b$ is
     its slope, 34. This backward walk is called **backpropagation**: the blame for the loss flows
     backwards through the graph to every knob.
 
@@ -261,12 +261,12 @@ def _(hand):
     _answers = {"p": 200, "g": 140, "e": 3, "L": 9,
                 "blame e": 6, "blame g": 6, "blame p": 6, "blame b": 6, "blame w": 120}
     _hints = {
-        "p": "p = w × t", "g": "g = p + b (b is negative)", "e": "e = g − s", "L": "L = e × e",
-        "blame e": "local slope of L = e × e is 2 × e; times the blame of L (1)",
-        "blame g": "local slope 1, times the blame of e",
-        "blame p": "local slope 1, times the blame of g",
-        "blame b": "local slope 1, times the blame of g",
-        "blame w": "local slope t (here 20), times the blame of p",
+        "p": r"$p = w \times t$", "g": "$g = p + b$ ($b$ is negative)", "e": "$e = g - s$", "L": r"$L = e \times e$",
+        "blame e": r"local slope of $L = e \times e$ is $2 \times e$; times the blame of $L$ (1)",
+        "blame g": "local slope 1, times the blame of $e$",
+        "blame p": "local slope 1, times the blame of $g$",
+        "blame b": "local slope 1, times the blame of $g$",
+        "blame w": "local slope $t$ (here 20), times the blame of $p$",
     }
     _lines = []
     for _name, _right in _answers.items():
@@ -295,26 +295,26 @@ def _():
     mo.md(r"""
     ## When a value is used twice, blames add
 
-    One more case. Take a step `a × c` where **both** sides are values that can move. Nudging only
-    `a` (holding `c` still) moves the result by `c` per unit; nudging only `c` moves it by `a` per
-    unit. That's the `c × x` rule from chapter 02, once for each side.
+    One more case. Take a step $a \times c$ where **both** sides are values that can move. Nudging only
+    $a$ (holding $c$ still) moves the result by $c$ per unit; nudging only $c$ moves it by $a$ per
+    unit. That's the $c \times x$ rule from chapter 02, once for each side.
 
-    What if both sides move at the same time, each by `h`? Picture a rectangle with sides `a` and
-    `c`, like chapter 02's square. Growing both sides by `h` adds a strip `c × h` along one side, a
-    strip `a × h` along the other, and a tiny corner `h × h`:
+    What if both sides move at the same time, each by $h$? Picture a rectangle with sides $a$ and
+    $c$, like chapter 02's square. Growing both sides by $h$ adds a strip $c \times h$ along one side, a
+    strip $a \times h$ along the other, and a tiny corner $h \times h$:
 
-    > (a + h) × (c + h) = a × c + **c × h** + **a × h** + h × h
+    > $$(a + h) \times (c + h) = a \times c + \boldsymbol{c \times h} + \boldsymbol{a \times h} + h \times h$$
 
-    The strip `c × h` is the effect through the first arrow (from `a`), and `a × h` is the effect
-    through the second arrow (from `c`). They sit side by side in the total, so they **add**. The
-    corner `h × h` is the usual leftover that vanishes as `h` shrinks.
+    The strip $c \times h$ is the effect through the first arrow (from $a$), and $a \times h$ is the effect
+    through the second arrow (from $c$). They sit side by side in the total, so they **add**. The
+    corner $h \times h$ is the usual leftover that vanishes as $h$ shrinks.
 
-    Now take `x × x`: the **same** box feeds both sides, so `a` and `c` are both `x` and both move
+    Now take $x \times x$: the **same** box feeds both sides, so $a$ and $c$ are both $x$ and both move
     together. The rule gives:
 
-    > blame of x = (through the first arrow) + (through the second arrow) = x + x = **2 × x**
+    > blame of $x$ = (through the first arrow) + (through the second arrow) = $x + x$ = **$2 \times x$**
 
-    That's exactly the slope of `x × x` from chapter 02, as it must be: with `a = c = x`, this
+    That's exactly the slope of $x \times x$ from chapter 02, as it must be: with $a = c = x$, this
     rectangle *is* chapter 02's square. The general rule: when a value feeds several arrows, the
     blames arriving through each of them add up.
 
@@ -322,7 +322,7 @@ def _():
     used on every day. So `w` collects blame from all 8 days, added up, then divided by 8 (the
     mean divides by 8, and "c times a function" gives c times its slope). In short:
 
-    > the slope of the mean loss = the mean of the slopes of each day
+    > $$\text{the slope of the mean loss} = \text{the mean of the slopes of each day}$$
 
     ## Exercise 2: one day's slopes in code
 
@@ -425,9 +425,9 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Once your exercises pass, each pair matches, up to the nudge's small leftover. For `w` the nudging column is about 0.06
-    off: that's the leftover again, here the average of `t × t` over Mia's days (about 603.5)
-    times `h = 0.0001`. (If your columns disagree by much more, your checks above will show which
+    Once your exercises pass, each pair matches, up to the nudge's small leftover. For $w$ the nudging column is about 0.06
+    off: that's the leftover again, here the average of $t \times t$ over Mia's days (about 603.5)
+    times $h = 0.0001$. (If your columns disagree by much more, your checks above will show which
     exercise to look at.)
 
     ## Exercise 4: gradient descent with exact slopes
@@ -529,7 +529,7 @@ def _():
 
     <!-- go-deeper -->
     **Go deeper (optional):** in textbooks, the blame of a value is its *partial derivative*,
-    written ∂L/∂w ("the slope of L with respect to w, with everything else held still").
+    written $\frac{\partial L}{\partial w}$ ("the slope of $L$ with respect to $w$, with everything else held still").
     """)
     return
 

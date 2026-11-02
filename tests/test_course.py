@@ -60,6 +60,38 @@ def test_catalogs_match_english(locale):
         assert fields(text) == fields(english[key]), key
 
 
+RAW_MATH = re.compile(r"[×÷²³√∂≈∞σ]|\be\^|\d − \d")
+
+
+def prose(markdown):
+    """Markdown without its code and its `$...$` math."""
+    markdown = re.sub(r"```.*?```", "", markdown, flags=re.DOTALL)
+    markdown = re.sub(r"``.*?``|`[^`\n]+`", "", markdown)
+    return re.sub(r"\$\$.+?\$\$|\$[^$\n]+\$", "", markdown)
+
+
+def assert_math_is_latex(markdown):
+    left = prose(markdown)
+    assert not RAW_MATH.search(left), f"hand-typed math, write it in $...$:\n{left}"
+    assert "$" not in left, f"unbalanced $:\n{left}"
+
+
+@pytest.mark.parametrize("path", NOTEBOOKS, ids=ids(NOTEBOOKS))
+def test_lesson_math_is_latex(path):
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for call in ast.walk(tree):
+        if isinstance(call, ast.Call) and getattr(call.func, "attr", "") == "md":
+            for node in ast.walk(call):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    assert_math_is_latex(node.value)
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_catalog_math_is_latex(locale):
+    for text in catalog(locale).values():
+        assert_math_is_latex(text)
+
+
 @pytest.mark.parametrize("number", CHAPTERS)
 def test_every_check_has_a_message(number):
     keys = {case.key for cases in exercises(number).values() for case in cases}

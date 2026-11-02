@@ -173,15 +173,15 @@ def _():
 
     Chapter 05's dot product multiplies position by position and adds. It's large when two vectors
     point the same way. But it also grows with their lengths, and for similarity we only care about
-    direction. So we divide by both lengths. Writing `·` for the dot product (`@` in code), the
-    **length** of a vector is `√(a · a)`, the square root of the sum of its squares. This measure is called **cosine similarity**:
+    direction. So we divide by both lengths. Writing $\cdot$ for the dot product (`@` in code), the
+    **length** of a vector is $\sqrt{a \cdot a}$, the square root of the sum of its squares. This measure is called **cosine similarity**:
 
-    > similarity(a, b) = (a · b) / (length of a × length of b)
+    > $$\operatorname{similarity}(a, b) = \frac{a \cdot b}{\text{length of } a \times \text{length of } b}$$
 
     It's 1 if they point the same way, 0 if they're at right angles (nothing in common), and −1 if
-    they point in opposite directions. With `a = [3, 4]` and `b = [6, 8]`, the dot product is 3 × 6 + 4 × 8 = 50.
-    The lengths are √(9 + 16) = 5 and √(36 + 64) = 10. So the
-    similarity is 50 / (5 × 10) = 1: `b` is `a` made twice as long, so the direction is the same.
+    they point in opposite directions. With `a = [3, 4]` and `b = [6, 8]`, the dot product is $3 \times 6 + 4 \times 8 = 50$.
+    The lengths are $\sqrt{9 + 16} = 5$ and $\sqrt{36 + 64} = 10$. So the
+    similarity is $50 / (5 \times 10) = 1$: $b$ is $a$ made twice as long, so the direction is the same.
 
     ## Exercise 2: similarity
 
@@ -259,8 +259,8 @@ def _():
     mo.md(r"""
     ## Real or made up? A cheaper question
 
-    Each word gets two vectors, one for when it's a centre (`u`) and one for when it's a context (`v`).
-    The word's meaning will end up in `u`. We'd like `u · v` to be high when `v` is a real neighbour.
+    Each word gets two vectors, one for when it's a centre ($u$) and one for when it's a context ($v$).
+    The word's meaning will end up in $u$. We'd like $u \cdot v$ to be high when $v$ is a real neighbour.
 
     The straightforward model is chapter 06's: the scores of all 2,000 words, then softmax. But
     that means 2,000 dot products for every pair, millions of times. Instead, we'll ask a much
@@ -268,25 +268,25 @@ def _():
     random, and train the network to tell the real context from the fakes. This is **negative
     sampling**.
 
-    A yes-or-no question needs a probability from one score `s`. Take softmax over two scores, `s`
+    A yes-or-no question needs a probability from one score $s$. Take softmax over two scores, $s$
     for "real" and 0 for "fake". (Why 0? Softmax only cares about differences between scores, as chapter 06's shift
-    showed, so one of them may as well be 0.) Anything to the power 0 is 1, so e^0 = 1, and the share of "real" is
+    showed, so one of them may as well be 0.) Anything to the power 0 is 1, so $e^0 = 1$, and the share of "real" is
 
-    > σ(s) = e^s / (e^s + e^0) = e^s / (e^s + 1)
+    > $$\sigma(s) = \frac{e^s}{e^s + e^0} = \frac{e^s}{e^s + 1}$$
 
-    This is called the **sigmoid**. It's near 1 for a big `s`, exactly 0.5 for `s = 0`, and
-    near 0 for a very negative `s`. And there's a handy fact: the share of "fake" is 1 − σ(s),
-    which equals σ(−s). (Check it: σ(−s) = e^(−s) / (e^(−s) + 1). Multiply top and bottom by e^s, remembering that
-    e^(−s) × e^s = e^0 = 1, and you get 1 / (1 + e^s), which is exactly 1 − e^s / (e^s + 1).)
+    This is called the **sigmoid**. It's near 1 for a big $s$, exactly 0.5 for $s = 0$, and
+    near 0 for a very negative $s$. And there's a handy fact: the share of "fake" is $1 - \sigma(s)$,
+    which equals $\sigma(-s)$. (Check it: $\sigma(-s) = e^{-s} / (e^{-s} + 1)$. Multiply top and bottom by $e^s$, remembering that
+    $e^{-s} \times e^s = e^0 = 1$, and you get $1 / (1 + e^s)$, which is exactly $1 - e^s / (e^s + 1)$.)
 
-    The loss is chapter 06's surprise, `−log` of the share given to the right answer, added up
-    for one real word and `k` noise words. For the real word, the right answer is "real", with share
-    σ(u · v). For a noise word `n`, the right answer is "fake", with share σ(−u · n):
+    The loss is chapter 06's surprise, $-\log$ of the share given to the right answer, added up
+    for one real word and $k$ noise words. For the real word, the right answer is "real", with share
+    $\sigma(u \cdot v)$. For a noise word $n$, the right answer is "fake", with share $\sigma(-u \cdot n)$:
 
-    > loss for one pair = −log σ(u · v) − log σ(−u · n₁) − … − log σ(−u · nₖ)
+    > $$\text{loss for one pair} = -\log \sigma(u \cdot v) - \log \sigma(-u \cdot n_1) - \ldots - \log \sigma(-u \cdot n_k)$$
 
-    The first term pulls `u` towards its real neighbour. The others push it away from the fakes. In
-    PyTorch, `F.logsigmoid(s)` computes `log σ(s)` safely, in the spirit of chapter 06's softmax shift.
+    The first term pulls $u$ towards its real neighbour. The others push it away from the fakes. In
+    PyTorch, `F.logsigmoid(s)` computes $\log \sigma(s)$ safely, in the spirit of chapter 06's softmax shift.
 
     ## Exercise 4: pair_loss
 
@@ -452,7 +452,7 @@ def _():
 
     Differences between vectors capture relationships too. If the step from `boy` to `girl` is
     roughly a "make it female" direction, then the same step from `he` should land near `she`.
-    The cell below computes `b − a + c` and asks for the nearest words that aren't one of the three.
+    The cell below computes $b - a + c$ and asks for the nearest words that aren't one of the three.
     (`not in` is the opposite of `in`.)
     """)
     return

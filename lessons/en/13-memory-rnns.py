@@ -59,7 +59,7 @@ def _():
 
     Say `x` is the vector of the current word (chapter 11's idea), and `h` is the memory so far, of size `m`. The new memory combines the two:
 
-    > new h = tanh(x @ Wx + h @ Wh + b)
+    > $$\text{new } h = \tanh(x \cdot W_x + h \cdot W_h + b)$$
 
     `Wx` turns a word into memory-sized numbers, `Wh` carries the old memory forward, and `b` is the usual
     bias. It's chapter 07's layer, with one twist: part of its input is its own previous output. "Recurrent" just means it comes back round.
@@ -250,9 +250,9 @@ def _():
 
     One step, where `both` is the word and the old `h` side by side, and `n` is the candidate new content:
 
-    > c = f × c + i × n
+    > $$c = f \times c + i \times n$$
 
-    > h = o × tanh(c)
+    > $$h = o \times \tanh(c)$$
 
     The first line is the key. With `f` near 1 and `i` near 0, the cell passes through untouched, and so could the blame.
     The word "could" matters, as we'll see.
@@ -313,9 +313,9 @@ def _():
     Just as bad: about `8e-14` at 60 words. That's worth a moment's thought. A fresh LSTM has random knobs, so
     its forget gates sit near 0.5: at every word, the cell is cut roughly in half, and half of a half of a half soon fades to nothing.
 
-    The difference is that an LSTM has a dial for this, and a plain RNN doesn't. A big bias in the forget gate makes `f` close to 1. Let's set it by hand.
+    The difference is that an LSTM has a dial for this, and a plain RNN doesn't. A big bias in the forget gate makes $f$ close to 1. Let's set it by hand.
     PyTorch stacks the four gates' biases in one vector. With 64 numbers per gate, the forget gate's are positions 64 to 127.
-    A bias of 3 gives σ(3), about 0.95. (Storing into a knob must happen under `torch.no_grad()`, so it isn't written in the book.)
+    A bias of 3 gives $\sigma(3)$, about 0.95. (Storing into a knob must happen under `torch.no_grad()`, so it isn't written in the book.)
     """)
     return
 
