@@ -9,12 +9,23 @@ requires-python = ">=3.12"
 dependencies = [
     "marimo>=0.25.2",
     "numpy>=2.5",
+    # No wheels for Intel Macs: there the course still starts, and chapters 00-08 work.
+    "torch>=2.8; sys_platform != 'darwin' or platform_machine == 'arm64'",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.1",
 ]
+
+# CPU builds on Linux and Windows: the default ones bring several GB of GPU libraries.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["hatchling"]

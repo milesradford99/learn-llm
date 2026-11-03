@@ -21,5 +21,8 @@ checks and UI strings live in `learn_llm/`. Scope, chapter map and decisions: `S
 - Page styling: `learn_llm/course.css`, loaded on every page via `custom_css` in
   `pyproject.toml` (not per lesson). marimo reads it at server start: restart to see edits.
   Visual rules (colours, type, radii) come from `DESIGN.md`; read it before changing UI.
+- Lessons using PyTorch call `laptop_speed()` in their setup (fewer threads, no denormals).
+- A class used by other cells goes in a regular cell that returns it; `@app.class_definition`
+  didn't reach cells when a class subclassed `nn.Module` and a lesson ran as a script.
 - Lesson text: no required external links. Links go after `<!-- go-deeper -->`.
 - Lesson text is original. Never copy course notes, slides or assignment text.

@@ -7,5 +7,8 @@
   "05-many-numbers-at-once.py": "sha256:cdf80bd779eadea2b26dd6169a65260996bbf5d1ef9fc3eb7ab477dc5209738c",
   "06-recognizing-digits.py": "sha256:be93e585f0a464b8eb5e331d9dbdb9bb15acf6ddd4a1c6f1a84ce7429474e7d3",
   "07-neural-networks.py": "sha256:6a9caa55d049df3ad4554554e6ba8c0555d1025350cfb9303bcc9181e26d20e8",
-  "08-training-that-works.py": "sha256:34101fb8072e71bd100f3366b1a88c0fa74e129c0e04daf524e8a569fa25bc55"
+  "08-training-that-works.py": "sha256:34101fb8072e71bd100f3366b1a88c0fa74e129c0e04daf524e8a569fa25bc55",
+  "09-hello-pytorch.py": "sha256:064545759576f3dd709babe71f6b2c0f828ef0a42b64e1cd1096df14a002ce39",
+  "10-seeing-with-convolutions.py": "sha256:bbfc582bd43774d1155fd255d7608afee0ce446751be98cdde693793134ca254",
+  "11-words-as-vectors.py": "sha256:c4cfffb584555b048da4b1e4357364a685e23bdb77f0ebf7122fbc99f4d99d1a"
 }

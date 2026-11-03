@@ -5,9 +5,9 @@
 Go from almost no maths or programming to building your own large language model, then
 serving it the way production systems do. Everything happens on one page in your browser.
 
-> **Status: early.** Chapters 00–08 are ready: from your first line of Python to a neural
-> network that reads handwritten digits, trained with the methods real models use. Chapter 09
-> (Hello PyTorch) is next.
+> **Status: early.** Chapters 00–11 are ready: from your first line of Python to convolutional
+> networks that find digits anywhere in a picture, and word vectors learned from stories.
+> Chapter 12 (Predicting the next word) is next.
 > See the [full chapter map](SCOPE.md).
 
 ## Start
@@ -23,8 +23,11 @@ time. No GPU, no accounts, no Python install needed.
 3. Your browser opens the course. Pick your language and begin with chapter 00.
 
 The first start installs [uv](https://docs.astral.sh/uv/), which downloads the right Python
-and everything the course needs into this folder. It takes a few minutes, once.
-Later starts take seconds.
+and everything the course needs into this folder (about 1 GB, mostly PyTorch). It takes a few
+minutes, once. Later starts take seconds.
+
+Chapters 09 onward use PyTorch, which runs on Linux, Windows and Macs with Apple chips on macOS
+14 or later. On an Intel Mac the course still starts, and chapters 00–08 work.
 
 Your work is saved in `my-work/`, your own copy of every lesson. Updating the course never
 overwrites it. To restart a chapter from scratch, delete its file in `my-work/` and start
