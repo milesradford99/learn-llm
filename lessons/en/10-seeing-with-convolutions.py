@@ -79,8 +79,8 @@ def _():
     mo.md(r"""
     ## Moving digits
 
-    To make the problem visible, we'll scatter the digits. Each 28 × 28 picture gets pasted at a random
-    spot on an empty 40 × 40 canvas:
+    To make the problem visible, we'll scatter the digits. Each $28 \times 28$ picture gets pasted at a random
+    spot on an empty $40 \times 40$ canvas:
     """)
     return
 
@@ -100,8 +100,8 @@ def shift_digits(images, size, seed):
 def _():
     mo.md(r"""
     Two new tools. `rng.integers(0, n)` gives a random whole number from 0 up to, but not
-    including, `n`. And a slice works in two directions at once: `canvas[i, r:r + 28, c:c + 28]` is
-    the 28 × 28 square of picture `i` whose top-left corner is at row `r`, column `c`, and storing into
+    including, $n$. And a slice works in two directions at once: `canvas[i, r:r + 28, c:c + 28]` is
+    the $28 \times 28$ square of picture $i$ whose top-left corner is at row $r$, column $c$, and storing into
     it pastes the digit there.
     """)
     return
@@ -124,7 +124,7 @@ def _():
 def _():
     mo.md(r"""
     Now train chapter 09's kind of network on them, made bigger to give it a fair chance: 1,600
-    inputs and 256 detectors. `nn.Flatten()` is a layer that turns each 40 × 40 picture into a row of
+    inputs and 256 detectors. `nn.Flatten()` is a layer that turns each $40 \times 40$ picture into a row of
     1,600 numbers, the same job as `reshape`. The cell shows three numbers: the knobs, then the accuracy on
     the training pictures, then on the test pictures.
     """)
@@ -154,12 +154,12 @@ def _():
 
     ## A detector that slides
 
-    Here's the better idea. Keep the detector small, say 3 × 3 knobs, and instead of giving each
+    Here's the better idea. Keep the detector small, say $3 \times 3$ knobs, and instead of giving each
     part of the picture its own detector, slide one detector over all of it. At each position, take
-    the 3 × 3 patch underneath it, and compute a dot product: multiply position by position, add
+    the $3 \times 3$ patch underneath it, and compute a dot product: multiply position by position, add
     up. The small grid of knobs is called a **kernel**, and sliding it is a **convolution**.
 
-    Let's do it by hand. Here's a 4 × 4 picture whose numbers jump from 0 to 1 halfway across, and a kernel
+    Let's do it by hand. Here's a $4 \times 4$ picture whose numbers jump from 0 to 1 halfway across, and a kernel
     that compares left with right:
 
     ```
@@ -172,14 +172,14 @@ def _():
 
     Put the kernel on the top-left patch (rows 0–2, columns 0–2):
 
-    (−1 × 0) + (0 × 0) + (1 × 1) in each of the 3 rows = 1 + 1 + 1 = **3**.
+    $(-1 \times 0) + (0 \times 0) + (1 \times 1)$ in each of the 3 rows = $1 + 1 + 1 = \boldsymbol{3}$.
 
-    Slide it one step right (columns 1–3): (−1 × 0) + (0 × 1) + (1 × 1) = 1 in each row, again **3**.
+    Slide it one step right (columns 1–3): $(-1 \times 0) + (0 \times 1) + (1 \times 1) = 1$ in each row, again **3**.
 
     A patch of only 0s, or only 1s, would give 0, since the −1s and +1s cancel. So
     the result is big exactly where the numbers change from left to right: this kernel is a
-    **vertical edge detector**. A 3 × 3 kernel fits in 2 positions across and 2 down on a 4 × 4 picture,
-    so the output is 2 × 2. In general, a picture of height `h` gives `h − k + 1` rows for a kernel of size `k`.
+    **vertical edge detector**. A $3 \times 3$ kernel fits in 2 positions across and 2 down on a $4 \times 4$ picture,
+    so the output is $2 \times 2$. In general, a picture of height $h$ gives $h - k + 1$ rows for a kernel of size $k$.
 
     ## Exercise 1: convolve
 
@@ -256,9 +256,9 @@ def _():
     ## Shrinking: max pooling
 
     A digit is more than edges: it's edges arranged in a certain way. To see bigger patterns, we
-    shrink the feature map and convolve again. **Max pooling** cuts the map into 2 × 2 squares
+    shrink the feature map and convolve again. **Max pooling** cuts the map into $2 \times 2$ squares
     and keeps the largest number of each. It says "the feature was somewhere around here",
-    forgets the exact position, and halves the height and width. So a 3 × 3 kernel in the next layer covers a patch
+    forgets the exact position, and halves the height and width. So a $3 \times 3$ kernel in the next layer covers a patch
     twice as wide in the original picture.
 
     ```
@@ -328,23 +328,23 @@ def _(digit, edge_v, response_v):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The shape ends in 26 × 26, as our formula says (28 − 3 + 1), and the second number is the largest
+    The shape ends in $26 \times 26$, as our formula says ($28 - 3 + 1$), and the second number is the largest
     difference from your map: 0, or as near as rounding allows. Two more pieces, and we can build a network.
 
     **Many kernels.** One layer learns many kernels at once, each giving its own map.
     `nn.Conv2d(1, 8, 3)` has 8 kernels and turns 1 map into 8. The next layer takes those 8 maps
-    in: `nn.Conv2d(8, 16, 3)` has 16 kernels of size 3 × 3 × 8, each looking at the same small patch across all 8 maps. That's how a later kernel can
+    in: `nn.Conv2d(8, 16, 3)` has 16 kernels of size $3 \times 3 \times 8$, each looking at the same small patch across all 8 maps. That's how a later kernel can
     say "a vertical edge just left of a horizontal edge". Counting knobs: each of the 16 kernels has
-    3 × 3 × 8 = 72 weights and 1 bias, so 16 × 73 = 1,168.
+    $3 \times 3 \times 8 = 72$ weights and 1 bias, so $16 \times 73 = 1{,}168$.
 
     **Keeping the size.** `padding=1` adds a one-pixel margin of zeros around the map first, so a
-    3 × 3 kernel gives an output of the same height and width as its input, and only pooling shrinks it.
+    $3 \times 3$ kernel gives an output of the same height and width as its input, and only pooling shrinks it.
 
     And for the end of the network, `nn.AdaptiveMaxPool2d(1)` keeps just the single largest number of
     each whole map, whatever its size. It answers "was this feature anywhere in the picture?"
     After it, the 32 maps have become 32 numbers (`nn.Flatten()` tidies the shape), which a final
     `nn.Linear` turns into 10 scores. Since almost nothing about the position survives, a digit
-    scores nearly the same wherever it is. (`nn.MaxPool2d(2)`, in the list below, is the 2 × 2 pooling you just wrote.)
+    scores nearly the same wherever it is. (`nn.MaxPool2d(2)`, in the list below, is the $2 \times 2$ pooling you just wrote.)
 
     ## Exercise 3: make_cnn
 

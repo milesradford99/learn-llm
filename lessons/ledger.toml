@@ -152,6 +152,46 @@ uses = [
     "matmul-operator", "epoch", "mini-batch",
 ]
 
+[chapters.12]
+introduces = [
+    "language-model", "unk-and-end", "conditional-probability", "bigram", "list-from-one",
+    "smoothing", "sampling", "rng-choice", "log-of-product", "perplexity", "pair-indexing",
+    "numpy-full", "unigram", "hyperparameter", "trigram", "tuple-key", "dict-values", "builtin-sum",
+    "mixing-models", "leaderboard", "numpy-tolist", "builtin-round",
+]
+uses = [
+    "dict", "dict-get", "vocabulary", "word-id", "text-dataset", "builtin-sorted", "builtin-zip",
+    "numpy-zeros", "numpy-sum", "keepdims", "axis", "surprise", "cross-entropy", "log", "exp",
+    "test-set", "overfitting", "argsort", "numpy-array", "if", "not-in", "string-join",
+]
+
+[chapters.13]
+introduces = [
+    "recurrence", "tanh", "shared-knobs-in-time", "all-of-a-dimension", "torch-stack",
+    "next-word-targets", "blame-through-time", "lstm", "lstm-cell", "gate", "torch-cat",
+    "forget-gate-bias", "reshape-minus-one", "gradient-clipping", "reduction-none",
+    "numpy-concatenate", "temperature",
+]
+uses = [
+    "word-vector", "nn-embedding", "sigmoid", "residual", "skip-connection", "vanishing-exploding",
+    "kernel", "language-model", "perplexity", "leaderboard", "tensor", "optimizer", "training-loop",
+    "no-grad", "nn-module-subclass", "builtin-super", "floor-division", "reshape", "slicing",
+    "torch-backward", "negative-sampling", "sampling", "vocabulary", "dict", "dict-get",
+]
+
+[chapters.14]
+introduces = [
+    "encoder-decoder", "bottleneck", "torch-flip", "teacher-forcing", "greedy-decoding",
+    "weighted-average", "query-key-value", "attention", "attention-matmul", "attention-map",
+    "numpy-stack",
+]
+uses = [
+    "lstm", "nn-embedding", "softmax", "dot-product", "cosine-similarity", "vector-times-matrix",
+    "torch-cat", "gradient-clipping", "residual", "transpose", "rng-integers",
+    "function-as-value", "nn-module-subclass", "language-model", "training-loop", "no-grad",
+    "reshape-minus-one",
+]
+
 [concepts]
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
 error-message = "a red error box means Python couldn't follow an instruction; read the last line, fix, re-run"
@@ -364,3 +404,53 @@ not-in = "x not in items is True when x isn't among items"
 word-analogy = "b − a + c lands near the word that is to c as b is to a"
 builtin-min = "min(a, b) is the smaller of two numbers"
 fractional-power = "a power below 1 pulls big numbers down more than small ones: 100 ** 0.75 is about 32"
+language-model = "a model that gives the chance of each next word, given the words so far"
+unk-and-end = "<unk> stands for any unknown word, <end> marks the end of a story"
+conditional-probability = "P(next | previous): the chance of next, given previous"
+bigram = "a table of how often each word followed each word"
+list-from-one = "ids[1:] is everything but the first item, ids[:-1] everything but the last"
+smoothing = "add a small k to every count, so nothing has a chance of exactly 0"
+sampling = "drawing the next word at random, with the model's chances"
+rng-choice = "rng.choice(n, p=p) draws one number below n with the chances in p"
+log-of-product = "log(a × b) = log a + log b, so tiny products become ordinary sums"
+perplexity = "e^(mean surprise): N means as unsure as choosing among N equal words; lower is better"
+pair-indexing = "P[a, b] with two arrays of positions picks one entry per pair"
+numpy-full = "np.full(n, x) is an array of n copies of x"
+unigram = "a model that uses only how common each word is"
+hyperparameter = "a setting we choose, not a knob trained by descent"
+trigram = "a model that looks back two words"
+tuple-key = "a dictionary key can be a pair: table[(a, b)]"
+dict-values = "d.values() goes through a dictionary's values"
+builtin-sum = "sum(numbers) adds them up"
+mixing-models = "adding two models' chances with shares, so one fills the other's gaps"
+leaderboard = "each model's perplexity per word on the same test stories, saved across chapters"
+builtin-round = "round(x, 3) keeps 3 digits after the point"
+numpy-tolist = "a.tolist() turns an array into a plain Python list"
+recurrence = "new h = tanh(x @ Wx + h @ Wh + b): a step whose input includes its own last output"
+tanh = "torch.tanh squashes numbers into −1 to 1"
+shared-knobs-in-time = "the same knobs at every word, as a kernel uses the same knobs at every position"
+all-of-a-dimension = "X[:, t] picks column t of every row; : means all of this dimension"
+torch-stack = "torch.stack(list, dim=1) joins tensors along a new dimension"
+next-word-targets = "the answers are the same text moved along by one"
+blame-through-time = "blame on an early word is multiplied at every later word, so it fades"
+lstm = "a recurrent network with a cell changed by adding, controlled by gates"
+lstm-cell = "c = f × c + i × n, h = o × tanh(c)"
+gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
+torch-cat = "torch.cat([a, b], dim=1) joins tensors side by side"
+forget-gate-bias = "a fresh forget gate is near 0.5 and fades the cell; a big bias opens it and blame survives"
+reshape-minus-one = "reshape(-1, size): -1 means whatever number fits"
+gradient-clipping = "if all slopes together are longer than 1, scale them down to 1, keeping their direction"
+reduction-none = "reduction=\"none\" gives each surprise, not their mean"
+numpy-concatenate = "np.concatenate(list) joins arrays into one"
+temperature = "dividing scores by it before softmax: below 1 is safer, above 1 wilder"
+numpy-stack = "np.stack(list) makes a table from a list of rows"
+encoder-decoder = "one network reads, another starts from its memory and writes"
+bottleneck = "all of a long input has to pass through one fixed vector"
+torch-flip = "torch.flip(X, dims=[1]) reverses along dimension 1"
+teacher-forcing = "in training, the decoder gets the correct previous word, not its own guess"
+greedy-decoding = "writing by always taking the likeliest word"
+weighted-average = "a @ V: multiply each row by its share, and add up"
+query-key-value = "compare the query with the keys; get back a blend of the values"
+attention = "compare, share out with softmax, blend: a fresh summary for each step"
+attention-matmul = "A = softmax(Q @ K.transpose(1, 2), dim=2); blended = A @ V"
+attention-map = "the shares as a picture: which word was read to write which word"

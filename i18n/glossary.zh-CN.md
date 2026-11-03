@@ -116,5 +116,23 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | negative sampling | 负采样 | 11 |
 | noise word | 噪声词 | 11 |
 | sigmoid | sigmoid | 11 |
-| perplexity | 困惑度 | 12 |
 | leaderboard | 排行榜 | 11 |
+| language model | 语言模型 | 12 |
+| conditional probability | 条件概率 | 12 |
+| bigram / trigram / unigram | 二元 / 三元 / 一元模型 | 12 |
+| smoothing | 平滑 | 12 |
+| sampling | 采样 | 12 |
+| perplexity | 困惑度 | 12 |
+| hyperparameter | 超参数 | 12 |
+| recurrent neural network (RNN) | 循环神经网络 | 13 |
+| memory (of an RNN) | 记忆 | 13 |
+| LSTM cell | 细胞 | 13 |
+| gate | 门 | 13 |
+| forget / input / output gate | 遗忘门 / 输入门 / 输出门 | 13 |
+| clipping | 裁剪 | 13 |
+| temperature | 温度 | 13 |
+| encoder / decoder | 编码器 / 解码器 | 14 |
+| teacher forcing | 教师强制 | 14 |
+| weighted average | 加权平均 | 14 |
+| attention | 注意力 | 14 |
+| query / key / value | 查询 / 键 / 值 | 14 |

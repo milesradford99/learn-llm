@@ -23,7 +23,7 @@ def _():
     So far every model guessed one number: ice creams sold. In this chapter the model looks at a
     picture of a handwritten digit and says which digit it is: 0, 1, 2, … or 9. That's
     **classification**: choosing one answer from a fixed list. Along the way you'll meet two
-    new pieces of maths, `e^x` and `log`, and you'll derive their slopes exactly as you did in
+    new pieces of maths, $e^x$ and $\log$, and you'll derive their slopes exactly as you did in
     chapter 02.
 
     ## The pictures
@@ -53,9 +53,9 @@ def _():
 
     To pick one item out of an array (or a list), put its position in square brackets, counting
     from 0: `train_images[0]` is the first picture, `train_labels[0]` its label. For a matrix,
-    give the row and then the column: for a matrix `M`, `M[2, 5]` is the number in row 2,
+    give the row and then the column: for a matrix $M$, `M[2, 5]` is the number in row 2,
     column 5. One position on a matrix gives a whole row: `train_images[0]` is the first picture
-    (a 28 × 28 matrix), so `train_images[0][14]` is row 14 of it, a horizontal line across its
+    (a $28 \times 28$ matrix), so `train_images[0][14]` is row 14 of it, a horizontal line across its
     middle:
     """)
     return
@@ -86,8 +86,8 @@ def _():
     mo.md(r"""
     ## One long row per picture
 
-    Our models work on vectors, so we unroll each 28 × 28 grid into one row of 784 numbers
-    (28 × 28 = 784): row 0 of the picture, then row 1 after it, and so on. `reshape` does that:
+    Our models work on vectors, so we unroll each $28 \times 28$ grid into one row of 784 numbers
+    ($28 \times 28 = 784$): row 0 of the picture, then row 1 after it, and so on. `reshape` does that:
     it keeps the same numbers in the same order and only changes the shape. We also divide by
     255, so every pixel is between 0 (white) and 1 (black), for the same reason we rescaled
     temperatures in chapters 04 and 05: small numbers of similar size suit one learning rate.
@@ -120,10 +120,10 @@ def _():
     > `S = X @ W + b`
 
     gives all the scores for all the pictures at once. `matrix @ matrix` takes the dot product of
-    **every row** of the first with **every column** of the second: the score of picture `i` for
-    digit `c` is row `i` of `X` dotted with column `c` of `W`. The shape rule is the one from
+    **every row** of the first with **every column** of the second: the score of picture $i$ for
+    digit $c$ is row $i$ of $X$ dotted with column $c$ of $W$. The shape rule is the one from
     chapter 05: `(10000, 784) @ (784, 10)` gives `(10000, 10)`; the two numbers in the middle
-    (784 and 784) match and disappear. Then `+ b` adds each digit's `b` to its column, for every
+    (784 and 784) match and disappear. Then $+ b$ adds each digit's $b$ to its column, for every
     picture (broadcasting, as in chapter 05).
 
     Let's start with every knob at 0. `np.zeros((784, 10))` makes an array of that shape filled
@@ -203,19 +203,19 @@ def _():
     for 8, 0.1 for the rest", a tiny nudge would change the shares a tiny bit, and that gives
     slopes.
 
-    ## From scores to shares: `e^s`
+    ## From scores to shares: $e^s$
 
     Scores can be negative, and a share can't. So first we turn each score into a positive
     number, in a way that keeps the order (a higher score must stay higher). The tool for this
     is a power of a special number called **e**, about 2.718.
 
-    You know powers from chapter 00: `2 ** 3` is 2 × 2 × 2. Powers have a handy rule:
-    `2 ** (3 + 2) = 2 ** 3 × 2 ** 2` (five 2s multiplied either way). Powers are extended to
+    You know powers from chapter 00: `2 ** 3` is $2 \times 2 \times 2$. Powers have a handy rule:
+    $2^{3 + 2} = 2^3 \times 2^2$ (five 2s multiplied either way). Powers are extended to
     every number, including 0, negatives and fractions, in the one way that keeps this rule
-    true. For example: `e^3 × e^0` must be `e^(3 + 0) = e^3`, so `e^0 = 1`. `e^1 × e^-1` must be
-    `e^0 = 1`, so `e^-1 = 1 / e`. `e^0.5 × e^0.5` must be `e^1`, so `e^0.5` is the number that
+    true. For example: $e^3 \times e^0$ must be $e^{3 + 0} = e^3$, so $e^0 = 1$. $e^1 \times e^{-1}$ must be
+    $e^0 = 1$, so $e^{-1} = 1 / e$. $e^{0.5} \times e^{0.5}$ must be $e^1$, so $e^{0.5}$ is the number that
     times itself gives e (about 1.65). One more rule follows the same way:
-    `e^(a − b) × e^b = e^a`, so **`e^(a − b) = e^a / e^b`**. We write `e^s`; in NumPy it's
+    $e^{a - b} \times e^b = e^a$, so **$e^{a - b} = e^a / e^b$**. We write $e^s$; in NumPy it's
     `np.exp(s)`. Here it is for scores from -3 to 3:
     """)
     return
@@ -223,7 +223,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
-    chart((-3, 3), (0, 20), "score s", "e^s",
+    chart((-3, 3), (0, 20), "score s", "eˢ",
           curve=[(x / 20, float(np.exp(x / 20))) for x in range(-60, 61)])
     return
 
@@ -231,22 +231,22 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Three things to notice: `e^s` is always positive; a higher score always gives a higher
-    `e^s`; and every +1 in the score multiplies `e^s` by about 2.718. (Why e and not 2? Because
+    Three things to notice: $e^s$ is always positive; a higher score always gives a higher
+    $e^s$; and every +1 in the score multiplies $e^s$ by about 2.718. (Why e and not 2? Because
     with e the slopes come out simplest; you'll see exactly why below.)
 
     Then **divide each by their total**, so they add up to 1. For scores `[2, 1, 0.1]`:
-    `e^2 = 7.39`, `e^1 = 2.72`, `e^0.1 = 1.11`, total 11.21, so the shares are
-    `7.39 / 11.21 = 0.659`, `0.242` and `0.099`. This recipe, `e^s` then divide by the total,
+    $e^2 = 7.39$, $e^1 = 2.72$, $e^{0.1} = 1.11$, total 11.21, so the shares are
+    $7.39 / 11.21 = 0.659$, $0.242$ and $0.099$. This recipe, $e^s$ then divide by the total,
     is called **softmax**. Its shares are the model's **probabilities**: how sure it is of each
     digit.
 
     One practical problem: `np.exp(1000)` is far too big for the computer, so it gives `inf`
     (infinity), and `inf / inf` is not a number (NumPy shows that as `nan`, short for "not a
-    number"). The fix: before `e^`, subtract the largest score `m` from every score. This doesn't
-    change the shares at all: by the rule above, `e^(s − m) = e^s / e^m`, so every `e^` is divided
-    by the same `e^m`, and dividing every part and the total by the same number leaves the shares
-    unchanged. After subtracting, the largest score is 0, so `e^` of it is 1 and nothing gets too
+    number"). The fix: before $e^{\square}$, subtract the largest score $m$ from every score. This doesn't
+    change the shares at all: by the rule above, $e^{s - m} = e^s / e^m$, so every $e^{\square}$ is divided
+    by the same $e^m$, and dividing every part and the total by the same number leaves the shares
+    unchanged. After subtracting, the largest score is 0, so $e^{\square}$ of it is 1 and nothing gets too
     big for the computer. (If you leave this step out, NumPy also prints a warning saying
     "overflow": that's this problem.)
 
@@ -303,15 +303,15 @@ def _():
     and that grows, without limit, as that share shrinks towards 0: a model that's very sure of
     a wrong answer should pay a lot.
 
-    **log** does this. `log` undoes `e^`: `log(e^a) = a`, so `log x` answers "e to the power of
-    what gives x?" (in NumPy, `np.log(x)`). `log 1 = 0` (because `e^0 = 1`), and for shares below 1 the log is negative
+    **log** does this. $\log$ undoes $e^{\square}$: $\log(e^a) = a$, so $\log x$ answers "e to the power of
+    what gives x?" (in NumPy, `np.log(x)`). $\log 1 = 0$ (because $e^0 = 1$), and for shares below 1 the log is negative
     (only a negative power of e is below 1), heading down without limit as the share approaches
     0. So we use **minus** the log of the
     right digit's share, called the **surprise**:
 
     | share of the right digit | 1 | 0.9 | 0.5 | 0.1 | 0.01 |
     |---|---|---|---|---|---|
-    | surprise, `−log p` | 0 | 0.105 | 0.693 | 2.303 | 4.605 |
+    | surprise, $-\log p$ | 0 | 0.105 | 0.693 | 2.303 | 4.605 |
     """)
     return
 
@@ -361,7 +361,7 @@ def _():
     ## Exercise 3: cross_entropy
 
     Write `cross_entropy(P, Y)`, the mean surprise. Since `np.log` works position by position,
-    `np.sum(Y * np.log(P), axis=1)` gives each picture's `log p` for its right digit. Return
+    `np.sum(Y * np.log(P), axis=1)` gives each picture's $\log p$ for its right digit. Return
     minus the mean of that: `return -np.mean(np.sum(Y * np.log(P), axis=1))`.
     """)
     return
@@ -389,22 +389,22 @@ def _(S_zero, Y):
 def _():
     mo.md(r"""
     With all scores 0, every digit gets the same share, 1/10, so every picture's surprise is
-    `−log 0.1 = 2.303`. That's the loss of a model that knows nothing. Training should bring it
+    $-\log 0.1 = 2.303$. That's the loss of a model that knows nothing. Training should bring it
     down.
 
-    ## The slopes of `e^x` and `log x`
+    ## The slopes of $e^x$ and $\log x$
 
-    To run gradient descent we need the loss's slopes, and the loss is built from `e^` and `log`.
+    To run gradient descent we need the loss's slopes, and the loss is built from $e^{\square}$ and $\log$.
     So, as in chapter 02, we work out their slopes by nudging.
 
-    **`e^x`.** Nudge `x` by a tiny `h`. By the power rule, `e^(x + h) = e^x × e^h`, so the
-    change is `e^x × e^h − e^x`. Both parts contain `e^x` (the second is `e^x × 1`), so the
-    change is `e^x × (e^h − 1)`, and the ratio (change ÷ `h`) is
+    **$e^x$.** Nudge $x$ by a tiny $h$. By the power rule, $e^{x + h} = e^x \times e^h$, so the
+    change is $e^x \times e^h - e^x$. Both parts contain $e^x$ (the second is $e^x \times 1$), so the
+    change is $e^x \times (e^h - 1)$, and the ratio (change $\div$ $h$) is
 
-    > `e^x × (e^h − 1) / h`
+    > $$e^x \times \frac{e^h - 1}{h}$$
 
-    The part `(e^h − 1) / h` doesn't depend on `x` at all. The same steps work for any base:
-    for base 2 the part is `(2^h − 1) / h`. Here it is for bases 2, 3 and e, as `h` shrinks:
+    The part $(e^h - 1) / h$ doesn't depend on $x$ at all. The same steps work for any base:
+    for base 2 the part is $(2^h - 1) / h$. Here it is for bases 2, 3 and e, as $h$ shrinks:
 
     | base | `h = 0.01` | `h = 0.0001` |
     |---|---|---|
@@ -412,43 +412,43 @@ def _():
     | 3 | 1.1047 | 1.0987 |
     | e | 1.0050 | 1.0001 |
 
-    As in chapter 02, as `h` shrinks the ratio closes in on a fixed number: about 0.693 for base
+    As in chapter 02, as $h$ shrinks the ratio closes in on a fixed number: about 0.693 for base
     2, 1.099 for base 3, and exactly **1** for base e. That's what makes e special; it's in fact
-    *chosen* as the base where this number is 1. So the ratio closes in on `e^x × 1`:
+    *chosen* as the base where this number is 1. So the ratio closes in on $e^x \times 1$:
 
-    > the slope of `e^x` is `e^x` itself.
+    > the slope of $e^x$ is $e^x$ itself.
 
-    **`log x`.** Say `y = log x`, which means `x = e^y`. Nudge `y` by a tiny `k`: by the slope
-    we just found (change ≈ slope × nudge), `x` grows by about `e^y × k = x × k`. So when `x` grows by `x × k`, `log x`
-    grows by `k`. Change of `log x` per unit change of `x`:
+    **$\log x$.** Say $y = \log x$, which means $x = e^y$. Nudge $y$ by a tiny $k$: by the slope
+    we just found (change $\approx$ slope $\times$ nudge), $x$ grows by about $e^y \times k = x \times k$. So when $x$ grows by $x \times k$, $\log x$
+    grows by $k$. Change of $\log x$ per unit change of $x$:
 
-    > the slope of `log x` is `k / (x × k) = 1 / x`.
+    > the slope of $\log x$ is $k / (x \times k) = 1 / x$.
 
     ## The slope of the loss for each score
 
     To keep it short, pretend there are only three possible digits, 0, 1 and 2. Take one picture
     with scores `s0, s1, s2`, where 0 is the right digit. Write
-    `T = e^s0 + e^s1 + e^s2` for the total, so the right share is `p0 = e^s0 / T`, and the
-    surprise is `L = −log(e^s0 / T)`.
+    $T = e^{s_0} + e^{s_1} + e^{s_2}$ for the total, so the right share is $p_0 = e^{s_0} / T$, and the
+    surprise is $L = -\log(e^{s_0} / T)$.
 
-    One more log rule first. Take any two positive numbers `x` and `y`, and write them as powers
-    of e: `x = e^a` and `y = e^b`, so `a = log x` and `b = log y`. Then
-    `x / y = e^a / e^b = e^(a − b)` (the rule from earlier), and "e to the power of what gives
-    `x / y`?" is `a − b`. So `log(x / y) = a − b = log x − log y`. Applied to the surprise:
+    One more log rule first. Take any two positive numbers $x$ and $y$, and write them as powers
+    of e: $x = e^a$ and $y = e^b$, so $a = \log x$ and $b = \log y$. Then
+    $x / y = e^a / e^b = e^{a - b}$ (the rule from earlier), and "e to the power of what gives
+    $x / y$?" is $a - b$. So $\log(x / y) = a - b = \log x - \log y$. Applied to the surprise:
 
-    > `L = −(log(e^s0) − log T) = −log(e^s0) + log T = −s0 + log T`
+    > $L = -(\log(e^{s_0}) - \log T) = -\log(e^{s_0}) + \log T = -s_0 + \log T$
 
-    (the minus sign in front flips both parts, and `log(e^s0) = s0` because log undoes `e^`).
+    (the minus sign in front flips both parts, and $\log(e^{s_0}) = s_0$ because log undoes $e^{\square}$).
 
     Now the slopes, with the rules from chapters 02 and 03 (slopes of a sum add; a chain
     multiplies, blame times local slope):
 
-    - **For `s0`** (the right digit): the `−s0` part has slope −1. The `log T` part: the slope
-      of `log T` for `T` is `1 / T`, and the slope of `T` for `s0` is `e^s0` (the other two
-      parts, `e^s1` and `e^s2`, don't contain `s0`: slope 0), so together `e^s0 / T = p0`.
-      Total: **`p0 − 1`**.
-    - **For `s1`** (a wrong digit): `−s0` doesn't contain `s1`, slope 0. `log T` gives
-      `e^s1 / T = p1`. Total: **`p1`**. The same for `s2`: `p2`.
+    - **For $s_0$** (the right digit): the $-s_0$ part has slope −1. The $\log T$ part: the slope
+      of $\log T$ for $T$ is $1 / T$, and the slope of $T$ for $s_0$ is $e^{s_0}$ (the other two
+      parts, $e^{s_1}$ and $e^{s_2}$, don't contain $s_0$: slope 0), so together $e^{s_0} / T = p_0$.
+      Total: **$p_0 - 1$**.
+    - **For $s_1$** (a wrong digit): $-s_0$ doesn't contain $s_1$, slope 0. $\log T$ gives
+      $e^{s_1} / T = p_1$. Total: **$p_1$**. The same for $s_2$: $p_2$.
 
     In words: **share minus 1 for the right digit, share for every other digit.** With a one-hot
     row `y`, that's simply `p - y`. Gradient descent steps against the slope, so it pushes the
@@ -493,12 +493,12 @@ def _():
     of score `S[i, c]`.
 
     Now from scores to knobs, with the same idea as in chapter 05 (there the blame vector came
-    first, `(2 * e) @ X`; here the shapes call for a different arrangement, worked out below). The knob `W[j, c]` (pixel `j`, digit `c`)
-    multiplies pixel `j` in digit `c`'s score, for every picture. So its slope is: for each
-    picture, the score's blame `G[i, c]` times the local slope `X[i, j]` (in `X[i, j] × W[j, c]`,
+    first, `(2 * e) @ X`; here the shapes call for a different arrangement, worked out below). The knob `W[j, c]` (pixel $j$, digit $c$)
+    multiplies pixel $j$ in digit $c$'s score, for every picture. So its slope is: for each
+    picture, the score's blame `G[i, c]` times the local slope `X[i, j]` (in $X[i, j] \times W[j, c]$,
     nudging `W[j, c]` moves the score by `X[i, j]` per unit), all added up, because `W[j, c]`
-    feeds `n` scores and their blames add. That
-    is the dot product of **column `j` of `X`** with **column `c` of `G`**.
+    feeds $n$ scores and their blames add. That
+    is the dot product of **column $j$ of $X$** with **column $c$ of $G$**.
 
     We want that for every `j` and every `c`: a `(784, 10)` matrix, the same shape as `W`. If
     `X`'s columns were rows, it would be `matrix @ matrix`. Turning columns into rows is called
@@ -508,8 +508,8 @@ def _():
     > `X.T @ G` has shape `(784, n) @ (n, 10)` = `(784, 10)`, with entry `[j, c]` = column `j` of
     > `X` dotted with column `c` of `G`
 
-    which is exactly the slope of every knob. And the slope for `b[c]` is the sum of column `c`
-    of `G` (each `b` adds 1 × itself to its score, for every picture): `np.sum(G, axis=0)`, which
+    which is exactly the slope of every knob. And the slope for `b[c]` is the sum of column $c$
+    of $G$ (each $b$ adds 1 $\times$ itself to its score, for every picture): `np.sum(G, axis=0)`, which
     adds **down** each column.
 
     ## Exercise 4: gradient
@@ -597,7 +597,7 @@ def _():
 
     ## What the model learned
 
-    Each column of `W` is a digit's 784 knobs, one per pixel, so we can draw it as a 28 × 28
+    Each column of $W$ is a digit's 784 knobs, one per pixel, so we can draw it as a $28 \times 28$
     picture: **blue** where ink raises that digit's score, **red** where ink lowers it.
     """)
     return
@@ -647,15 +647,15 @@ def _():
     - multiply a matrix by a matrix, and check the shapes
     - turn scores into probabilities with softmax, safely
     - measure a classifier with accuracy and with cross-entropy (mean surprise)
-    - derive the slopes of `e^x` (itself) and `log x` (`1 / x`) by nudging
-    - derive the gradient of cross-entropy, `p − y`, and compute it for all knobs with `X.T @ G`
+    - derive the slopes of $e^x$ (itself) and $\log x$ ($1 / x$) by nudging
+    - derive the gradient of cross-entropy, $p - y$, and compute it for all knobs with `X.T @ G`
     - train a digit classifier and test it on pictures it has never seen
 
     ---
 
     <!-- go-deeper -->
     **Go deeper (optional):** this model is called *softmax regression* or *multinomial logistic
-    regression*; `log` here is the *natural logarithm*, often written `ln`.
+    regression*; $\log$ here is the *natural logarithm*, often written `ln`.
     """)
     return
 

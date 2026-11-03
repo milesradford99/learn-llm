@@ -24,5 +24,6 @@ checks and UI strings live in `learn_llm/`. Scope, chapter map and decisions: `S
 - Lessons using PyTorch call `laptop_speed()` in their setup (fewer threads, no denormals).
 - A class used by other cells goes in a regular cell that returns it; `@app.class_definition`
   didn't reach cells when a class subclassed `nn.Module` and a lesson ran as a script.
+- Math in lesson text and check messages is LaTeX: `$...$` inline, `> $$...$$` for a formula on its own line, `\text{...}` for words inside one. Backticks are only for Python a learner could type. Use a raw `mo.md(r"...")`; in a non-raw or f-string write `\\times`. Chart and diagram labels are SVG text, so they keep Unicode.
 - Lesson text: no required external links. Links go after `<!-- go-deeper -->`.
 - Lesson text is original. Never copy course notes, slides or assignment text.

@@ -32,7 +32,7 @@ def _():
 
     Mia didn't only write down the temperature. She also noted whether it **rained** that day
     (1 for yes, 0 for no) and whether it was a **weekend** (1 for yes, 0 for no). Here are her 8
-    days again, with the best possible line's guess (the line `w × t + b` with the lowest loss,
+    days again, with the best possible line's guess (the line $w \times t + b$ with the lowest loss,
     about 27) and by how much it missed. (Days are numbered from 0, the way Python counts.)
     """)
     return
@@ -61,13 +61,13 @@ def _():
 
     Give each input its own knob:
 
-    > guess = w_t × temperature + w_r × rain + w_k × weekend + b
+    > $$\text{guess} = w_t \times \text{temperature} + w_r \times \text{rain} + w_k \times \text{weekend} + b$$
 
-    `w_t` is how many more ice creams per degree, `w_r` how many more (or fewer) on a rainy day,
-    `w_k` how many more on a weekend (k for wee**k**end, since `w` is already taken), and `b` the starting height, as before. Try knobs
-    `w_t = 12`, `w_r = -8`, `w_k = 4`, `b = -105` on day 1 (17 °C, rain, not a weekend):
+    $w_t$ is how many more ice creams per degree, $w_r$ how many more (or fewer) on a rainy day,
+    $w_k$ how many more on a weekend (k for wee**k**end, since `w` is already taken), and `b` the starting height, as before. Try knobs
+    $w_t = 12$, $w_r = -8$, $w_k = 4$, $b = -105$ on day 1 (17 °C, rain, not a weekend):
 
-    > 12 × 17 + (-8) × 1 + 4 × 0 + (-105) = 204 − 8 + 0 − 105 = 91
+    > $$12 \times 17 + (-8) \times 1 + 4 \times 0 + (-105) = 204 - 8 + 0 - 105 = 91$$
 
     She sold 90: closer than the line's guess of 96.
 
@@ -78,11 +78,11 @@ def _():
     A list of numbers like `[12, -8, 4]` is called a **vector**. Multiplying two vectors in pairs
     and adding up the products is called their **dot product**:
 
-    > dot([12, -8, 4], [17, 1, 0]) = 12 × 17 + (-8) × 1 + 4 × 0 = 196
+    > $$\operatorname{dot}([12, -8, 4], [17, 1, 0]) = 12 \times 17 + (-8) \times 1 + 4 \times 0 = 196$$
 
     You already know this from shopping. If apples cost 2, bread 3 and milk 1, and you buy 4
     apples, 1 bread and 2 milks, the bill is the dot product of prices and amounts:
-    2 × 4 + 3 × 1 + 1 × 2 = 13. A model's guess works the same way: each knob is a "price" per
+    $2 \times 4 + 3 \times 1 + 1 \times 2 = 13$. A model's guess works the same way: each knob is a "price" per
     unit of its input.
 
     ## Exercise 1: dot
@@ -268,7 +268,7 @@ def _():
 
     Between a matrix and a vector, `matrix @ vector` takes the dot product of **every row** with
     the vector, and gives back one number per row. That is exactly your `predict_all` without
-    the `+ b`:
+    the $+ b$:
     """)
     return
 
@@ -335,7 +335,7 @@ def _():
     ## Exercise 4: the loss, all at once
 
     The loss is the mean squared error from chapter 01: for every day the error
-    `e = guess − sold`, then the mean of `e × e`. With arrays, every step works on all 8 days at
+    $e = \text{guess} - \text{sold}$, then the mean of $e \times e$. With arrays, every step works on all 8 days at
     once:
 
     1. `e = X @ w + b - y`: the 8 errors, as one vector.
@@ -362,33 +362,33 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    With knobs `w = [10, 0, 0]` and `b = -60`, rain and weekend are switched off and the model is
-    chapter 01's line `10 × t − 60`. Its loss is 177.5, the same number you found in chapter 01.
+    With knobs `w = [10, 0, 0]` and $b = -60$, rain and weekend are switched off and the model is
+    chapter 01's line $10 \times t - 60$. Its loss is 177.5, the same number you found in chapter 01.
     With `[12, -8, 4]` and `-105` the loss is 4.
 
     ## The gradient for many knobs
 
     Now the slopes. Chapter 03 worked them out for one day of the line: with
-    `e = w × t + b − s` and day loss `e × e`, the blame of `e` is `2 × e`, and
+    $e = w \times t + b - s$ and day loss $e \times e$, the blame of $e$ is $2 \times e$, and
 
-    - the slope for `w` is `2 × e × t` (the local slope from `e` to `w` is `t`, the input `w`
+    - the slope for $w$ is $2 \times e \times t$ (the local slope from $e$ to $w$ is $t$, the input $w$
       multiplies);
-    - the slope for `b` is `2 × e` (the local slope from `e` to `b` is 1).
+    - the slope for $b$ is $2 \times e$ (the local slope from $e$ to $b$ is 1).
 
     The gradient of the mean loss was the **mean** of these over all days.
 
-    With three inputs, one day's error is `e = w_t × t + w_r × r + w_k × k + b − s`. Nothing new
-    happens. Nudge `w_r` while the other knobs stay still: only the `w_r × r` part of the sum
-    moves, by `r` per unit of `w_r`, so the local slope from `e` to `w_r` is `r`. The same goes
+    With three inputs, one day's error is $e = w_t \times t + w_r \times r + w_k \times k + b - s$. Nothing new
+    happens. Nudge $w_r$ while the other knobs stay still: only the $w_r \times r$ part of the sum
+    moves, by $r$ per unit of $w_r$, so the local slope from $e$ to $w_r$ is $r$. The same goes
     for every knob: each one multiplies its own input, so by the same rule
 
-    - slope for `w_t` = `2 × e × t`, slope for `w_r` = `2 × e × r`, slope for `w_k` = `2 × e × k`,
-    - slope for `b` = `2 × e`.
+    - slope for $w_t$ = $2 \times e \times t$, slope for $w_r$ = $2 \times e \times r$, slope for $w_k$ = $2 \times e \times k$,
+    - slope for $b$ = $2 \times e$.
 
-    So **each knob's slope is 2 × e times that knob's own input**, averaged over the days. For
-    `w_r` that is: take the vector of 8 values `2 × e`, multiply it in pairs with the rain
+    So **each knob's slope is $2 \times e$ times that knob's own input**, averaged over the days. For
+    $w_r$ that is: take the vector of 8 values $2 \times e$, multiply it in pairs with the rain
     column, add up, divide by 8. "Multiply in pairs and add up" is a dot product: the dot
-    product of `2 × e` with the **rain column**.
+    product of $2 \times e$ with the **rain column**.
 
     ### `vector @ matrix`: one dot product per column
 
@@ -411,7 +411,7 @@ def _():
     `[1, 1]` they give 5, 7 and 9. In shapes: `(2,) @ (2, 3)` gives `(3,)`; again the two numbers in
     the middle match and disappear.
 
-    So `(2 * e) @ X` gives, in one go, the three dot products we need: `2 × e` with the
+    So `(2 * e) @ X` gives, in one go, the three dot products we need: $2 \times e$ with the
     temperature column, with the rain column and with the weekend column. Shapes: `(8,) @ (8, 3)`
     gives `(3,)`, one number per knob. Divide by the number of days to get the means.
 
@@ -447,17 +447,17 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    At the line's knobs (`[10, 0, 0]`, `-60`), the slopes for `w_t` and `b` are -94 and 2.5:
+    At the line's knobs (`[10, 0, 0]`, `-60`), the slopes for $w_t$ and $b$ are -94 and 2.5:
     exactly chapter 03's gradient, because the extra knobs are switched off. The two new slopes
-    say where the extra knobs should go: the slope for `w_r` is 6.25 (positive, so the step rule
-    `knob − rate × slope` moves `w_r` **down**: rain lowers sales) and the slope for `w_k` is
-    -2.75 (negative, so `w_k` moves **up**: weekends raise them).
+    say where the extra knobs should go: the slope for $w_r$ is 6.25 (positive, so the step rule
+    $\text{knob} - \text{rate} \times \text{slope}$ moves $w_r$ **down**: rain lowers sales) and the slope for $w_k$ is
+    -2.75 (negative, so $w_k$ moves **up**: weekends raise them).
 
     ## Checking it by nudging
 
     New formula, so let's check it the chapter 02 way: nudge one knob by a tiny `h`, see how much
-    the loss moves, divide by `h`. Adding `[h, 0, 0]` to `w` nudges only `w_t` (position by
-    position); `[0, h, 0]` nudges only `w_r`; `[0, 0, h]` only `w_k`. This cell uses your
+    the loss moves, divide by `h`. Adding `[h, 0, 0]` to `w` nudges only $w_t$ (position by
+    position); `[0, h, 0]` nudges only $w_r$; `[0, 0, h]` only $w_k$. This cell uses your
     `mse_np`, so it shows an error until Exercise 4 passes:
     """)
     return
@@ -560,10 +560,10 @@ def _():
     The loss drops to about **0.54**. The best possible line had about **27**. The knobs, read
     back in Mia's units:
 
-    - `w_t` ≈ 119 per 10 degrees: about **11.9 more ice creams per degree**;
-    - `w_r` ≈ -8.4: about **8 fewer** on a rainy day;
-    - `w_k` ≈ 4.2: about **4 more** on a weekend;
-    - `b` ≈ 193: the guess for a dry weekday at 25 °C (where the measured temperature is 0).
+    - $w_t$ $\approx$ 119 per 10 degrees: about **11.9 more ice creams per degree**;
+    - $w_r$ $\approx$ -8.4: about **8 fewer** on a rainy day;
+    - $w_k$ $\approx$ 4.2: about **4 more** on a weekend;
+    - $b$ $\approx$ 193: the guess for a dry weekday at 25 °C (where the measured temperature is 0).
 
     The model found the rain and weekend effects you spotted in the table by eye, and measured
     them.
