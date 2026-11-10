@@ -587,5 +587,9 @@
   "ch23.shard.hint": "提示：`size = count // devices`，`extra = count % devices`，`start = rank * size + min(rank, extra)`，`stop = start + size + (1 if rank < extra else 0)`，然后 `return start, stop`。",
   "ch23.bytes_per_device.stages": "1,000 个旋钮、4 台设备，第 0 到 3 级：16,000、10,000、7,000 和 4,000 字节",
   "ch23.bytes_per_device.hint": "提示：先写 `weights = 4 * knobs`、`slopes = 4 * knobs`、`adam = 8 * knobs`；三个单独的 `if`，彼此对齐，用 `>=`（第 3 级包含第 1、2 级分片的所有东西）；`return weights + slopes + adam`。",
-  "ch22.tiled_attention.big": "分数 $s$ 很大、直接算 $e^s$ 会溢出时：仍然相同"
+  "ch22.tiled_attention.big": "分数 $s$ 很大、直接算 $e^s$ 会溢出时：仍然相同",
+  "hand.empty": "- ⬜ **{name}**：{hint}",
+  "hand.right": "- ✅ **{name}** = {value}",
+  "hand.wrong": "- ❌ **{name}** = {value}，还不对。提示：{hint}",
+  "hand.hint": "卡住了？提示 {n}"
 }
