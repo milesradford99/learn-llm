@@ -13,5 +13,8 @@
   "11-words-as-vectors.py": "sha256:d05a21b0acf3fb42526996608a7b80b2d7c49e1c0d44c1c603ad4f343bc1ab38",
   "12-predicting-the-next-word.py": "sha256:882ac358e468265f24fd5fb54986a58a23b447b2259c69fe6b2dac42f2620025",
   "13-memory-rnns.py": "sha256:9c5e802a98b977d7732c6315687e8dfb2c6e5cca6097b44a26535c47aff05e0c",
-  "14-attention.py": "sha256:50109447c5537792a1d04e7945a2fec187250a65549616bf85205cd8d4a5901a"
+  "14-attention.py": "sha256:50109447c5537792a1d04e7945a2fec187250a65549616bf85205cd8d4a5901a",
+  "15-the-transformer.py": "sha256:b2c7914c56f6a5f35f3117fbedea43288cacdcdb4302fbc9bc02328615ef2453",
+  "16-pretrain-fine-tune-evaluate.py": "sha256:5eadf055352a37bbca79547ef262a8465b9a710a911d203d33ff2165d28d3c3e",
+  "17-tokenization.py": "sha256:4d5435271c806c877d1da2bcf109da694ba8ecd0d23eb91ff2303c8a91ec2dfb"
 }

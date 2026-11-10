@@ -49,7 +49,7 @@ that covers the essential knowledge of CS231n → CS224N → CS336 → tiny-llm.
 | 13 | Memory: RNNs | RNN/LSTM language model | Recurrence, vanishing gradients | 224N RNNs |
 | 14 | Attention | Seq2seq with attention | Weighted averages, softmax again | 224N attention |
 | 15 | The Transformer | Tiny GPT trained on TinyStories | Masking, positional encodings, layer norm | 224N + 336 (taught once) |
-| 16 | Pretrain, fine-tune, evaluate | BERT vs GPT, fine-tuning, benchmarks | Train/test leakage, metrics | 224N pretraining |
+| 16 | Pretrain, fine-tune, evaluate | Fine-tuning a GPT on a task made from the stories; BERT explained, not trained | Baselines, precision and recall, margin of error, leakage | 224N pretraining |
 | **Part 3 — Building a real LLM** (CS336 core) |
 | 17 | Tokenization | Byte-level BPE tokenizer | Bytes, Unicode, hashing/merging | 336 A1 |
 | 18 | A modern transformer | RMSNorm, RoPE, SwiGLU, AdamW, LR schedule, checkpoints | Rotations, schedules | 336 A1 |
@@ -127,6 +127,7 @@ On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
 - Chapters 09–11 batch: PyTorch is the third runtime dependency, CPU builds on Linux and Windows through uv's CPU index (default builds bring several GB of GPU libraries); ch 10 uses the bundled digits pasted at random spots instead of CIFAR, which has no clear licence and is bigger and slower (it also shows directly why convolutions help); the course's text is a bundled 13,000-story TinyStories subset, CDLA-Sharing-1.0, with its own notice (user, 2026-10-31)
 
 - Chapters 12–14 batch: the leaderboard scores perplexity per word on a 2,002-entry word vocabulary and lives in each learner's `my-work/.leaderboard.json`; chapter 14 teaches attention on reversing text instead of translation, since the course has no bundled translated text and every answer can be checked at a glance (agent-default, 2026-11-01)
+- Chapters 15–17 batch: chapter 16's task is naming a blanked-out animal, made from the stories, because the course has no hand-labelled data; it reports that pretraining gave no clear gain on this small model, and that a small BERT-style model scored below the baseline, instead of the textbook result (agent-default, 2026-11-01)
 
 ## Open decisions
 - (none)

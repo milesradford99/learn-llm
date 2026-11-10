@@ -136,3 +136,19 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | weighted average | 加权平均 | 14 |
 | attention | 注意力 | 14 |
 | query / key / value | 查询 / 键 / 值 | 14 |
+| self-attention | 自注意力 | 15 |
+| head (of attention) | 头 | 15 |
+| layer normalisation | 层归一化 | 15 |
+| block | 块 | 15 |
+| pretraining | 预训练 | 16 |
+| fine-tuning | 微调 | 16 |
+| freeze | 冻结 | 16 |
+| baseline | 基线 | 16 |
+| precision / recall | 精确率 / 召回率 | 16 |
+| margin of error | 误差范围 | 16 |
+| leakage | 泄漏 | 16 |
+| benchmark | 基准 | 16 |
+| byte | 字节 | 17 |
+| token | 词元（token） | 17 |
+| tokenizer | 分词器 | 17 |
+| merge | 合并 | 17 |

@@ -180,6 +180,19 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   diagonal nobody asked for. Not on the leaderboard: that's for the transformer, which next chapter
   answers the question of whether the LSTMs are needed at all.
 
+## Step plan: chapters 15–17 (written 2026-11-01)
+
+- **15 The Transformer.** Self-attention, the future mask, scaling by √d (variances add), multi-head
+  by cutting vectors, a measured demo that attention ignores order, a position table, layer norm,
+  and blocks of two `x + f(x)` steps. About 1.1 million knobs and perplexity about 23, first on the board.
+- **16 Pretrain, fine-tune, evaluate.** Name the blanked animal in a story. Majority baseline 40%,
+  precision and recall, a margin of error from variances adding. Pretraining reaches about 51% with
+  no labels, but with labels the three columns sit inside the margin. Leaving the word in gives 81%
+  on leaky test data and 45% on the real task.
+- **17 Tokenization.** UTF-8 bytes, then count pairs, merge, train, encode, decode. `while` is taught
+  here. 500 merges on 300 stories: 3 bytes per token, whole-story round trip, Chinese survives.
+  Scores stay per word when later chapters retrain on tokens.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a

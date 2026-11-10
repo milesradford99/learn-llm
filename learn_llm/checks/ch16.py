@@ -1,0 +1,40 @@
+import numpy as np
+import torch
+from torch import nn
+
+from learn_llm.checking import Case
+from learn_llm.checks.ch05 import _plain
+
+GUESSES = np.array([1, 1, 1, 0, 0, 2])
+LABELS = np.array([1, 1, 0, 1, 0, 2])
+
+
+def _frozen(f):
+    model = nn.Linear(2, 2)
+    f(model)
+    return [p.requires_grad for p in model.parameters()]
+
+
+EXERCISES = {
+    "blank_out": [
+        Case("ch16.blank_out.some", lambda f: f([5, 7, 5, 9], [5], 0), [0, 7, 0, 9], hint="ch16.blank_out.hint"),
+        Case("ch16.blank_out.none", lambda f: f([1, 2], [], 0), [1, 2], hint="ch16.blank_out.hint"),
+    ],
+    "majority_share": [
+        Case("ch16.majority_share.page", lambda f: _plain(f(np.array([1, 1, 1, 0, 2, 2]))), 0.5, tolerance=1e-9, hint="ch16.majority_share.hint"),
+        Case("ch16.majority_share.all", lambda f: _plain(f(np.array([3, 3, 3]))), 1.0, tolerance=1e-9, hint="ch16.majority_share.hint"),
+    ],
+    "precision_recall": [
+        Case("ch16.precision_recall.one", lambda f: _plain(f(GUESSES, LABELS, 1)), (2 / 3, 2 / 3), tolerance=1e-9, hint="ch16.precision_recall.hint"),
+        Case("ch16.precision_recall.order", lambda f: _plain(f(np.array([1, 1, 1, 0]), np.array([1, 0, 0, 0]), 1)), (1 / 3, 1.0), tolerance=1e-9, hint="ch16.precision_recall.hint"),
+        Case("ch16.precision_recall.perfect", lambda f: _plain(f(GUESSES, LABELS, 2)), (1.0, 1.0), tolerance=1e-9, hint="ch16.precision_recall.hint"),
+        Case("ch16.precision_recall.never", lambda f: _plain(f(GUESSES, LABELS, 3)), (0.0, 0.0), tolerance=1e-9, hint="ch16.precision_recall.hint"),
+    ],
+    "margin": [
+        Case("ch16.margin.page", lambda f: _plain(f(0.6, 265)), 2 * float(np.sqrt(0.24 / 265)), tolerance=1e-9, hint="ch16.margin.hint"),
+        Case("ch16.margin.sure", lambda f: _plain(f(1.0, 100)), 0.0, tolerance=1e-9, hint="ch16.margin.hint"),
+    ],
+    "freeze": [
+        Case("ch16.freeze.all", _frozen, [False, False], hint="ch16.freeze.hint"),
+    ],
+}

@@ -168,7 +168,7 @@ uses = [
 [chapters.13]
 introduces = [
     "recurrence", "tanh", "shared-knobs-in-time", "all-of-a-dimension", "torch-stack",
-    "next-word-targets", "blame-through-time", "lstm", "lstm-cell", "gate", "torch-cat",
+    "next-word-targets", "windows", "blame-through-time", "lstm", "lstm-cell", "gate", "torch-cat",
     "forget-gate-bias", "reshape-minus-one", "gradient-clipping", "reduction-none",
     "numpy-concatenate", "temperature",
 ]
@@ -190,6 +190,43 @@ uses = [
     "torch-cat", "gradient-clipping", "residual", "transpose", "rng-integers",
     "function-as-value", "nn-module-subclass", "language-model", "training-loop", "no-grad",
     "reshape-minus-one",
+]
+
+[chapters.15]
+introduces = [
+    "transformer", "self-attention", "future-mask", "torch-triu", "masked-fill", "attention-scale",
+    "negative-dimensions", "multi-head", "permutation-blindness", "position-table", "layer-norm",
+    "torch-var", "block", "pre-norm", "torch-arange", "list-from-end", "gpt",
+]
+uses = [
+    "attention", "query-key-value", "attention-matmul", "residual", "variances-add", "variance",
+    "nn-linear", "nn-module-subclass", "nn-embedding", "softmax", "training-loop", "gradient-clipping",
+    "perplexity", "leaderboard", "temperature", "windows", "attention-map", "torch-flip",
+    "floor-division", "transpose",
+]
+
+[chapters.16]
+introduces = [
+    "pretraining", "fine-tuning", "freezing", "conditional-expression", "bincount", "majority-baseline",
+    "precision", "recall", "elementwise-and", "margin-of-error", "state-dict", "leakage", "benchmark",
+    "bert", "module-list",
+]
+uses = [
+    "gpt", "transformer", "block", "test-set", "accuracy", "variances-add", "numpy-sqrt",
+    "hyperparameter", "optimizer", "training-loop", "requires-grad", "numpy-tolist",
+    "list-comprehension", "not-equal", "builtin-max", "mixing-models", "log",
+]
+
+[chapters.17]
+introduces = [
+    "byte", "utf-8", "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "token", "bpe",
+    "tie-breaking", "while-loop", "and-operator", "max-with-key", "dict-items", "byte-string",
+    "errors-replace", "vocabulary-size", "per-word-scoring",
+]
+uses = [
+    "dict", "dict-get", "builtin-zip", "list-from-one", "list-append", "builtin-range", "vocabulary",
+    "hyperparameter", "perplexity", "leaderboard", "string-join", "if", "comparison", "list-comprehension",
+    "dict-values", "tuple-key", "update-variable",
 ]
 
 [concepts]
@@ -454,3 +491,53 @@ query-key-value = "compare the query with the keys; get back a blend of the valu
 attention = "compare, share out with softmax, blend: a fresh summary for each step"
 attention-matmul = "A = softmax(Q @ K.transpose(1, 2), dim=2); blended = A @ V"
 attention-map = "the shares as a picture: which word was read to write which word"
+windows = "cut ids into rows X, with Y the same rows moved along by one"
+transformer = "a stack of blocks of self-attention and small networks, with no recurrence"
+self-attention = "each word's vector makes a query, key and value, and words attend to each other"
+future-mask = "a table of True above the diagonal: no word may look at later words"
+torch-triu = "torch.triu(table, diagonal=1) keeps what's above the main diagonal"
+masked-fill = "scores.masked_fill(mask, -torch.inf) stores −∞ wherever mask is True, so softmax gives 0"
+attention-scale = "dividing scores by √d keeps them in scale, since dot products grow with √d"
+negative-dimensions = "dim=-1 is the last dimension, -2 the one before it"
+multi-head = "cut each vector into pieces and run attention on each piece side by side"
+permutation-blindness = "attention alone ignores word order"
+position-table = "a learned vector per position, added to the word's vector"
+layer-norm = "rescale each vector to mean 0 and typical size 1"
+torch-var = "torch.var(x, dim=-1, keepdim=True, unbiased=False) is chapter 08's variance"
+block = "x = x + attention(norm1(x)), then x = x + think(norm2(x))"
+pre-norm = "normalising just before each part, on the way into x + f(x)"
+torch-arange = "torch.arange(n) is 0, 1, …, n − 1"
+list-from-end = "words[-32:] is the last 32 items"
+gpt = "a transformer language model that reads left to right"
+pretraining = "train on plain text first, then reuse the model on a task with few labels"
+fine-tuning = "start from pretrained knobs, add a new last layer, and train gently on labels"
+freezing = "set requires_grad to False, so that part of a model stops learning"
+conditional-expression = "a if test else b gives a when the test holds, else b"
+bincount = "np.bincount(labels) counts how often each whole number appears"
+majority-baseline = "always saying the commonest answer: a model must beat this to be interesting"
+precision = "tp / (tp + fp): when it says this class, how often is it right?"
+recall = "tp / (tp + fn): of the real ones, how many did it find?"
+elementwise-and = "(a == 1) & (b == 2) means and, position by position"
+margin-of-error = "2 × √(p × (1 − p) / n): differences smaller than this may be luck"
+state-dict = "model.state_dict() holds the knobs by name; load_state_dict puts them back"
+leakage = "information about the answer sneaking into what the model sees"
+benchmark = "a standard test set everyone uses; repeated use slowly wears it out"
+bert = "a transformer with no future mask, trained to fill in hidden words"
+module-list = "nn.ModuleList holds layers in a list so PyTorch can find their knobs"
+byte = "a whole number from 0 to 255; computers store everything in bytes"
+utf-8 = "the standard way to write text in bytes: 1 for English letters, 3 for Chinese characters"
+string-encode = "text.encode('utf-8') gives the bytes of text"
+byte-decode = ".decode('utf-8') turns bytes back into text"
+builtin-list = "list(x) makes a plain list"
+builtin-bytes = "bytes([100]) makes bytes from a list of numbers"
+token = "a piece of text, often a word and sometimes part of one, with its own id"
+bpe = "byte-pair encoding: merge the commonest neighbouring pair, again and again"
+tie-breaking = "when pairs are tied, take the one seen first"
+while-loop = "while test: repeats its lines as long as the test holds, moving at its own pace"
+and-operator = "a and b holds when both hold; the right side isn't looked at if the left fails"
+max-with-key = "max(counts, key=counts.get) gives the key with the biggest count"
+dict-items = "for key, value in d.items(): goes through a dictionary's pairs"
+byte-string = "b''.join(list) joins bytes"
+errors-replace = "errors='replace' shows a broken sequence as � instead of stopping"
+vocabulary-size = "more merges mean fewer tokens per text, but a bigger table to learn"
+per-word-scoring = "total surprise divided by words keeps scores comparable across tokenizers"
