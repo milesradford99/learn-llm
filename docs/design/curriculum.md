@@ -193,6 +193,33 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   here. 500 merges on 300 stories: 3 bytes per token, whole-story round trip, Chinese survives.
   Scores stay per word when later chapters retrain on tokens.
 
+## Step plan: agents track, chapters 30–41 (written 2026-11-01)
+
+The brief: finish able to say "I know Pi and DeepSeek's Super-agent, their source and their architecture", and
+defend it. The promise differs from the main course in one way: the reader finished chapter 17,
+so Python is assumed and only new features are taught. Everything else carries over: toolboxes
+just in time, the ledger, on-page checks, no required links, en and zh-CN.
+
+Each chapter has one rhythm: quote the real code, then rebuild the mechanism in Python, with
+checks built from the behaviour of the source (`Tool X not found`, 2,000 lines and 50 KB, warn
+at 3 and stop at 5). A scripted `FakeModel` plays the model, in `learn_llm/agents.py`. Excerpts
+can't drift unnoticed: `learn_llm/source_check.py` compares every one with a checkout.
+
+- **30–36, Pi:** depth on the loop. Chapter 30 gives the reader a working agent in 20 lines and
+  lists what's wrong with it, and each later chapter is one of those problems: steering, streams
+  and providers, tools, the session tree, compaction, then extensions and trust.
+- **37–41, Super-agent:** many loops working for a team. The Router and Workers, the gate and
+  Mandates, Subscriptions and Ticket stages, the store-first engine, then prompts and context.
+  The prototype differs from DeepSeek's essay, so every claim says which one it rests on. It's
+  taught by contrast, so each chapter names what Pi does instead.
+- **41 ends with an exam:** twelve graded questions, then seven practical tasks with real models,
+  because the course is honest that reading isn't experience. The tasks need keys and money, so
+  they stay outside the graded path.
+
+Rejected: a separate top-level folder with its own framework copy (it would fork the checks,
+ledger and i18n); numbering from 18 (it would collide with the main course's map); chapters that
+need a real API key (it breaks "no accounts" and gives different results each run).
+
 ## Step plan: chapters 18–20 (written 2026-11-09)
 
 - **18 A modern transformer.** Fair tokens first (same text as the word models, scored per word).

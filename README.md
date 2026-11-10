@@ -10,6 +10,11 @@ serving it the way production systems do. Everything happens on one page in your
 > is next.
 > See the [full chapter map](SCOPE.md).
 
+**New: an optional agents track.** Chapters 30–41 take you through two real open-source agents,
+[Pi](https://github.com/badlogic/pi-mono) and DeepSeek's [Super-agent](https://github.com/deepseek-ai/dsh-superagent-prototype),
+down to their source code. You read the real code on the page and rebuild each mechanism yourself.
+It needs Python up to chapter 17, and runs offline with no API key.
+
 ## Start
 
 You need a computer running macOS, Linux or Windows, and an internet connection the first
@@ -66,3 +71,4 @@ questions are welcome as GitHub issues.
 
 Code: [MIT](LICENSE). Lesson text: [CC BY 4.0](LICENSE-CONTENT). The bundled MNIST digits
 (from chapter 06): [CC BY-SA 3.0](learn_llm/data/MNIST-NOTICE.md), by Yann LeCun and Corinna Cortes.
+Source excerpts in chapters 30–41: [MIT, from Pi and the DeepSeek Super-agent prototype](learn_llm/data/AGENT-SOURCES.md).

@@ -8,6 +8,11 @@
 > **状态：早期。**第 00–20 章已经可以学了：从你的第一行 Python，到亲手搭建、能在多个进程上训练的现代 Transformer。下一章是第 21 章（缩放定律）。
 > 完整章节规划见 [SCOPE.md](SCOPE.md)（英文）。
 
+**新增：选修的智能体路线。** 第 30–41 章带你深入两个真实的开源智能体
+[Pi](https://github.com/badlogic/pi-mono) 和 DeepSeek 的 [Super-agent](https://github.com/deepseek-ai/dsh-superagent-prototype)，
+一直读到源码层面。你在页面上阅读真实代码，再亲手重建每个机制。
+需要学完第 17 章的 Python，可以离线运行，不需要 API 密钥。
+
 ## 开始
 
 你需要一台 macOS、Linux 或 Windows 电脑，首次启动时需要联网。不需要 GPU，不用注册账号，也不用自己装 Python。

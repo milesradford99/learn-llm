@@ -27,3 +27,4 @@ checks and UI strings live in `learn_llm/`. Scope, chapter map and decisions: `S
 - Math in lesson text and check messages is LaTeX: `$...$` inline, `> $$...$$` for a formula on its own line, `\text{...}` for words inside one. Backticks are only for Python a learner could type. Use a raw `mo.md(r"...")`; in a non-raw or f-string write `\\times`. Chart and diagram labels are SVG text, so they keep Unicode.
 - Lesson text: no required external links. Links go after `<!-- go-deeper -->`.
 - Lesson text is original. Never copy course notes, slides or assignment text.
+- Chapters 30+ are the optional agents track. They quote pinned source (`learn_llm/data/AGENT-SOURCES.md`); after changing an excerpt or re-pinning, run `python -m learn_llm.source_check --pi <clone> --dsh <clone>`. A cell's text can't contain `""`: marimo's formatter corrupts it, so write `''` and quote docstrings without their quote marks.

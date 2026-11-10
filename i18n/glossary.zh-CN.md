@@ -152,6 +152,37 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | token | 词元（token） | 17 |
 | tokenizer | 分词器 | 17 |
 | merge | 合并 | 17 |
+| agent | 智能体 | 30 |
+| tool / tool call / tool result | 工具 / 工具调用 / 工具结果 | 30 |
+| harness | harness（运行底座） | 30 |
+| turn | 轮 | 30 |
+| context window | 上下文窗口 | 30 |
+| exception | 异常 | 30 |
+| steering / follow-up | 转向 / 后续 | 31 |
+| stream / event / delta | 流 / 事件 / delta | 32 |
+| block | 块 | 30 |
+| leaf / active branch | 叶子 / 当前分支 | 34 |
+| projection | 投影 | 34 |
+| compaction | 压缩 | 35 |
+| skill / extension | 技能 / 扩展 | 36 |
+| progressive disclosure | 渐进式披露 | 36 |
+| hook | 钩子 | 31 |
+| sub-agent | 子智能体 | 36 |
+| Router / Worker | Router / Worker | 37 |
+| Source / Trigger / Thread | 来源 / 触发 / 线程 | 37 |
+| Eval / Ticket / Mandate | 评估 / 工单 / 授权 | 37 |
+| Subscription / Assignment / Channel | 订阅 / 派工 / 渠道 | 37 |
+| idempotence | 幂等 | 37 |
+| strength (explicit / inferred) | 强度（明确 / 推断） | 38 |
+| gate / admission table | 准入 / 准入表 | 38 |
+| accept mode | 接单模式 | 38 |
+| hand back | 交回 | 39 |
+| stage | 阶段 | 39 |
+| transaction | 事务 | 40 |
+| effect / outbox | 效果 / 发件箱 | 40 |
+| exponential backoff | 指数退避 | 40 |
+| prefix cache | 前缀缓存 | 41 |
+| regular expression | 正则表达式 | 41 |
 | RMSNorm | 均方根归一化（RMSNorm） | 18 |
 | angle / radian | 角 / 弧度 | 18 |
 | cosine / sine | 余弦 / 正弦 | 18 |

@@ -19,5 +19,17 @@
   "17-tokenization.py": "sha256:4d5435271c806c877d1da2bcf109da694ba8ecd0d23eb91ff2303c8a91ec2dfb",
   "18-a-modern-transformer.py": "sha256:2ad759a868984f14c456b33566fe926a515d2b548bfae4a061f3a0312a10b039",
   "19-making-it-fast.py": "sha256:bf1b43b5ca80386b1592a79f448526eefa7e60e4692df23d7dcc3864dca08fc2",
-  "20-many-devices.py": "sha256:84424db3fc4fdc8a5e5d4051cd21464b93d56893454043738abab2f66ea3ba78"
+  "20-many-devices.py": "sha256:84424db3fc4fdc8a5e5d4051cd21464b93d56893454043738abab2f66ea3ba78",
+  "30-the-agent-loop.py": "sha256:f03da1606ac227c19a0bfbce790dcf857d7f9f8b0eb07aaf89affa63566ec40f",
+  "31-inside-pis-loop.py": "sha256:2dc8c798bd2857f6749cf1d83627f1ede56085e857a3ca89ebdb09e41c713252",
+  "32-one-api-for-every-model.py": "sha256:3b235f90f95c5816ebd3f47215825195f3d3bbccfd93a5b5d0950be63291ded9",
+  "33-tools-that-survive-the-real-world.py": "sha256:b6bc75d95c2a5699738a492bc978ee32d026375318634f8055240f3334b93709",
+  "34-a-conversation-is-a-tree.py": "sha256:704108d108a07fb122869fa88b53dacb9a3ac2df881fe73e81c033d1b640fbd9",
+  "35-running-out-of-room.py": "sha256:b7181e192bcf56f5dd35c2833bb82ee54fdb25fa95b0480d5dadb79add7212da",
+  "36-a-harness-you-can-make-your-own.py": "sha256:c8277909f3d3ddad3988b00e12ef36bddf4405c7d1838521a3d193de92236ec7",
+  "37-super-agent-router-and-workers.py": "sha256:9960743398340dd15900d95b26b3522be22c70b2a9264671fc2df7fb80e6836c",
+  "38-who-may-ask-for-work.py": "sha256:36ac9f861a82dde02e30a068b346518235b02dde5ee5266606bdfd871b588052",
+  "39-subscriptions-tickets-and-follow-ups.py": "sha256:c2c22ce1fed7afb36982eddbf5602bb0584d8164ef013af81e5ae02ad5d8154d",
+  "40-an-engine-that-never-loses-work.py": "sha256:fa97ecb6bf977f0059a463156f8413e26f49360ee742323ef738a11579a004f3",
+  "41-prompts-context-and-the-exam.py": "sha256:0d208bc91d025baed25b87a77f7fc09416d19a960e15ff8c287274f0d0a5434d"
 }

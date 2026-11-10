@@ -69,12 +69,29 @@ editable exercise cells with stubs, and live check cells that grade them on the 
 solutions and the CI test harness live outside the learner's notebook. Real local Python is required
 because PyTorch does not run in browser-only Python (Pyodide).
 
+**Agents track (optional, after chapter 17; chapter numbers start at 30, so the main course keeps 18–27)**
+
+| # | Chapter | You build | Prereqs taught here | Source studied |
+|---|---|---|---|---|
+| 30 | The agent loop | Tools, errors as results, a loop with a turn limit | try/except, raise, f-strings | Pi `agent-loop.ts` |
+| 31 | Inside Pi's loop | Two-level loop with steering and follow-ups | Reading TypeScript, `lambda`, `or`, `list.pop` | Pi `agent` package |
+| 32 | One API for every model | Stream assembly, two provider converters, tool deltas | JSON, `isinstance` | Pi `ai` package |
+| 33 | Tools that survive the real world | Truncation, unique edits, fuzzy match, result ordering | Text methods | Pi `coding-agent/core/tools` |
+| 34 | A conversation is a tree | Append-only session, branching, JSONL | `is None`, `reverse` | Pi `session-manager.ts` |
+| 35 | Running out of room | Token estimate, cut points, retry and overflow decisions | `math.ceil` | Pi `compaction.ts`, `agent-session.ts` |
+| 36 | A harness you can make your own | Prompt sections, skill listing, handler chain | `continue` | Pi extensions, skills, trust |
+| 37 | Super-agent: one Router, many Workers | Idempotent intake, direct delivery | | DeepSeek `dsh-superagent-prototype`: docs 000-001, `core/intake.ts` |
+| 38 | Who may ask for work | Admission cell, gate, assessment outcome, Eval deadline | | `policy.ts`, `core/evals.ts` |
+| 39 | Subscriptions, Tickets and follow-ups | Fan-out and resume rules, Ticket stages, pull-request ends | | `core/intake.ts`, `core/stage.ts`, `core/tickets.ts` |
+| 40 | An engine that never loses work | Effect coalescing, capped backoff, worker slots | | `core/engine.ts`, `app/effects.ts`, `executor/dsh.ts` |
+| 41 | Prompts, context and the exam | Prompt order, card preview; a graded exam | Regular expressions | `docs/004-prompts.md`, `app/cards.ts` |
+
 ## Non-goals
 - Not a survey of every model or paper; one path, chosen depth.
 - Not a replacement for the source courses' videos; no re-hosting of their materials.
 - No mandatory GPU, paid API, or account sign-up to finish Parts 0–2.
 - No framework zoo: NumPy → PyTorch only (Triton optional in ch. 18).
-- Not production MLOps, agents frameworks, or RAG app tutorials.
+- Not production MLOps, a survey of agent frameworks, or RAG app tutorials. The agents track is two projects read in depth, not a framework tour.
 
 ## v0.1 acceptance check (machine-runnable)
 On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
@@ -127,7 +144,10 @@ On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
 - Chapters 09–11 batch: PyTorch is the third runtime dependency, CPU builds on Linux and Windows through uv's CPU index (default builds bring several GB of GPU libraries); ch 10 uses the bundled digits pasted at random spots instead of CIFAR, which has no clear licence and is bigger and slower (it also shows directly why convolutions help); the course's text is a bundled 13,000-story TinyStories subset, CDLA-Sharing-1.0, with its own notice (user, 2026-10-31)
 
 - Chapters 12–14 batch: the leaderboard scores perplexity per word on a 2,002-entry word vocabulary and lives in each learner's `my-work/.leaderboard.json`; chapter 14 teaches attention on reversing text instead of translation, since the course has no bundled translated text and every answer can be checked at a glance (agent-default, 2026-11-01)
+
 - Chapters 15–17 batch: chapter 16's task is naming a blanked-out animal, made from the stories, because the course has no hand-labelled data; it reports that pretraining gave no clear gain on this small model, and that a small BERT-style model scored below the baseline, instead of the textbook result (agent-default, 2026-11-01)
+
+- Agents track, chapters 30–41: added at the user's request (2026-11-01), which amends the earlier non-goal on agents; it studies Pi (30–36) and DeepSeek's Super-agent (37–41) to source level. "Deepseek Super-Agent" was first misread as ByteDance's DeerFlow; on 2026-11-03 the user pointed to the AgentsPulse review of DeepSeek's essay and its prototype `deepseek-ai/dsh-superagent-prototype`, and chapters 37–41 were rewritten on it (user). Numbers start at 30 so the main course keeps 18–27 and the existing chapters, checks, ledger and navigation work unchanged (agent-default). A scripted model keeps every exercise offline and free (agent-default). Excerpts stay short, under their MIT licences, pinned by commit in `learn_llm/data/AGENT-SOURCES.md` and checked by `python -m learn_llm.source_check` (agent-default). The prototype is a research reference, not a product, and differs from DeepSeek's essay; lessons say which source each claim comes from (agent-default)
 
 - Chapters 18–20 batch: token models read the same text as the word models, with rare words as `<unk>`, and are scored per word; spelling rare words out costs about 40% more perplexity, so mixing the two would rig the leaderboard. Merges for the stories are bundled (`learn_llm/data/tinystories-bpe.json`, rebuilt with `python -m learn_llm.tokenizer`). Chapter 20 trains on real CPU processes with PyTorch's `gloo` backend (`learn_llm/parallel.py`); chapters 18–19 use NumPy's `cos`, `sin` and `exp` so the agent track can keep introducing the `math` module (agent-default, 2026-11-09)
 
