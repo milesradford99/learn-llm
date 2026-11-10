@@ -1,4 +1,4 @@
-# Source excerpts in chapters 30 to 41
+# Source excerpts in chapters 40 to 51
 
 The agents chapters quote short excerpts from two open-source projects, so that the code can be
 read on the page. Exercise code is the course's own. The excerpts are not covered by this

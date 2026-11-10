@@ -593,7 +593,7 @@ def _():
     The loss falls from 2.303 to about 0.38, and the model now gets about 0.90 (**90%**) of the
     test pictures right, up from 10%. It reads handwriting it has never seen. Here training and
     test accuracy are almost equal: a model this simple can't memorise its training pictures.
-    Bigger models can, and chapter 08 shows what that looks like.
+    Bigger models can, and chapter 09 shows what that looks like.
 
     ## What the model learned
 
@@ -638,7 +638,7 @@ def _():
     ## What's next
 
     A template can only say "ink here is good, ink there is bad", and add it up. It can't say
-    "a 7 has a stroke here **or** there, but not both". In **Chapter 07** you'll stack a hidden
+    "a 7 has a stroke here **or** there, but not both". In **Chapter 08** you'll stack a hidden
     layer of simple pieces in between, and the model becomes a **neural network**.
 
     ## What you can do now

@@ -9,7 +9,7 @@ requires-python = ">=3.12"
 dependencies = [
     "marimo>=0.25.2",
     "numpy>=2.5",
-    # No wheels for Intel Macs: there the course still starts, and chapters 00-08 work.
+    # No wheels for Intel Macs: there the course still starts, and chapters 00-09 work.
     "torch>=2.8; sys_platform != 'darwin' or platform_machine == 'arm64'",
 ]
 

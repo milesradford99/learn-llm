@@ -1,21 +1,32 @@
 """Reference solutions for chapter 40. Peek only after trying!"""
 
-def enqueue(queue, kind, key, payload, now):
-    for row in queue:
-        if row["kind"] == kind and row["key"] == key:
-            row["payload"] = payload
-            row["due"] = now
-            return queue
-    queue.append({"kind": kind, "key": key, "payload": payload, "due": now})
-    return queue
+from learn_llm.agents import result
 
 
-def retry_delay(attempts, first, cap):
-    return min(cap, first * 2 ** min(attempts, 16))
+def tool_calls(message):
+    return [block for block in message["content"] if block["type"] == "toolCall"]
 
 
-def reserve(used, max_workers, by):
-    extra = 0
-    if by == "person":
-        extra = 1
-    return used < max_workers + extra
+def run_tool(tools, call):
+    name = call["name"]
+    if name not in tools:
+        return result(call["id"], name, f"Tool {name} not found", True)
+    try:
+        text = tools[name](call["arguments"])
+    except Exception as error:
+        return result(call["id"], name, str(error), True)
+    return result(call["id"], name, text)
+
+
+def agent_loop(model, messages, tools, max_turns):
+    turns = 0
+    while turns < max_turns:
+        reply = model(messages)
+        messages.append(reply)
+        turns = turns + 1
+        calls = tool_calls(reply)
+        if len(calls) == 0:
+            return messages
+        for call in calls:
+            messages.append(run_tool(tools, call))
+    return messages

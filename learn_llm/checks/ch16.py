@@ -3,38 +3,98 @@ import torch
 from torch import nn
 
 from learn_llm.checking import Case
-from learn_llm.checks.ch05 import _plain
+from learn_llm.checks.ch10 import _plain
 
-GUESSES = np.array([1, 1, 1, 0, 0, 2])
-LABELS = np.array([1, 1, 0, 1, 0, 2])
+Q = torch.tensor([[[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]]])
+K = torch.tensor([[[1.0, 1.0], [0.0, 1.0], [2.0, 0.0]]])
+V = torch.tensor([[[1.0], [2.0], [3.0]]])
+OPEN = torch.zeros(3, 3, dtype=torch.bool)
+TRI = torch.triu(torch.ones(3, 3, dtype=torch.bool), diagonal=1)
 
 
-def _frozen(f):
-    model = nn.Linear(2, 2)
-    f(model)
-    return [p.requires_grad for p in model.parameters()]
+def _reference(mask):
+    scores = (Q @ K.transpose(-2, -1) / np.sqrt(2)).masked_fill(mask, -torch.inf)
+    A = torch.softmax(scores, dim=-1)
+    return (A @ V).tolist(), A.tolist()
+
+
+def _four_way(f):
+    """Works with a heads dimension too, so masks and transposes must use the last dimensions."""
+    x = torch.rand(2, 4, 5, 8)
+    return [list(part.shape) for part in f(x, x, x, torch.zeros(5, 5, dtype=torch.bool))]
+
+
+def _blocked(f):
+    return _plain(f(Q, K, V, TRI)[1])[0][0][1:]
+
+
+def _split(f):
+    x = torch.arange(12.0).reshape(1, 2, 6)
+    return _plain(f(x, 3))
+
+
+def _split_shape(f):
+    out = f(torch.zeros(5, 7, 128), 4)
+    return list(out.shape) if isinstance(out, torch.Tensor) else _plain(out)
+
+
+def _norm(f):
+    torch.manual_seed(2)
+    out = f(torch.rand(3, 4, 8) * 10)
+    return round(torch.mean(torch.abs(torch.mean(out, dim=-1))).item(), 3), round(torch.mean(torch.var(out, dim=-1, unbiased=False)).item(), 2)
+
+
+def _matches_pytorch(f):
+    torch.manual_seed(3)
+    x = torch.rand(2, 3, 8)
+    mine = f(x)
+    theirs = nn.LayerNorm(8, eps=1e-5, elementwise_affine=False)(x)
+    return bool(torch.max(torch.abs(mine - theirs)) < 1e-4)
+
+
+def _block(f):
+    x = torch.ones(1, 2, 3)
+    double = lambda t: 2 * t
+    add_one = lambda t: t + 1
+    # 1 + 2 × (2 × 1) = 5, then 5 + 2 × (5 + 1) = 17
+    out = f(x, double, double, add_one, double)
+    return None if out is None else _plain(out)[0][0][0]
+
+
+def _order(f):
+    calls = []
+
+    def note(name):
+        def layer(t):
+            calls.append(name)
+            return t
+        return layer
+
+    f(torch.ones(1, 1, 1), note("norm1"), note("attention"), note("norm2"), note("think"))
+    return calls
 
 
 EXERCISES = {
-    "blank_out": [
-        Case("ch16.blank_out.some", lambda f: f([5, 7, 5, 9], [5], 0), [0, 7, 0, 9], hint="ch16.blank_out.hint"),
-        Case("ch16.blank_out.none", lambda f: f([1, 2], [], 0), [1, 2], hint="ch16.blank_out.hint"),
+    "future_mask": [
+        Case("ch16.future_mask.three", lambda f: _plain(f(3)), [[False, True, True], [False, False, True], [False, False, False]], hint="ch16.future_mask.hint"),
+        Case("ch16.future_mask.one", lambda f: _plain(f(1)), [[False]], hint="ch16.future_mask.hint"),
     ],
-    "majority_share": [
-        Case("ch16.majority_share.page", lambda f: _plain(f(np.array([1, 1, 1, 0, 2, 2]))), 0.5, tolerance=1e-9, hint="ch16.majority_share.hint"),
-        Case("ch16.majority_share.all", lambda f: _plain(f(np.array([3, 3, 3]))), 1.0, tolerance=1e-9, hint="ch16.majority_share.hint"),
+    "attend": [
+        Case("ch16.attend.open", lambda f: _plain(f(Q, K, V, OPEN)), _reference(OPEN), tolerance=1e-5, hint="ch16.attend.hint"),
+        Case("ch16.attend.masked", lambda f: _plain(f(Q, K, V, TRI)), _reference(TRI), tolerance=1e-5, hint="ch16.attend.hint"),
+        Case("ch16.attend.blocked", _blocked, [0.0, 0.0], tolerance=1e-9, hint="ch16.attend.hint"),
+        Case("ch16.attend.heads", _four_way, [[2, 4, 5, 8], [2, 4, 5, 5]], hint="ch16.attend.hint"),
     ],
-    "precision_recall": [
-        Case("ch16.precision_recall.one", lambda f: _plain(f(GUESSES, LABELS, 1)), (2 / 3, 2 / 3), tolerance=1e-9, hint="ch16.precision_recall.hint"),
-        Case("ch16.precision_recall.order", lambda f: _plain(f(np.array([1, 1, 1, 0]), np.array([1, 0, 0, 0]), 1)), (1 / 3, 1.0), tolerance=1e-9, hint="ch16.precision_recall.hint"),
-        Case("ch16.precision_recall.perfect", lambda f: _plain(f(GUESSES, LABELS, 2)), (1.0, 1.0), tolerance=1e-9, hint="ch16.precision_recall.hint"),
-        Case("ch16.precision_recall.never", lambda f: _plain(f(GUESSES, LABELS, 3)), (0.0, 0.0), tolerance=1e-9, hint="ch16.precision_recall.hint"),
+    "split_heads": [
+        Case("ch16.split_heads.shape", _split_shape, [5, 4, 7, 32], hint="ch16.split_heads.hint"),
+        Case("ch16.split_heads.values", _split, [[[[0.0, 1.0], [6.0, 7.0]], [[2.0, 3.0], [8.0, 9.0]], [[4.0, 5.0], [10.0, 11.0]]]], hint="ch16.split_heads.hint"),
     ],
-    "margin": [
-        Case("ch16.margin.page", lambda f: _plain(f(0.6, 265)), 2 * float(np.sqrt(0.24 / 265)), tolerance=1e-9, hint="ch16.margin.hint"),
-        Case("ch16.margin.sure", lambda f: _plain(f(1.0, 100)), 0.0, tolerance=1e-9, hint="ch16.margin.hint"),
+    "layer_norm": [
+        Case("ch16.layer_norm.scale", _norm, (0.0, 1.0), tolerance=0.01, hint="ch16.layer_norm.hint"),
+        Case("ch16.layer_norm.pytorch", _matches_pytorch, True, hint="ch16.layer_norm.hint"),
     ],
-    "freeze": [
-        Case("ch16.freeze.all", _frozen, [False, False], hint="ch16.freeze.hint"),
+    "block_step": [
+        Case("ch16.block_step.value", _block, 17.0, tolerance=1e-6, hint="ch16.block_step.hint"),
+        Case("ch16.block_step.order", _order, ["norm1", "attention", "norm2", "think"], hint="ch16.block_step.hint"),
     ],
 }

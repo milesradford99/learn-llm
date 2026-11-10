@@ -1,28 +1,36 @@
+from learn_llm.agents import FakeModel, ask, call, result, say, trace, user
 from learn_llm.checking import Case
 
 
-def _q(f):
-    queue = []
-    f(queue, "reply", "T1", "hello", 10)
-    f(queue, "launch", "T2", "go", 11)
-    f(queue, "reply", "T1", "hello again", 20)
-    return [(r["kind"], r["key"], r["payload"], r["due"]) for r in queue]
+def _boom(arguments):
+    raise ValueError("disk full")
+
+
+TOOLS = {"add": lambda a: str(a["x"] + a["y"]), "boom": _boom}
+TWO = ask(call("add", {"x": 1, "y": 2}, "a"), call("add", {"x": 3, "y": 4}, "b"))
+
+
+def _loop(f, replies, max_turns=10):
+    return trace(f(FakeModel(replies), [user("go")], TOOLS, max_turns))
 
 
 EXERCISES = {
-    "enqueue": [
-        Case("ch40.enqueue.new", lambda f: f([], "reply", "T1", "hi", 5), [{"kind": "reply", "key": "T1", "payload": "hi", "due": 5}], hint="ch40.enqueue.hint"),
-        Case("ch40.enqueue.replace", _q, [("reply", "T1", "hello again", 20), ("launch", "T2", "go", 11)], hint="ch40.enqueue.hint"),
-        Case("ch40.enqueue.kind", lambda f: len(f([{"kind": "reply", "key": "T1", "payload": "x", "due": 1}], "launch", "T1", "y", 2)), 2, hint="ch40.enqueue.hint"),
+    "tool_calls": [
+        Case("ch40.tool_calls.none", lambda f: f(say("hi")), [], hint="ch40.tool_calls.hint"),
+        Case("ch40.tool_calls.two", lambda f: [c["id"] for c in f(TWO)], ["a", "b"], hint="ch40.tool_calls.hint"),
     ],
-    "retry_delay": [
-        Case("ch40.retry_delay.grow", lambda f: [f(0, 2000, 60000), f(1, 2000, 60000), f(2, 2000, 60000)], [2000, 4000, 8000], hint="ch40.retry_delay.hint"),
-        Case("ch40.retry_delay.cap", lambda f: f(9, 2000, 60000), 60000, hint="ch40.retry_delay.hint"),
-        Case("ch40.retry_delay.huge", lambda f: f(1000, 1, 10 ** 9), 65536, hint="ch40.retry_delay.hint"),
+    "run_tool": [
+        Case("ch40.run_tool.ok", lambda f: f(TOOLS, call("add", {"x": 1, "y": 2}, "a")), result("a", "add", "3"), hint="ch40.run_tool.hint"),
+        Case("ch40.run_tool.unknown", lambda f: f(TOOLS, call("nope", {}, "b")), result("b", "nope", "Tool nope not found", True), hint="ch40.run_tool.hint"),
+        Case("ch40.run_tool.raises", lambda f: f(TOOLS, call("boom", {}, "c")), result("c", "boom", "disk full", True), hint="ch40.run_tool.hint"),
     ],
-    "reserve": [
-        Case("ch40.reserve.free", lambda f: f(2, 3, "launch"), True, hint="ch40.reserve.hint"),
-        Case("ch40.reserve.full", lambda f: [f(3, 3, "launch"), f(3, 3, "wake")], [False, False], hint="ch40.reserve.hint"),
-        Case("ch40.reserve.person", lambda f: [f(3, 3, "person"), f(4, 3, "person")], [True, False], hint="ch40.reserve.hint"),
+    "agent_loop": [
+        Case("ch40.agent_loop.talk", lambda f: _loop(f, [say("hello")]), ["user: go", "assistant: hello"], hint="ch40.agent_loop.hint"),
+        Case("ch40.agent_loop.tool", lambda f: _loop(f, [ask(call("add", {"x": 1, "y": 2})), say("3")]),
+             ["user: go", "assistant: [add]", "tool add ok: 3", "assistant: 3"], hint="ch40.agent_loop.hint"),
+        Case("ch40.agent_loop.two", lambda f: _loop(f, [TWO, say("done")]),
+             ["user: go", "assistant: [add] [add]", "tool add ok: 3", "tool add ok: 7", "assistant: done"], hint="ch40.agent_loop.hint"),
+        Case("ch40.agent_loop.error", lambda f: _loop(f, [ask(call("boom")), say("sorry")])[2], "tool boom error: disk full", hint="ch40.agent_loop.hint"),
+        Case("ch40.agent_loop.limit", lambda f: len(_loop(f, [ask(call("add", {"x": 1, "y": 1}))] * 50, 3)), 7, hint="ch40.agent_loop.limit_hint"),
     ],
 }

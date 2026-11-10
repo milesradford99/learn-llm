@@ -81,7 +81,7 @@ uses = [
     "centering-inputs", "chart-reading", "tuple",
 ]
 
-[chapters.07]
+[chapters.08]
 introduces = [
     "model-capacity", "relu", "piecewise-line", "hidden-layer", "neural-network",
     "matmul-grouping", "random-generator", "random-init", "input-gradient", "relu-slope",
@@ -94,7 +94,7 @@ uses = [
     "reshape", "numpy-zeros", "builtin-range", "curve-model", "comparing-arrays", "test-set",
 ]
 
-[chapters.08]
+[chapters.09]
 introduces = [
     "variance", "typical-size", "numpy-sqrt", "zero-init-symmetry", "variances-add",
     "he-init", "vanishing-exploding", "mini-batch", "epoch", "permutation", "range-step",
@@ -108,7 +108,7 @@ uses = [
     "derivative-rules", "centering-inputs", "elementwise", "function", "return-pair",
 ]
 
-[chapters.09]
+[chapters.10]
 introduces = [
     "library", "tensor", "bits-and-precision", "dtype", "dim", "requires-grad", "torch-backward",
     "item", "grads-accumulate", "fresh-forward", "torch-relu", "torch-cross-entropy",
@@ -124,7 +124,7 @@ uses = [
     "he-init", "neural-network", "relu",
 ]
 
-[chapters.10]
+[chapters.11]
 introduces = [
     "translation-problem", "rng-integers", "two-way-slice", "kernel", "convolution",
     "convolution-output-size", "feature-map", "numpy-roll", "knob-sharing", "max-pooling",
@@ -138,7 +138,7 @@ uses = [
     "argument-unpacking", "parameters", "if",
 ]
 
-[chapters.11]
+[chapters.12]
 introduces = [
     "text-dataset", "one-hot-words", "word-vector", "distributional-idea", "string-lower",
     "string-join", "dict", "dict-get", "builtin-sorted", "vocabulary", "word-id", "filtered-list",
@@ -152,7 +152,7 @@ uses = [
     "matmul-operator", "epoch", "mini-batch",
 ]
 
-[chapters.12]
+[chapters.13]
 introduces = [
     "language-model", "unk-and-end", "conditional-probability", "bigram", "list-from-one",
     "smoothing", "sampling", "rng-choice", "log-of-product", "perplexity", "pair-indexing",
@@ -165,7 +165,7 @@ uses = [
     "test-set", "overfitting", "argsort", "numpy-array", "if", "not-in", "string-join",
 ]
 
-[chapters.13]
+[chapters.14]
 introduces = [
     "recurrence", "tanh", "shared-knobs-in-time", "all-of-a-dimension", "torch-stack",
     "next-word-targets", "windows", "blame-through-time", "lstm", "lstm-cell", "gate", "torch-cat",
@@ -179,7 +179,7 @@ uses = [
     "torch-backward", "negative-sampling", "sampling", "vocabulary", "dict", "dict-get",
 ]
 
-[chapters.14]
+[chapters.15]
 introduces = [
     "encoder-decoder", "bottleneck", "torch-flip", "teacher-forcing", "greedy-decoding",
     "weighted-average", "query-key-value", "attention", "attention-matmul", "attention-map",
@@ -192,7 +192,7 @@ uses = [
     "reshape-minus-one",
 ]
 
-[chapters.15]
+[chapters.16]
 introduces = [
     "transformer", "self-attention", "future-mask", "torch-triu", "masked-fill", "attention-scale",
     "negative-dimensions", "multi-head", "permutation-blindness", "position-table", "layer-norm",
@@ -205,7 +205,7 @@ uses = [
     "floor-division", "transpose",
 ]
 
-[chapters.16]
+[chapters.18]
 introduces = [
     "pretraining", "fine-tuning", "freezing", "conditional-expression", "bincount", "majority-baseline",
     "precision", "recall", "elementwise-and", "margin-of-error", "state-dict", "leakage", "benchmark",
@@ -217,7 +217,7 @@ uses = [
     "list-comprehension", "not-equal", "builtin-max", "mixing-models", "log",
 ]
 
-[chapters.17]
+[chapters.19]
 introduces = [
     "byte", "utf-8", "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "token", "bpe",
     "tie-breaking", "while-loop", "and-operator", "max-with-key", "dict-items", "byte-string",
@@ -229,55 +229,55 @@ uses = [
     "dict-values", "tuple-key", "update-variable",
 ]
 
-[chapters.30]
+[chapters.40]
 introduces = ["agent", "tool-call", "harness", "message-roles", "stop-reason", "tool-result", "try-except", "tool-failure-as-data", "agent-turn", "context-window", "fake-model", "f-string", "builtin-str", "raise-exception", "builtin-ValueError", "module-learn_llm.agents"]
 uses = ["function", "list", "dict", "list-comprehension", "while-loop", "if", "comparison", "loop", "list-append", "builtin-range", "builtin-sum"]
 
-[chapters.31]
+[chapters.41]
 introduces = ["monorepo", "read-typescript", "steering", "follow-up", "list-pop", "agent-hooks", "agent-events", "length-stop", "lambda", "or-operator"]
 uses = ["agent", "tool-call", "tool-result", "stop-reason", "try-except", "while-loop"]
 
-[chapters.32]
+[chapters.42]
 introduces = ["stream-event", "delta", "failure-as-message", "json", "module-json", "string-join-empty", "builtin-isinstance", "provider-formats", "transcript-tools"]
 uses = ["tool-call", "tool-result", "dict-get", "dict", "list-comprehension", "or-operator", "attribute"]
 
-[chapters.33]
+[chapters.43]
 introduces = ["output-truncation", "unique-edit", "fuzzy-match", "string-tools", "parallel-tools", "file-mutation-queue"]
 uses = ["byte", "string-encode", "try-except", "tool-result", "dict", "list-comprehension", "string-join", "or-operator"]
 
-[chapters.34]
+[chapters.44]
 introduces = ["append-only-log", "session-tree", "leaf-pointer", "active-branch", "is-none", "list-reverse", "projection", "jsonl"]
 uses = ["json", "module-json", "while-loop", "raise-exception", "dict", "list-comprehension", "tool-result", "string-tools", "string-join"]
 
-[chapters.35]
+[chapters.45]
 introduces = ["token-estimate", "math-module", "math-ceil", "compaction", "cut-point", "structured-summary", "retry-backoff", "overflow-recovery"]
 uses = ["builtin-min", "builtin-max", "builtin-reversed", "builtin-range", "json", "module-json", "projection", "power", "tool-result", "or-operator"]
 
-[chapters.36]
+[chapters.46]
 introduces = ["system-prompt-sections", "loop-continue", "skill", "progressive-disclosure", "xml-escaping", "extension", "first-block-wins", "project-trust", "mcp"]
 uses = ["dict-items", "string-tools", "string-join", "is-none", "list-comprehension", "agent-hooks", "agent-events"]
 
-[chapters.37]
+[chapters.47]
 introduces = ["router-and-workers", "attention-principle", "trigger", "thread", "eval", "ticket", "mandate", "subscription", "idempotent-intake", "direct-delivery", "essay-vs-prototype"]
 uses = ["raise-exception", "builtin-ValueError", "dict", "dict-get", "list-append", "if", "loop", "agent"]
 
-[chapters.38]
+[chapters.48]
 introduces = ["strength", "accept-mode", "admission-table", "admission-gate", "assessment", "model-proposes-code-disposes", "per-thread-batch", "eval-deadline", "mandate-revalidation"]
 uses = ["trigger", "thread", "eval", "mandate", "ticket", "is-none", "attention-principle", "read-typescript", "comparison"]
 
-[chapters.39]
+[chapters.49]
 introduces = ["fan-out", "resume-rules", "follow-up-ownership", "hand-back", "ticket-stage", "follows-done", "explicit-states"]
 uses = ["subscription", "ticket", "mandate", "is-none", "builtin-sorted", "tuple", "indexing", "list-comprehension", "session-tree"]
 
-[chapters.40]
+[chapters.50]
 introduces = ["one-writer", "transaction", "effect-outbox", "effect-coalescing", "worker-slots", "non-blocking-loop", "recovery-note", "not-a-boundary"]
 uses = ["retry-backoff", "builtin-min", "power", "dict", "ticket", "attention-principle", "append-only-log", "agent-hooks"]
 
-[chapters.41]
+[chapters.51]
 introduces = ["prompt-order", "prompt-precedence", "inline-and-spill", "chain-of-recall", "module-re", "regex", "builtin-string-slice", "pi-vs-super-agent"]
 uses = ["transcript-tools", "output-truncation", "strength", "fan-out", "worker-slots"]
 
-[chapters.18]
+[chapters.20]
 introduces = [
     "fair-tokens", "rms-norm", "angle", "cos-sin", "radian", "math-pi", "rotation", "rotation-dot",
     "rope", "ellipsis-index", "new-axis", "silu", "swiglu", "adamw", "warmup", "cosine-decay",
@@ -290,7 +290,7 @@ uses = [
     "chart-reading", "variance",
 ]
 
-[chapters.19]
+[chapters.22]
 introduces = [
     "module-time", "time-a-function", "flops", "machine-speed", "training-flops", "utilisation",
     "training-memory", "activations", "float-formats", "finfo", "mixed-precision", "memory-bound",
@@ -302,7 +302,7 @@ uses = [
     "torch-backward", "block", "builtin-print",
 ]
 
-[chapters.20]
+[chapters.23]
 introduces = [
     "process", "data-parallel", "mean-of-equal-means", "gradient-accumulation", "builtin-slice",
     "all-reduce", "ring-all-reduce", "spawned-process", "sharding", "zero-stages", "remainder",
@@ -588,7 +588,7 @@ multi-head = "cut each vector into pieces and run attention on each piece side b
 permutation-blindness = "attention alone ignores word order"
 position-table = "a learned vector per position, added to the word's vector"
 layer-norm = "rescale each vector to mean 0 and typical size 1"
-torch-var = "torch.var(x, dim=-1, keepdim=True, unbiased=False) is chapter 08's variance"
+torch-var = "torch.var(x, dim=-1, keepdim=True, unbiased=False) is chapter 09's variance"
 block = "x = x + attention(norm1(x)), then x = x + think(norm2(x))"
 pre-norm = "normalising just before each part, on the way into x + f(x)"
 torch-arange = "torch.arange(n) is 0, 1, …, n − 1"

@@ -1,7 +1,7 @@
-"""Real data-parallel training on separate CPU processes, for chapter 20.
+"""Real data-parallel training on separate CPU processes, for chapter 23.
 
 The work function lives here, not in a notebook cell, because each new process starts fresh
-and must be able to import it. Every process holds a full copy of chapter 09's digit network,
+and must be able to import it. Every process holds a full copy of chapter 10's digit network,
 takes its own slice of each batch, and averages its slopes with the others' before each step.
 """
 

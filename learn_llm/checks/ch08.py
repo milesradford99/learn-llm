@@ -3,77 +3,77 @@ import numpy as np
 from learn_llm.checking import Case
 from learn_llm.checks.ch05 import _plain
 
-
-def _batches(f, n, size):
-    """What the learner's batches gave: sizes, and whether together they cover 0..n-1 once."""
-    out = f(n, size, np.random.default_rng(3))
-    if not isinstance(out, list):
-        return _plain(out)
-    sizes = [len(b) for b in out]
-    joined = sorted(int(i) for b in out for i in b)
-    return sizes, joined == list(range(n))
-
-
-def _shuffled(f):
-    """The first batch differs from 0, 1, 2, ... (with this seed, a shuffle can't give that)."""
-    out = f(100, 10, np.random.default_rng(3))
-    return isinstance(out, list) and len(out) > 0 and [int(i) for i in out[0]] != list(range(10))
+# A tiny network: 2 pictures, 3 pixels, 2 hidden units, 2 digits. One hidden value is
+# negative before the bend, so a wrong ReLU slope shows.
+X = np.array([[1.0, 0.0, 2.0], [0.5, 1.0, -1.0]])
+Y = np.array([[1.0, 0.0], [0.0, 1.0]])
+W1 = np.array([[0.5, -1.0], [1.0, 0.5], [-0.25, 0.5]])
+B1 = np.array([0.1, -0.2])
+W2 = np.array([[1.0, -0.5], [0.5, 2.0]])
+B2 = np.array([0.0, 0.3])
 
 
-def _adam(f, steps):
-    w, m, v = np.array([1.0, -2.0]), np.zeros(2), np.zeros(2)
-    for t in range(1, steps + 1):
-        out = f(w, m, v, np.array([0.5, -3.0]) * t, t, 0.1)
-        if not isinstance(out, tuple) or len(out) != 3:
-            return _plain(out)
-        w, m, v = out
-    return _plain(w)
+def _softmax(S):
+    E = np.exp(S - np.max(S, axis=1, keepdims=True))
+    return E / np.sum(E, axis=1, keepdims=True)
 
 
-def _adam_count(f):
-    """How many things adam_step gave back (None counts as 0, a single array as 1)."""
-    out = f(np.array([1.0, -2.0]), np.zeros(2), np.zeros(2), np.array([0.5, -3.0]), 1, 0.1)
+def _forward():
+    Z = X @ W1 + B1
+    H = np.maximum(Z, 0)
+    return Z, H, H @ W2 + B2
+
+
+def _backward():
+    Z, H, S = _forward()
+    G = (_softmax(S) - Y) / len(X)
+    dZ = (G @ W2.T) * (Z > 0)
+    return X.T @ dZ, np.sum(dZ, axis=0), H.T @ G, np.sum(G, axis=0)
+
+
+def _list(values):
+    return tuple(np.asarray(v).tolist() for v in values)
+
+
+def _count(f):
+    """How many things forward gave back (None counts as 0, a single array as 1)."""
+    out = f(X, W1, B1, W2, B2)
     return 0 if out is None else len(out) if isinstance(out, tuple) else 1
 
 
-def _adam_reference(steps):
-    w, m, v = np.array([1.0, -2.0]), np.zeros(2), np.zeros(2)
-    for t in range(1, steps + 1):
-        g = np.array([0.5, -3.0]) * t
-        m = 0.9 * m + 0.1 * g
-        v = 0.999 * v + 0.001 * g * g
-        w = w - 0.1 * (m / (1 - 0.9 ** t)) / (np.sqrt(v / (1 - 0.999 ** t)) + 1e-8)
-    return w.tolist()
-
-
-def _momentum(f, steps):
-    w, velocity = np.array([1.0, -2.0]), np.zeros(2)
-    for _ in range(steps):
-        out = f(w, velocity, np.array([0.5, -3.0]), 0.1)
-        if not isinstance(out, tuple) or len(out) != 2:
+def _part(i):
+    """Item i of forward's (Z, H, S); anything else is shown as it is, for the hint to explain."""
+    def get(f):
+        out = f(X, W1, B1, W2, B2)
+        if not isinstance(out, tuple) or len(out) != 3:
             return _plain(out)
-        w, velocity = out
-    return _plain((w, velocity))
+        return _plain(out[i])
+    return get
+
+
+def _grads(part):
+    """backward's slopes for one layer: (dW2, db2) or (dW1, db1); anything else shown as it is."""
+    def get(f):
+        out = f(X, Y, *_forward(), W2)
+        if not isinstance(out, tuple) or len(out) != 4:
+            return _plain(out)
+        return _plain(out[part])
+    return get
 
 
 EXERCISES = {
-    "variance": [
-        Case("ch08.variance.small", lambda f: _plain(f(np.array([1.0, 3.0]))), 1.0, tolerance=1e-12, hint="ch08.variance.hint"),
-        Case("ch08.variance.five", lambda f: _plain(f(np.array([2.0, 4.0, 4.0, 4.0, 6.0]))), 1.6, tolerance=1e-12, hint="ch08.variance.hint"),
-        Case("ch08.variance.same", lambda f: _plain(f(np.array([7.0, 7.0, 7.0]))), 0.0, tolerance=1e-12, hint="ch08.variance.hint"),
+    "relu": [
+        Case("ch08.relu.mixed", lambda f: _plain(f(np.array([[-2.0, 0.0, 3.0], [1.5, -0.5, 0.0]]))), [[0.0, 0.0, 3.0], [1.5, 0.0, 0.0]], tolerance=1e-12, hint="ch08.relu.hint"),
+        Case("ch08.relu.shape", lambda f: list(np.shape(f(np.zeros((4, 7))))), [4, 7], hint="ch08.relu.hint"),
     ],
-    "batches": [
-        Case("ch08.batches.even", lambda f: _batches(f, 10, 5), ([5, 5], True), hint="ch08.batches.hint"),
-        Case("ch08.batches.uneven", lambda f: _batches(f, 10, 4), ([4, 4, 2], True), hint="ch08.batches.hint"),
-        Case("ch08.batches.shuffled", _shuffled, True, hint="ch08.batches.shuffle_hint"),
+    "forward": [
+        Case("ch08.forward.count", _count, 3, hint="ch08.forward.hint"),
+        Case("ch08.forward.z", _part(0), _forward()[0].tolist(), tolerance=1e-9, hint="ch08.forward.hint"),
+        Case("ch08.forward.h", _part(1), _forward()[1].tolist(), tolerance=1e-9, hint="ch08.forward.hint"),
+        Case("ch08.forward.s", _part(2), _forward()[2].tolist(), tolerance=1e-9, hint="ch08.forward.hint"),
     ],
-    "momentum_step": [
-        Case("ch08.momentum_step.one", lambda f: _momentum(f, 1), ([0.95, -1.7], [0.5, -3.0]), tolerance=1e-12, hint="ch08.momentum_step.hint"),
-        Case("ch08.momentum_step.two", lambda f: _momentum(f, 2), ([0.855, -1.13], [0.95, -5.7]), tolerance=1e-12, hint="ch08.momentum_step.hint"),
-    ],
-    "adam_step": [
-        Case("ch08.adam_step.count", _adam_count, 3, hint="ch08.adam_step.hint"),
-        Case("ch08.adam_step.one", lambda f: _adam(f, 1), _adam_reference(1), tolerance=1e-6, hint="ch08.adam_step.hint"),
-        Case("ch08.adam_step.five", lambda f: _adam(f, 5), _adam_reference(5), tolerance=1e-6, hint="ch08.adam_step.hint"),
+    "backward": [
+        Case("ch08.backward.second", _grads(slice(2, 4)), _list(_backward()[2:]), tolerance=1e-9, hint="ch08.backward.second_hint"),
+        Case("ch08.backward.first", _grads(slice(0, 2)), _list(_backward()[:2]), tolerance=1e-9, hint="ch08.backward.first_hint"),
     ],
 }

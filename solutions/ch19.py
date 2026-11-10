@@ -1,41 +1,51 @@
 """Reference solutions for chapter 19. Peek only after trying!"""
 
-import time
 
-import numpy as np
-import torch
-
-
-def time_it(f, repeats):
-    f()
-    started = time.perf_counter()
-    for i in range(repeats):
-        f()
-    return (time.perf_counter() - started) / repeats
+def to_bytes(text):
+    return list(text.encode("utf-8"))
 
 
-def matmul_flops(n, k, m):
-    return 2 * n * k * m
+def count_pairs(ids):
+    counts = {}
+    for pair in zip(ids, ids[1:]):
+        counts[pair] = counts.get(pair, 0) + 1
+    return counts
 
 
-def training_flops(knobs, tokens):
-    return 6 * knobs * tokens
+def merge(ids, pair, new_id):
+    out = []
+    i = 0
+    while i < len(ids):
+        if i < len(ids) - 1 and ids[i] == pair[0] and ids[i + 1] == pair[1]:
+            out.append(new_id)
+            i = i + 2
+        else:
+            out.append(ids[i])
+            i = i + 1
+    return out
 
 
-def adam_bytes(knobs):
-    return 16 * knobs
+def train_bpe(ids, count):
+    merges = {}
+    for step in range(count):
+        counts = count_pairs(ids)
+        pair = max(counts, key=counts.get)
+        new_id = 256 + step
+        merges[pair] = new_id
+        ids = merge(ids, pair, new_id)
+    return merges
 
 
-def tiled_attention(q, K, V, tile):
-    best = -np.inf
-    total = 0.0
-    acc = torch.zeros(V.shape[1])
-    for start in range(0, len(K), tile):
-        scores = K[start:start + tile] @ q / np.sqrt(len(q))
-        new_best = max(best, torch.max(scores).item())
-        fix = np.exp(best - new_best)
-        weights = torch.exp(scores - new_best)
-        total = total * fix + torch.sum(weights).item()
-        acc = acc * fix + weights @ V[start:start + tile]
-        best = new_best
-    return acc / total
+def encode(text, merges):
+    ids = to_bytes(text)
+    for pair, new_id in merges.items():
+        ids = merge(ids, pair, new_id)
+    return ids
+
+
+def decode(ids, merges):
+    table = [bytes([i]) for i in range(256)]
+    for pair, new_id in merges.items():
+        table.append(table[pair[0]] + table[pair[1]])
+    joined = b"".join([table[i] for i in ids])
+    return joined.decode("utf-8", errors="replace")

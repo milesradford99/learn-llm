@@ -1,28 +1,46 @@
 """Reference solutions for chapter 41. Peek only after trying!"""
 
-import re
+from learn_llm.agents import result
 
 
-def prompt_order(role):
-    order = ["shared and role", "team sections", "subscriptions and replies"]
-    if role == "orchestrator":
-        order.append("dispatch")
-    else:
-        order.append("work")
-    if role == "orchestrator":
-        order.append("admission")
-    order = order + ["handoff", "environment"]
-    if role == "orchestrator":
-        order.append("policy")
-    return order
+def take_one(queue):
+    if len(queue) == 0:
+        return []
+    return [queue.pop(0)]
 
 
-def preview(text):
-    return re.sub(r"\s+", " ", text)[:160]
+def can_continue(messages):
+    if len(messages) == 0:
+        return False
+    return messages[-1]["role"] != "assistant"
 
 
-def exam():
-    return {
-        "q1": "b", "q2": "c", "q3": "a", "q4": "b", "q5": "c", "q6": "a",
-        "q7": "c", "q8": "b", "q9": "a", "q10": "c", "q11": "b", "q12": "a",
-    }
+def truncated_result(call):
+    text = f"Tool call \"{call['name']}\" was not executed: the response hit the output token limit."
+    return result(call["id"], call["name"], text, True)
+
+
+def run_loop(model, messages, run_call, steering, follow_ups):
+    pending = take_one(steering)
+    while True:
+        more_calls = True
+        while more_calls or len(pending) > 0:
+            for message in pending:
+                messages.append(message)
+            pending = []
+            reply = model(messages)
+            messages.append(reply)
+            if reply["stopReason"] == "error" or reply["stopReason"] == "aborted":
+                return messages
+            calls = [block for block in reply["content"] if block["type"] == "toolCall"]
+            more_calls = len(calls) > 0
+            for call in calls:
+                if reply["stopReason"] == "length":
+                    messages.append(truncated_result(call))
+                else:
+                    messages.append(run_call(call))
+            pending = take_one(steering)
+        extra = take_one(follow_ups)
+        if len(extra) == 0:
+            return messages
+        pending = extra

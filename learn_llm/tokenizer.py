@@ -1,6 +1,6 @@
-"""A fast byte-level BPE tokenizer for the stories, the same method as chapter 17.
+"""A fast byte-level BPE tokenizer for the stories, the same method as chapter 19.
 
-Chapter 17's tokenizer is written for clarity: it recounts every pair over the whole text at
+Chapter 19's tokenizer is written for clarity: it recounts every pair over the whole text at
 each step. This one does the same merges two standard ways faster: it trains on a table of
 word counts instead of the text, and it encodes each distinct word once and remembers it.
 Merges never cross the start of a word, so every token belongs to one word.
@@ -20,8 +20,8 @@ def to_words(text: str) -> list[str]:
 
 
 def story_words(story_list: list[str], known: set[str] | None = None) -> list[list[str]]:
-    """Each story as chapter 11's lower-case words. With `known`, any other word becomes "<unk>",
-    so a token model reads exactly the text the word models of chapters 12-16 read."""
+    """Each story as chapter 12's lower-case words. With `known`, any other word becomes "<unk>",
+    so a token model reads exactly the text the word models of chapters 13-18 read."""
     if known is None:
         return [to_words(story) for story in story_list]
     return [[w if w in known else "<unk>" for w in to_words(story)] for story in story_list]
@@ -40,7 +40,7 @@ def _merge(ids: tuple, pair: tuple, new_id: int) -> tuple:
 
 
 def train(word_counts: dict[str, int], count: int) -> list[tuple[int, int]]:
-    """The `count` merges chapter 17's train_bpe would find, counting each word once per use."""
+    """The `count` merges chapter 19's train_bpe would find, counting each word once per use."""
     words = {tuple((" " + w).encode("utf-8")): n for w, n in word_counts.items()}
     merges = []
     for step in range(count):

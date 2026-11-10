@@ -2,35 +2,39 @@
 
 import numpy as np
 import torch
-import torch.nn.functional as F
+from torch import nn
 
 
-def count_words(words):
-    counts = {}
-    for word in words:
-        counts[word] = counts.get(word, 0) + 1
-    return counts
+def convolve(image, kernel):
+    h, w = image.shape
+    k = kernel.shape[0]
+    out = np.zeros((h - k + 1, w - k + 1))
+    for r in range(h - k + 1):
+        for c in range(w - k + 1):
+            patch = image[r:r + k, c:c + k]
+            out[r, c] = np.sum(patch * kernel)
+    return out
 
 
-def similarity(a, b):
-    length_a = np.sqrt(a @ a)
-    length_b = np.sqrt(b @ b)
-    return (a @ b) / (length_a * length_b)
+def max_pool(M):
+    h, w = M.shape
+    out = np.zeros((h // 2, w // 2))
+    for r in range(h // 2):
+        for c in range(w // 2):
+            out[r, c] = np.max(M[2 * r:2 * r + 2, 2 * c:2 * c + 2])
+    return out
 
 
-def skipgram_pairs(ids, window):
-    centres = []
-    contexts = []
-    for i in range(len(ids)):
-        for j in range(max(0, i - window), min(len(ids), i + window + 1)):
-            if j != i:
-                centres.append(ids[i])
-                contexts.append(ids[j])
-    return centres, contexts
+def make_cnn():
+    return nn.Sequential(
+        nn.Conv2d(1, 8, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
+        nn.Conv2d(8, 16, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
+        nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(),
+        nn.AdaptiveMaxPool2d(1), nn.Flatten(), nn.Linear(32, 10),
+    )
 
 
-def pair_loss(u, v, n):
-    real = torch.sum(u * v, dim=1)
-    fake = torch.sum(n * u.unsqueeze(1), dim=2)
-    surprise = -F.logsigmoid(real) - torch.sum(F.logsigmoid(-fake), dim=1)
-    return torch.mean(surprise)
+def residual_block(x, conv1, conv2):
+    h = torch.relu(conv1(x))
+    h = conv2(h)
+    return torch.relu(x + h)

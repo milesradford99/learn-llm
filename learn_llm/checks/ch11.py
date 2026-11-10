@@ -1,55 +1,80 @@
 import numpy as np
 import torch
+from torch import nn
 
 from learn_llm.checking import Case
 from learn_llm.checks.ch05 import _plain
-from learn_llm.checks.ch09 import _plain as _plain_t
+from learn_llm.checks.ch10 import _plain as _plain_t
+
+EDGE = np.array([[-1.0, 0.0, 1.0], [-1.0, 0.0, 1.0], [-1.0, 0.0, 1.0]])
+STEP = np.array([[0.0, 0.0, 1.0, 1.0]] * 4)
+POOL = np.array([[1.0, 3.0, 0.0, 2.0], [5.0, 2.0, 1.0, 0.0], [0.0, 0.0, 4.0, 1.0], [1.0, 0.0, 6.0, 2.0]])
 
 
-def _batch():
-    u = torch.tensor([[1.0, 0.0], [0.0, 2.0]])
-    v = torch.tensor([[1.0, 1.0], [1.0, 1.0]])
-    n = torch.tensor([[[1.0, 0.0], [-1.0, 0.0], [0.0, 0.0]], [[0.0, 1.0], [0.0, 0.0], [2.0, 0.0]]])
-    return u, v, n
+def _odd_pool(f):
+    return _plain(f(np.arange(1.0, 26.0).reshape(5, 5)))
 
 
-def _reference_loss():
-    def surprise(s):
-        return float(np.log1p(np.exp(-s)))
-
-    first = surprise(1) + surprise(-1) + surprise(1) + surprise(0)
-    second = surprise(2) + surprise(-2) + surprise(0) + surprise(0)
-    return (first + second) / 2
+def _kinds(f):
+    model = f()
+    return [type(layer).__name__ for layer in model] if isinstance(model, nn.Sequential) else _plain_t(model)
 
 
-def _no_noise(f):
-    u = torch.tensor([[0.0, 0.0]])
-    return _plain_t(f(u, torch.tensor([[1.0, 2.0]]), torch.tensor([[[3.0, 4.0]]])))
+def _knobs(f):
+    return sum(p.numel() for p in f().parameters())
 
 
-def _lengths(f):
-    out = f([1, 2, 3, 4, 5, 6], 2)
-    return [len(part) for part in out] if isinstance(out, tuple) else _plain(out)
+def _paddings(f):
+    return [layer.padding[0] for layer in f() if isinstance(layer, nn.Conv2d)]
+
+
+def _out_shape(f, size):
+    with torch.no_grad():
+        return list(f()(torch.zeros(2, 1, size, size)).shape)
+
+
+def _convs():
+    torch.manual_seed(3)
+    conv1 = nn.Conv2d(2, 2, 3, padding=1)
+    conv2 = nn.Conv2d(2, 2, 3, padding=1)
+    return torch.rand(1, 2, 4, 4), conv1, conv2
+
+
+def _block(f):
+    with torch.no_grad():
+        return round(torch.sum(f(*_convs())).item(), 4)
+
+
+def _block_nonnegative(f):
+    with torch.no_grad():
+        return bool(torch.min(f(*_convs())) >= 0)
+
+
+def _reference_block():
+    x, conv1, conv2 = _convs()
+    with torch.no_grad():
+        return round(torch.sum(torch.relu(x + conv2(torch.relu(conv1(x))))).item(), 4)
 
 
 EXERCISES = {
-    "count_words": [
-        Case("ch11.count_words.small", lambda f: f(["the", "dog", "the"]), {"the": 2, "dog": 1}, hint="ch11.count_words.hint"),
-        Case("ch11.count_words.empty", lambda f: f([]), {}, hint="ch11.count_words.hint"),
+    "convolve": [
+        Case("ch11.convolve.step", lambda f: _plain(f(STEP, EDGE)), [[3.0, 3.0], [3.0, 3.0]], tolerance=1e-9, hint="ch11.convolve.hint"),
+        Case("ch11.convolve.flat", lambda f: _plain(f(np.ones((3, 4)), EDGE)), [[0.0, 0.0]], tolerance=1e-9, hint="ch11.convolve.hint"),
+        Case("ch11.convolve.one", lambda f: _plain(f(np.array([[1.0, 2.0], [3.0, 4.0]]), np.array([[2.0]]))), [[2.0, 4.0], [6.0, 8.0]], tolerance=1e-9, hint="ch11.convolve.hint"),
     ],
-    "similarity": [
-        Case("ch11.similarity.same", lambda f: _plain(f(np.array([3.0, 4.0]), np.array([6.0, 8.0]))), 1.0, tolerance=1e-9, hint="ch11.similarity.hint"),
-        Case("ch11.similarity.right", lambda f: _plain(f(np.array([1.0, 0.0]), np.array([0.0, 5.0]))), 0.0, tolerance=1e-9, hint="ch11.similarity.hint"),
-        Case("ch11.similarity.opposite", lambda f: _plain(f(np.array([1.0, 2.0]), np.array([-2.0, -4.0]))), -1.0, tolerance=1e-9, hint="ch11.similarity.hint"),
-        Case("ch11.similarity.mixed", lambda f: _plain(f(np.array([1.0, 0.0]), np.array([3.0, 4.0]))), 0.6, tolerance=1e-9, hint="ch11.similarity.hint"),
+    "max_pool": [
+        Case("ch11.max_pool.page", lambda f: _plain(f(POOL)), [[5.0, 2.0], [1.0, 6.0]], tolerance=1e-9, hint="ch11.max_pool.hint"),
+        Case("ch11.max_pool.odd", _odd_pool, [[7.0, 9.0], [17.0, 19.0]], tolerance=1e-9, hint="ch11.max_pool.hint"),
     ],
-    "skipgram_pairs": [
-        Case("ch11.skipgram_pairs.page", lambda f: f([0, 1, 2, 3], 1), ([0, 1, 1, 2, 2, 3], [1, 0, 2, 1, 3, 2]), hint="ch11.skipgram_pairs.hint"),
-        Case("ch11.skipgram_pairs.wide", _lengths, [18, 18], hint="ch11.skipgram_pairs.hint"),
-        Case("ch11.skipgram_pairs.one", lambda f: f([7], 2), ([], []), hint="ch11.skipgram_pairs.hint"),
+    "make_cnn": [
+        Case("ch11.make_cnn.layers", _kinds, ["Conv2d", "ReLU", "MaxPool2d", "Conv2d", "ReLU", "MaxPool2d", "Conv2d", "ReLU", "AdaptiveMaxPool2d", "Flatten", "Linear"], hint="ch11.make_cnn.hint"),
+        Case("ch11.make_cnn.knobs", _knobs, 6218, hint="ch11.make_cnn.knobs_hint"),
+        Case("ch11.make_cnn.padding", _paddings, [1, 1, 1], hint="ch11.make_cnn.knobs_hint"),
+        Case("ch11.make_cnn.shape", lambda f: _out_shape(f, 40), [2, 10], hint="ch11.make_cnn.hint"),
+        Case("ch11.make_cnn.any_size", lambda f: _out_shape(f, 28), [2, 10], hint="ch11.make_cnn.hint"),
     ],
-    "pair_loss": [
-        Case("ch11.pair_loss.batch", lambda f: _plain_t(f(*_batch())), _reference_loss(), tolerance=1e-4, hint="ch11.pair_loss.hint"),
-        Case("ch11.pair_loss.zero", _no_noise, 2 * float(np.log(2)), tolerance=1e-4, hint="ch11.pair_loss.hint"),
+    "residual_block": [
+        Case("ch11.residual_block.value", _block, _reference_block(), tolerance=1e-3, hint="ch11.residual_block.hint"),
+        Case("ch11.residual_block.bend", _block_nonnegative, True, hint="ch11.residual_block.hint"),
     ],
 }
