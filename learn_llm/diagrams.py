@@ -44,3 +44,30 @@ def one_day(values: dict | None = None, blames: dict | None = None, highlight: s
                          f'{escape(str(blames[name]))}</text>')
     parts.append("</svg>")
     return mo.Html("".join(parts))
+
+
+def looking(read: list[str], shares: list[float], asker: str, label: str):
+    """One step of attention: the `asker` box below looks at each `read` box above.
+
+    A thicker line means a bigger share; each line carries its share. `label` describes the
+    picture for screen readers, in the lesson's language.
+    """
+    import marimo as mo
+
+    n, gap, top, bottom = len(read), 150, 34, 170
+    width = max(gap * n, 300)
+    xs = [width / 2 + gap * (i - (n - 1) / 2) for i in range(n)]
+    parts = [f'<svg viewBox="0 0 {width} 200" width="100%" style="max-width:{width}px" role="img" '
+             f'aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
+             'font-family="ui-monospace, monospace" text-anchor="middle">']
+    for x, share in zip(xs, shares):
+        parts.append(f'<line x1="{width / 2}" y1="{bottom - _BH / 2}" x2="{x}" y2="{top + _BH / 2}" stroke="{DOT}" '
+                     f'stroke-width="{1 + 10 * share:.1f}" stroke-linecap="round" opacity="0.75"/>')
+        mx, my = (width / 2 + 2 * x) / 3, (bottom - _BH / 2 + 2 * (top + _BH / 2)) / 3
+        parts.append(f'<text x="{mx + 24:.0f}" y="{my + 4:.0f}" font-size="13" fill="{TEXT}">{share:.2f}</text>')
+    for x, y, text in [(x, top, word) for x, word in zip(xs, read)] + [(width / 2, bottom, asker)]:
+        parts.append(f'<rect x="{x - 55}" y="{y - _BH / 2}" width="110" height="{_BH}" rx="6" '
+                     f'fill="none" stroke="{AXIS}" stroke-width="1.2"/>')
+        parts.append(f'<text x="{x}" y="{y + 5}" font-size="14" fill="{TEXT}">{escape(text)}</text>')
+    parts.append("</svg>")
+    return mo.Html("".join(parts))

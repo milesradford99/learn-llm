@@ -12,9 +12,10 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import stories
+    from learn_llm.diagrams import looking
     from learn_llm.images import maps
 
     LOCALE = "en"
@@ -99,12 +100,21 @@ def _():
 
     ## Exercise 1: shift_right
 
-    Write `shift_right(Y)`, for a table `Y` of shape `(batch, length)`. `Y[:, :-1]` drops the last column. `Y[:, :1]` is the first column, and
-    `torch.zeros_like` gives zeros of the same shape and kind. Chapter 14's `torch.cat` joins the two:
+    /// admonition | 🧰 Toolbox: columns of a table
+    Take a table `T` with the rows `[1, 2, 3]` and `[4, 5, 6]`.
 
-    ```
-    return torch.cat([torch.zeros_like(Y[:, :1]), Y[:, :-1]], dim=1)
-    ```
+    - `T[:, :1]` keeps every row, and only the first column: `[[1], [4]]`. It's still a table, with one column.
+    - `T[:, :-1]` keeps every row, and drops the last column: `[[1, 2], [4, 5]]`.
+    - `torch.zeros_like(T)` is a table of zeros with the same shape and the same kind of number as `T`.
+    - Chapter 14's `torch.cat([A, B], dim=1)` joins two tables side by side.
+    ///
+
+    Write `shift_right(Y)`, for a table `Y` of shape `(batch, length)`. Every row loses its last word and gets a 0, the id of `<start>`, at the
+    front, so the shape stays the same:
+
+    > `[[7, 8, 9], [4, 5, 6]]` becomes `[[0, 7, 8], [0, 4, 5]]`
+
+    Build it from two pieces: a column of zeros, and `Y` without its last column.
     """)
     return
 
@@ -118,6 +128,15 @@ def shift_right(Y):
 @app.cell(hide_code=True)
 def _():
     check("15", "shift_right", shift_right, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Every tool you need is in the Toolbox box: a slice that keeps one column, `torch.zeros_like`, a slice that drops the last column, and `torch.cat`.""",
+        r"""It fits in one line. Inside `torch.cat([..., ...], dim=1)` the column of zeros comes first. To get a column of zeros, take the first column of `Y` and ask for zeros like it.""",
+    ], LOCALE)
     return
 
 
@@ -198,6 +217,45 @@ def share_correct(model, ids, length, rng):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    ## Predict the shapes
+
+    Before training anything, follow one batch through the model on paper. Say `X` holds 64 texts of 6 words each, the memory size is 128, and the
+    vocabulary has 501 words. Read `forward` above, line by line, and fill in the sizes. An `nn.LSTM` gives one state for every word it reads.
+    """)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    shape_boxes = hand.boxes(['K: words', 'K: numbers', 'Q: words', 'out: scores'])
+    return (shape_boxes,)
+
+
+
+@app.cell(hide_code=True)
+def _(shape_boxes):
+    hand.marked(shape_boxes, {'K: words': 6, 'K: numbers': 128, 'Q: words': 6, 'out: scores': 501}, {
+        'K: words': r"""`K` has shape `(64, ?, 128)`: the encoder leaves one state for each word it read""",
+        'K: numbers': r"""each state is one memory, and `size` says how many numbers that is""",
+        'Q: words': r"""the decoder's input is `shift_right(Y)`, which has the same shape as `Y`""",
+        'out: scores': r"""`self.out` gives one score for every word in the vocabulary""",
+    }, LOCALE)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    So the encoder hands over 6 states of 128 numbers, but `no_attention` throws `K` away. Only the final memory, one vector of 128 numbers, reaches the decoder.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     `train_translator` trains on stretches of 3 to 20 words. `translate` writes for real, with no teacher: each word comes from
     the decoder's own last guess, taking the likeliest word (`torch.argmax`). `share_correct` scores 500 examples of one length: the share of positions with the right word.
 
@@ -235,19 +293,52 @@ def _():
 
     ## Weighted averages
 
-    The fix starts with a small idea. Say we have three vectors, and we want a mix of them: 70% of the first, 20% of the second,
-    10% of the third. That's a **weighted average**: multiply each vector by its share, and add up. If the vectors are the rows of a matrix `V`
-    and the shares are a vector `a`, it's just `a @ V`, chapter 05's vector times matrix.
+    The fix starts with a small idea. Say we have three vectors, and we want a mix of them: half of the first, 30% of the second,
+    20% of the third. That's a **weighted average**: multiply each vector by its share, and add up.
 
+    | row | vector | share | share $\times$ vector |
+    |---|---|---|---|
+    | 0 | `[10, 0]` | 0.5 | `[5, 0]` |
+    | 1 | `[0, 10]` | 0.3 | `[0, 3]` |
+    | 2 | `[10, 10]` | 0.2 | `[2, 2]` |
+    | | | **sum** | **`[7, 5]`** |
+
+    The shares add up to 1, so the result stays among the vectors: it's pulled most towards the one with the biggest share.
     With shares `[1, 0, 0]`, you get exactly the first vector. So a weighted average is a kind of soft lookup: it can pick out one row, or blend a few.
 
+    ## By hand: a blend
+
+    Your turn. The rows are `[4, 0]`, `[0, 8]` and `[2, 2]`, and the shares are 0.25, 0.25 and 0.5. Work out the two numbers of the weighted average.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    blend_boxes = hand.boxes(['first number', 'second number'])
+    return (blend_boxes,)
+
+
+
+@app.cell(hide_code=True)
+def _(blend_boxes):
+    hand.marked(blend_boxes, {'first number': 2, 'second number': 3}, {
+        'first number': r"""use the first number of each row: $0.25 \times 4 + 0.25 \times 0 + 0.5 \times 2$""",
+        'second number': r"""use the second number of each row: $0.25 \times 0 + 0.25 \times 8 + 0.5 \times 2$""",
+    }, LOCALE)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 2: weighted_average
 
-    Write `weighted_average(a, V)`, for shares `a` of shape `(n,)` and rows `V` of shape `(n, d)`:
+    Write `weighted_average(a, V)`, for shares `a` of shape `(n,)` and a matrix `V` of shape `(n, d)` whose rows are the vectors. It gives back one
+    vector of `d` numbers. You don't need a loop: chapter 05 has an operation that multiplies each row of a matrix by one number of a vector and adds up the results.
 
-    ```
-    return a @ V
-    ```
+    On the table above, the shares `[0.5, 0.3, 0.2]` must give `[7, 5]`.
     """)
     return
 
@@ -266,6 +357,15 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""Chapter 05: a vector times a matrix, written with `@`, takes each row times its number, and adds them up.""",
+        r"""One line, with the shares on the left of the `@`.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## Where to look: query, key, value
 
@@ -277,20 +377,83 @@ def _():
     2. **Share out.** Softmax turns those scores into shares that add up to 1 (chapter 06).
     3. **Blend.** Take the weighted average of the encoder states with those shares.
 
-    The result is a fresh summary of the input, made for this one step of writing. The terms for these come from looking
+    **One step, with numbers.** Real states have 128 numbers. Here are three with 2 numbers each, for three words read, and a decoder state `q = [2, 1]`:
+
+    | word read | its state | 1. compare: dot product with `q` | 2. share out: softmax |
+    |---|---|---|---|
+    | the | `[1, 0]` | $2 \times 1 + 1 \times 0 = 2$ | 0.24 |
+    | dog | `[0, 1]` | $2 \times 0 + 1 \times 1 = 1$ | 0.09 |
+    | ran | `[1, 1]` | $2 \times 1 + 1 \times 1 = 3$ | 0.67 |
+
+    Step 3 blends the three states with those shares:
+
+    > $$0.24 \times [1, 0] + 0.09 \times [0, 1] + 0.67 \times [1, 1] = [0.91, 0.76]$$
+
+    The result is close to the state of `ran`, with a little of the others mixed in. Here's the same step as a picture: the thicker the line, the bigger the share.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    looking(['the [1, 0]', 'dog [0, 1]', 'ran [1, 1]'], [0.24, 0.09, 0.67], 'q = [2, 1]',
+            'The decoder state q looks at three encoder states with shares 0.24, 0.09 and 0.67')
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Notice how sharp softmax is. The score of `ran` is only 1 more than the score of `the`, yet its share is about 2.7 times as big, because
+    each extra point of score multiplies the share by $e$ (chapter 06).
+
+    The result is a fresh summary of the input, made for this one step of writing. The terms for the three parts come from looking
     things up. The **query** `q` is what you're looking for, the **keys** `K` are the labels you compare it with, and
-    the **values** `V` are what you get back. Here the keys and the values are the same encoder states, but they needn't be, and in
-    the next chapter they won't be.
+    the **values** `V` are what you get back. In a library, the query is your question, the keys are the titles on the spines, and the values are the books.
+    Here the keys and the values are the same encoder states, but they needn't be, and in the next chapter they won't be.
 
     Why would a decoder state and an encoder state have a big dot product? At first, they don't. Training makes the useful ones large, as you'll see below.
 
+    ## By hand: compare
+
+    A new query, `q = [1, 3]`, and three keys: `[2, 0]`, `[0, 1]` and `[1, 1]`. Work out the three scores. Then say which key will get the
+    biggest share: 0, 1 or 2.
+    """)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    score_boxes = hand.boxes(['score 0', 'score 1', 'score 2', 'biggest share'])
+    return (score_boxes,)
+
+
+
+@app.cell(hide_code=True)
+def _(score_boxes):
+    hand.marked(score_boxes, {'score 0': 2, 'score 1': 3, 'score 2': 4, 'biggest share': 2}, {
+        'score 0': r"""the dot product of `[1, 3]` and `[2, 0]`: $1 \times 2 + 3 \times 0$""",
+        'score 1': r"""the dot product of `[1, 3]` and `[0, 1]`""",
+        'score 2': r"""the dot product of `[1, 3]` and `[1, 1]`""",
+        'biggest share': r"""softmax keeps the order: the biggest score gets the biggest share. Type the number of that key""",
+    }, LOCALE)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 3: attention_shares
 
-    Write `attention_shares(q, K)` for one query `q` of shape `(d,)`, and keys `K` of shape `(n, d)`. `K @ q` gives one dot product per key:
+    Write `attention_shares(q, K)`, doing steps 1 and 2 for one query `q` of shape `(d,)` and keys `K` of shape `(n, d)`, one key per row. It gives back `n` shares.
 
-    ```
-    return torch.softmax(K @ q, dim=0)
-    ```
+    `K @ q` is chapter 05's matrix times vector: one dot product for each row of `K`. `torch.softmax` needs to be told along which dimension the
+    shares should add up to 1, and a vector has only one, `dim=0`.
+
+    On the table above, `q = [2, 1]` must give about `[0.24, 0.09, 0.67]`.
     """)
     return
 
@@ -309,18 +472,72 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""Two steps in order: the scores, then softmax of the scores.""",
+        r"""One line: `torch.softmax(...)` around the dot products, with `dim=0`.""",
+    ], LOCALE)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Here are the shares for your hand example, from your own function:
+    """)
+    return
+
+
+
+@app.cell
+def _():
+    attention_shares(torch.tensor([1.0, 3.0]), torch.tensor([[2.0, 0.0], [0.0, 1.0], [1.0, 1.0]]))
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    About 0.09, 0.24 and 0.67. Those are the same three shares as in the table, though the scores were 2, 3, 4 there and 2, 1, 3 here. Softmax only sees the
+    gaps between scores, as chapter 06 showed: adding the same number to every score changes nothing.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## Exercise 4: attend
 
-    Now everything at once: a batch of texts, with many queries in each. `Q` has shape `(batch, writes, d)`, `K` has shape
-    `(batch, reads, d)`, and `V` has shape `(batch, reads, e)`: values may have a size of their own. On tensors with three dimensions, `@` works text by text, on the last two.
-    `K.transpose(1, 2)` swaps dimensions 1 and 2, like `.T` for each text.
+    Now everything at once: a batch of texts, with many queries in each. Every word being written has its own query, so the shares form a table:
+    one row for each word written, one column for each word read.
 
-    Write `attend(Q, K, V)`, giving back the blended vectors and the shares:
+    /// admonition | 🧰 Toolbox: a batch of matrices
+    A tensor of shape `(5, 2, 3)` can be read as 5 matrices of shape `(2, 3)`, one for each text.
 
-    1. `scores = Q @ K.transpose(1, 2)`, shape `(batch, writes, reads)`: every query against every key
-    2. `A = torch.softmax(scores, dim=2)`, so each query's shares add up to 1
-    3. `return A @ V, A`, the weighted averages, of shape `(batch, writes, e)`, and the shares
+    - `@` works text by text, on the last two dimensions: `(5, 2, 3) @ (5, 3, 4)` gives `(5, 2, 4)`.
+    - `M.transpose(1, 2)` swaps dimensions 1 and 2. It's `.T` for each text: `(5, 2, 3)` becomes `(5, 3, 2)`.
+    - `torch.softmax(M, dim=2)` makes the numbers add up to 1 along the last dimension, that is along each row of each matrix.
+    ///
+
+    In one text, with the queries as the rows of $Q$, the keys as the rows of $K$ and the values as the rows of $V$, the three steps are:
+
+    > $$\text{scores} = Q K^\top \qquad A = \text{softmax}(\text{scores}) \qquad \text{blended} = A V$$
+
+    $K^\top$ is $K$ with rows and columns swapped (chapter 06), so that row $i$ of the scores holds the dot products of query $i$ with every key.
+
+    Write `attend(Q, K, V)`. It gives back two things, the blended vectors and the shares `A`:
+
+    | | shape |
+    |---|---|
+    | `Q` | `(batch, writes, d)` |
+    | `K` | `(batch, reads, d)` |
+    | `V` | `(batch, reads, e)`: values may have a size of their own |
+    | scores, and `A` | `(batch, writes, reads)` |
+    | blended | `(batch, writes, e)` |
+
+    Each written word shares out its attention over the words read, so the shares must add up to 1 along `reads`.
     """)
     return
 
@@ -339,18 +556,68 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""Three lines, one for each formula. Follow the shapes in the table: `(batch, writes, d) @ (batch, d, reads)` gives `(batch, writes, reads)`.""",
+        r"""`K` has shape `(batch, reads, d)`, so it needs its last two dimensions swapped before the `@`. The softmax runs along dimension 2. The blend uses `V`, not `K`, and the function gives back a pair.""",
+    ], LOCALE)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
-    To plug it in, `with_attention` joins each decoder state to its blended summary, side by side, which is why the last layer's
-    width is twice the memory size. Nothing else changes. Same model, same data, same 1,500 batches, same memory size.
-    Until you press the button, the cells after it say `Ancestor stopped`. That's normal.
+    ## Exercise 5: with_attention
+
+    One piece is missing: a `use` function to hand to the `Translator`, in place of `no_attention`. Look at how `forward` and `translate` call `use(Q, K)`, and at what `no_attention` gives back.
+
+    Write `with_attention(Q, K)`:
+
+    1. Run your `attend`. The queries are the decoder states `Q`. The encoder states `K` serve as the keys and as the values.
+    2. Join each decoder state with its blended summary, side by side, so the last layer sees both. With a memory of 128 numbers that's 256, which is why the last layer's width doubles.
+    3. Give back the joined vectors and the shares.
+
+    | | shape |
+    |---|---|
+    | `Q` | `(batch, writes, 128)` |
+    | `K` | `(batch, reads, 128)` |
+    | joined | `(batch, writes, 256)` |
+    | shares | `(batch, writes, reads)` |
     """)
     return
 
 
+
 @app.function
 def with_attention(Q, K):
-    blended, A = attend(Q, K, K)
-    return torch.cat([Q, blended], dim=2), A
+    # ← replace todo() below with your code
+    todo()
+
+
+@app.cell(hide_code=True)
+def _():
+    check("15", "with_attention", with_attention, LOCALE)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""`attend(Q, K, K)` gives the blended vectors and the shares. `torch.cat` joins two tensors along a dimension you choose.""",
+        r"""Two lines. The states have three dimensions, `(batch, writes, 128)`, and the joining happens along the last one, `dim=2`. The decoder state goes first.""",
+    ], LOCALE)
+    return
+
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Nothing else changes. Same model, same data, same 1,500 batches, same memory size.
+    Until you press the button, the cells after it say `Ancestor stopped`. That's normal.
+    """)
+    return
 
 
 @app.cell(hide_code=True)
@@ -425,7 +692,9 @@ def _():
     - train a decoder with teacher forcing
     - compute a weighted average with `@`
     - explain query, key and value
+    - work out one step of attention by hand: scores, shares, blend
     - write attention for a whole batch, in three steps: compare, share out, blend
+    - plug attention into an encoder-decoder model
     - read an attention picture
 
     ---

@@ -185,6 +185,7 @@ introduces = [
     "weighted-average", "query-key-value", "attention", "attention-matmul", "attention-map",
     "numpy-stack",
 ]
+toolbox = ["torch-flip", "numpy-stack"]
 uses = [
     "lstm", "nn-embedding", "softmax", "dot-product", "cosine-similarity", "vector-times-matrix",
     "torch-cat", "gradient-clipping", "residual", "transpose", "rng-integers",

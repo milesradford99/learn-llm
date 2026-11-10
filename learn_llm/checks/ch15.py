@@ -26,6 +26,25 @@ def _shape(f):
     return list(blended.shape), list(A.shape)
 
 
+def _reference_with():
+    blended, A = _reference_attend_on(Q, K, K)
+    return torch.cat([Q, blended], dim=2).tolist(), A.tolist()
+
+
+def _reference_attend_on(Q, K, V):
+    A = torch.softmax(Q @ K.transpose(1, 2), dim=2)
+    return A @ V, A
+
+
+def _with_shape(f):
+    joined, A = f(torch.zeros(2, 4, 3), torch.zeros(2, 5, 3))
+    return list(joined.shape), list(A.shape)
+
+
+def _keeps_states(f):
+    return _plain(f(Q, K)[0][:, :, :2])
+
+
 EXERCISES = {
     "shift_right": [
         Case("ch15.shift_right.page", lambda f: _plain(f(torch.tensor([[7, 8, 9], [4, 5, 6]]))), [[0, 7, 8], [0, 4, 5]], hint="ch15.shift_right.hint"),
@@ -42,5 +61,10 @@ EXERCISES = {
     "attend": [
         Case("ch15.attend.shapes", _shape, ([2, 4, 7], [2, 4, 5]), hint="ch15.attend.hint"),
         Case("ch15.attend.values", _attend, _reference_attend(), tolerance=1e-5, hint="ch15.attend.hint"),
+    ],
+    "with_attention": [
+        Case("ch15.with_attention.shapes", _with_shape, ([2, 4, 6], [2, 4, 5]), hint="ch15.with_attention.hint"),
+        Case("ch15.with_attention.keeps", _keeps_states, Q.tolist(), tolerance=1e-6, hint="ch15.with_attention.hint"),
+        Case("ch15.with_attention.values", lambda f: _plain(f(Q, K)), _reference_with(), tolerance=1e-5, hint="ch15.with_attention.hint"),
     ],
 }

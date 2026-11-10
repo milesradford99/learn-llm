@@ -19,3 +19,8 @@ def attend(Q, K, V):
     scores = Q @ K.transpose(1, 2)
     A = torch.softmax(scores, dim=2)
     return A @ V, A
+
+
+def with_attention(Q, K):
+    blended, A = attend(Q, K, K)
+    return torch.cat([Q, blended], dim=2), A
