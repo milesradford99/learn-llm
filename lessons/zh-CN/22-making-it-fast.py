@@ -327,7 +327,7 @@ def _():
 
     ## 性能分析：找出慢在哪里
 
-    在提速之前，先找出哪里慢。**性能分析器**（profiler）给一次运行里的每个操作计时。PyTorch 的叫 `torch.profiler`。下面的单元格对一个小 Transformer 块的一步训练做性能分析，它是 PyTorch 自己版本的第 16 章 `Block`，并列出最耗时的五个操作：
+    在提速之前，先找出哪里慢。**性能分析器**（profiler）给一次运行里的每个操作计时。PyTorch 的叫 `torch.profiler`。下面的单元格对一个小 Transformer 块的一步训练做性能分析，它是 PyTorch 自己版本的第 17 章 `Block`，并列出最耗时的五个操作：
     """)
     return
 

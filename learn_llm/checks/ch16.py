@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch import nn
 
 from learn_llm.checking import Case
 from learn_llm.checks.ch10 import _plain
@@ -38,40 +37,41 @@ def _split_shape(f):
     return list(out.shape) if isinstance(out, torch.Tensor) else _plain(out)
 
 
-def _norm(f):
-    torch.manual_seed(2)
-    out = f(torch.rand(3, 4, 8) * 10)
-    return round(torch.mean(torch.abs(torch.mean(out, dim=-1))).item(), 3), round(torch.mean(torch.var(out, dim=-1, unbiased=False)).item(), 2)
+def _ref_split(x, heads):
+    batch, words, d = x.shape
+    return x.reshape(batch, words, heads, d // heads).transpose(1, 2)
 
 
-def _matches_pytorch(f):
-    torch.manual_seed(3)
-    x = torch.rand(2, 3, 8)
-    mine = f(x)
-    theirs = nn.LayerNorm(8, eps=1e-5, elementwise_affine=False)(x)
-    return bool(torch.max(torch.abs(mine - theirs)) < 1e-4)
+def _join_shape(f):
+    out = f(torch.zeros(5, 4, 7, 32))
+    return list(out.shape) if isinstance(out, torch.Tensor) else _plain(out)
 
 
-def _block(f):
-    x = torch.ones(1, 2, 3)
-    double = lambda t: 2 * t
-    add_one = lambda t: t + 1
-    # 1 + 2 × (2 × 1) = 5, then 5 + 2 × (5 + 1) = 17
-    out = f(x, double, double, add_one, double)
-    return None if out is None else _plain(out)[0][0][0]
+def _round_trip(f):
+    x = torch.arange(12.0).reshape(1, 2, 6)
+    return _plain(f(_ref_split(x, 3)))
 
 
-def _order(f):
-    calls = []
+X = torch.tensor([[[1.0, 0.0, 2.0, 1.0], [0.0, 1.0, 1.0, 3.0], [2.0, 2.0, 0.0, 1.0]]])
+SAME = lambda t: t
+DOUBLE = lambda t: 2 * t
 
-    def note(name):
-        def layer(t):
-            calls.append(name)
-            return t
-        return layer
 
-    f(torch.ones(1, 1, 1), note("norm1"), note("attention"), note("norm2"), note("think"))
-    return calls
+def _ref_step(to_query, to_key, to_value, mix, heads):
+    Q, K, V = _ref_split(to_query(X), heads), _ref_split(to_key(X), heads), _ref_split(to_value(X), heads)
+    mask = torch.triu(torch.ones(3, 3, dtype=torch.bool), diagonal=1)
+    A = torch.softmax((Q @ K.transpose(-2, -1) / np.sqrt(K.shape[-1])).masked_fill(mask, -torch.inf), dim=-1)
+    blended = (A @ V).transpose(1, 2).reshape(1, 3, 4)
+    return mix(blended).tolist(), A.tolist()
+
+
+def _step_shapes(f):
+    out, A = f(torch.zeros(2, 5, 8), SAME, SAME, SAME, SAME, 4)
+    return list(out.shape), list(A.shape)
+
+
+def _step_future(f):
+    return _plain(f(X, SAME, SAME, SAME, SAME, 2)[1])[0][0][0][1:]
 
 
 EXERCISES = {
@@ -89,12 +89,14 @@ EXERCISES = {
         Case("ch16.split_heads.shape", _split_shape, [5, 4, 7, 32], hint="ch16.split_heads.hint"),
         Case("ch16.split_heads.values", _split, [[[[0.0, 1.0], [6.0, 7.0]], [[2.0, 3.0], [8.0, 9.0]], [[4.0, 5.0], [10.0, 11.0]]]], hint="ch16.split_heads.hint"),
     ],
-    "layer_norm": [
-        Case("ch16.layer_norm.scale", _norm, (0.0, 1.0), tolerance=0.01, hint="ch16.layer_norm.hint"),
-        Case("ch16.layer_norm.pytorch", _matches_pytorch, True, hint="ch16.layer_norm.hint"),
+    "join_heads": [
+        Case("ch16.join_heads.shape", _join_shape, [5, 7, 128], hint="ch16.join_heads.hint"),
+        Case("ch16.join_heads.undo", _round_trip, torch.arange(12.0).reshape(1, 2, 6).tolist(), hint="ch16.join_heads.hint"),
     ],
-    "block_step": [
-        Case("ch16.block_step.value", _block, 17.0, tolerance=1e-6, hint="ch16.block_step.hint"),
-        Case("ch16.block_step.order", _order, ["norm1", "attention", "norm2", "think"], hint="ch16.block_step.hint"),
+    "self_attention_step": [
+        Case("ch16.self_attention_step.shapes", _step_shapes, ([2, 5, 8], [2, 4, 5, 5]), hint="ch16.self_attention_step.hint"),
+        Case("ch16.self_attention_step.future", _step_future, [0.0, 0.0], tolerance=1e-9, hint="ch16.self_attention_step.hint"),
+        Case("ch16.self_attention_step.values", lambda f: _plain(f(X, SAME, SAME, SAME, SAME, 2)), _ref_step(SAME, SAME, SAME, SAME, 2), tolerance=1e-5, hint="ch16.self_attention_step.hint"),
+        Case("ch16.self_attention_step.layers", lambda f: _plain(f(X, DOUBLE, SAME, lambda t: t + 1, DOUBLE, 2)), _ref_step(DOUBLE, SAME, lambda t: t + 1, DOUBLE, 2), tolerance=1e-5, hint="ch16.self_attention_step.hint"),
     ],
 }

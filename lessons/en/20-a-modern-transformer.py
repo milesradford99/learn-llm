@@ -29,7 +29,7 @@ def _():
     mo.md(r"""
     # 20 · A modern transformer
 
-    Chapter 16's model is the 2017 design. Large models today keep its skeleton, blocks of attention and thinking on the road of `x + f(x)`, but
+    Chapter 17's model is the 2017 design. Large models today keep its skeleton, blocks of attention and thinking on the road of `x + f(x)`, but
     almost every part has been swapped for a better one since. This chapter makes five of those swaps, each small, each measured:
 
     1. **RMSNorm**, a simpler normalisation;
@@ -80,7 +80,7 @@ def _():
 
     ## 1. RMSNorm
 
-    Chapter 16's layer norm subtracts the mean, then divides by the typical size. Researchers found the subtraction does little, so **RMSNorm** skips it: divide each vector by its
+    Chapter 17's layer norm subtracts the mean, then divides by the typical size. Researchers found the subtraction does little, so **RMSNorm** skips it: divide each vector by its
     **root mean square**, $\sqrt{\text{mean of } x^2}$, then multiply by a learned gain for each number in the vector. (The `1e-6` only guards against dividing by zero.) It's one step less, so a little faster, and works as well.
 
     ## Exercise 1: rms_norm
@@ -110,7 +110,7 @@ def _():
     mo.md(r"""
     ## 2. Rotations
 
-    Chapter 16 gave each position a learned vector, which has two weaknesses: the model knows nothing about position 33 if it only trained on 32, and "word 7 looking at word 5"
+    Chapter 17 gave each position a learned vector, which has two weaknesses: the model knows nothing about position 33 if it only trained on 32, and "word 7 looking at word 5"
     has to be learned separately from "word 27 looking at word 25", though it's the same relationship: two words back. Rotary positions fix both. They need one idea from geometry.
 
     **Angles, cos and sin.** Draw a circle of radius 1 around a point. Start at the right-hand edge, and walk anticlockwise round the circle. How far round you've
@@ -214,7 +214,7 @@ def _():
 
     ## 3. SwiGLU: thinking with a gate
 
-    Chapter 16's thinking layer is `W2(relu(W1(x)))`. Two changes make it better. First, a smoother bend: **SiLU**, $x \times \sigma(x)$ with chapter 12's sigmoid.
+    Chapter 17's thinking layer is `W2(relu(W1(x)))`. Two changes make it better. First, a smoother bend: **SiLU**, $x \times \sigma(x)$ with chapter 12's sigmoid.
     It's about $x$ for large $x$ and about 0 for very negative $x$, like ReLU, but with no sharp corner. Second, something like chapter 14's gates: a second layer `W3` decides,
     number by number, how much of the first passes. (It isn't squeezed between 0 and 1, so it's gate-like rather than a strict gate.) The $\times$ here is position by position:
 
@@ -416,7 +416,7 @@ def _():
 
     ## The modern model
 
-    Here are all five swaps together. Compare `ModernBlock` with chapter 16's `Block`: the same two `x + f(x)` steps, with `rms_norm` and `swiglu` in place of layer norm and ReLU, and `rope`
+    Here are all five swaps together. Compare `ModernBlock` with chapter 17's `Block`: the same two `x + f(x)` steps, with `rms_norm` and `swiglu` in place of layer norm and ReLU, and `rope`
     applied to queries and keys. `nn.Parameter` makes a tensor into a knob of its own, here each gain. The model has no position table. Its last layer and attention layers have no biases, which modern models usually drop.
     """)
     return
@@ -510,13 +510,13 @@ def per_word_perplexity(model, X, Y, word_count):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `train_modern` is chapter 16's loop with AdamW and the schedule: before every step it sets the rate for that step (`optimizer.param_groups` is where the rate lives).
+    `train_modern` is chapter 17's loop with AdamW and the schedule: before every step it sets the rate for that step (`optimizer.param_groups` is where the rate lives).
     `per_word_perplexity` adds up the surprise over all test tokens and divides by the **words**, as promised. Windows are 64 tokens long, a little over 60 words, since a token
     is nearly a word.
 
     One honest detail: cutting the text into windows drops a few tokens at the very end, so the words are counted over the tokens actually scored. The difference is a few tokens out of 167,000.
 
-    Finish all six exercises first: the training uses them all. The button trains a modern model of the same size as chapter 16's: 128 numbers per token, 4 heads, 3 blocks. It takes about 3 to 7 minutes,
+    Finish all six exercises first: the training uses them all. The button trains a modern model of the same size as chapter 17's: 128 numbers per token, 4 heads, 3 blocks. It takes about 3 to 7 minutes,
     then saves a checkpoint to `my-work/.models/ch20.pt`, so the run can be loaded again later. Until it finishes, the cells that need it say `Ancestor stopped`. That's normal.
     The cell shows the knobs and the per-word perplexity.
     """)
@@ -548,7 +548,7 @@ def _(ModernGPT, folder, test_tokens, tokenizer, train_button, train_tokens, wor
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    About 1.17 million knobs, nearly the same as chapter 16's model, and a per-word perplexity of about 19. Here's the leaderboard:
+    About 1.17 million knobs, nearly the same as chapter 17's model, and a per-word perplexity of about 19. Here's the leaderboard:
     """)
     return
 
@@ -563,7 +563,7 @@ def _(modern_score):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    About 19 against chapter 16's 23. How much of that is the tokens, and how much the five swaps? We trained chapter 16's design on these same tokens, with the same time and
+    About 19 against chapter 17's 23. How much of that is the tokens, and how much the five swaps? We trained chapter 17's design on these same tokens, with the same time and
     the same text: it scored about 23.4, just like on words. So the tokens alone change little here, since with `<unk>` kept this text is almost one token per word. The gain comes from the swaps.
 
     And without `<unk>`? We also trained both designs on the full text, with every rare word spelled out in tokens. Both scored about 40% worse per word, about 27 for the modern one: spelling out

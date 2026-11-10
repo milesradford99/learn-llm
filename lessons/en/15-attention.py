@@ -36,7 +36,7 @@ def _():
     a long sentence yourself. You wouldn't memorise it and then turn away. You'd keep looking back at the
     words you need, as you need them.
 
-    That looking back is called **attention**, and it's the idea behind the T in ChatGPT, which stands for Transformer (chapter 16).
+    That looking back is called **attention**, and it's the idea behind the T in ChatGPT, which stands for Transformer (chapters 16 and 17).
 
     ## A task we can check
 
@@ -684,7 +684,7 @@ def _():
     Here's a question. The LSTMs are still there, reading word by word, and they're slow, since each step must wait for the one before it. If attention is what
     does the real work, do we need the LSTMs at all? What if each word simply attended to the other words, all at once?
 
-    That's the **Transformer**, and in **Chapter 16** you'll build one from attention alone, put it on the leaderboard, and watch it take first place.
+    That's the **Transformer**. In **Chapter 16** you'll build its one new layer from attention alone. In chapter 17 you'll stack that layer into a model, put it on the leaderboard, and watch it take first place.
 
     ## What you can do now
 

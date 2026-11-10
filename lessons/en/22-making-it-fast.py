@@ -349,7 +349,7 @@ def _():
     ## Profiling: find out what's slow
 
     Before speeding anything up, find out what's slow. A **profiler** times every operation inside a run. PyTorch's is `torch.profiler`. The cell below profiles one training step of a small
-    transformer block, PyTorch's own version of chapter 16's `Block`, and lists the five most expensive operations:
+    transformer block, PyTorch's own version of chapter 17's `Block`, and lists the five most expensive operations:
     """)
     return
 

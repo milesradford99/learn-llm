@@ -67,8 +67,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Here's chapter 16's model, smaller, and with a switch: `.features(ids)` gives the vectors from the last block, before the scores. A new layer on
-    top of those will do the classifying: `Classifier` averages the vectors over the 64 words, then applies one new `nn.Linear`. You've seen the rest in chapter 16, so you don't need to study this code. The next cells prepare the data: each example is the first 64 words of a story.
+    Here's chapter 17's model, smaller, and with a switch: `.features(ids)` gives the vectors from the last block, before the scores. A new layer on
+    top of those will do the classifying: `Classifier` averages the vectors over the 64 words, then applies one new `nn.Linear`. You've seen the rest in chapter 17, so you don't need to study this code. The next cells prepare the data: each example is the first 64 words of a story.
     """)
     return
 

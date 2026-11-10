@@ -225,7 +225,7 @@ need a real API key (it breaks "no accounts" and gives different results each ru
 - **18 A modern transformer.** Fair tokens first (same text as the word models, scored per word).
   RMSNorm, angles and rotations taught from the circle, RoPE, SwiGLU, AdamW checked against
   PyTorch, warmup and cosine, checkpoints that resume exactly. Measured on the same text and time:
-  chapter 16's design 23.4, modern 19.3. Spelling rare words out costs about 40% more.
+  chapter 17's design 23.4, modern 19.3. Spelling rare words out costs about 40% more.
 - **19 Making it fast.** Timing, FLOPs of a product and of training (6N per token), the machine's
   speed and a run's utilisation, Adam's 16 bytes per knob. bfloat16 measured on the learner's own
   machine (about 100 times slower on the test CPU). Tiled attention with an online softmax, then

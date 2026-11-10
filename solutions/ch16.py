@@ -20,13 +20,14 @@ def split_heads(x, heads):
     return x.reshape(batch, words, heads, d // heads).transpose(1, 2)
 
 
-def layer_norm(x):
-    mean = torch.mean(x, dim=-1, keepdim=True)
-    variance = torch.var(x, dim=-1, keepdim=True, unbiased=False)
-    return (x - mean) / torch.sqrt(variance + 1e-5)
+def join_heads(x):
+    batch, heads, words, piece = x.shape
+    return x.transpose(1, 2).reshape(batch, words, heads * piece)
 
 
-def block_step(x, norm1, attention, norm2, think):
-    x = x + attention(norm1(x))
-    x = x + think(norm2(x))
-    return x
+def self_attention_step(x, to_query, to_key, to_value, mix, heads):
+    Q = split_heads(to_query(x), heads)
+    K = split_heads(to_key(x), heads)
+    V = split_heads(to_value(x), heads)
+    blended, A = attend(Q, K, V, future_mask(x.shape[1]))
+    return mix(join_heads(blended)), A

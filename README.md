@@ -7,7 +7,8 @@ serving it the way production systems do. Everything happens on one page in your
 
 > **Status: early.** Chapters 00–23 are ready: from your first line of Python to a modern
 > transformer you build yourself, trained across several processes. Chapter 24 (Scaling laws)
-> is next.
+> is next. Chapters 06–23 are being reworked for a more even pace; numbers 07 and 21 are
+> reserved for chapters being split out of 06 and 20.
 > See the [full chapter map](SCOPE.md).
 
 **New: an optional agents track.** Chapters 40–51 take you through two real open-source agents,

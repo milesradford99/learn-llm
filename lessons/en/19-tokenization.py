@@ -316,7 +316,7 @@ def _():
 
     ## What's next
 
-    Chapter 16's model was tiny, with some simple choices. **Chapter 20** upgrades it to a modern design, with a better normalisation, a better way of handling position, a schedule for the learning rate, and the ability to save a run and continue it later.
+    Chapter 17's model was tiny, with some simple choices. **Chapter 20** upgrades it to a modern design, with a better normalisation, a better way of handling position, a schedule for the learning rate, and the ability to save a run and continue it later.
 
     ## What you can do now
 

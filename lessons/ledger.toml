@@ -195,15 +195,26 @@ uses = [
 
 [chapters.16]
 introduces = [
-    "transformer", "self-attention", "future-mask", "torch-triu", "masked-fill", "attention-scale",
-    "negative-dimensions", "multi-head", "permutation-blindness", "position-table", "layer-norm",
-    "torch-var", "block", "pre-norm", "torch-arange", "list-from-end", "gpt",
+    "self-attention", "future-mask", "torch-triu", "masked-fill", "attention-scale",
+    "negative-dimensions", "multi-head", "permutation-blindness", "torch-arange",
 ]
+toolbox = ["torch-triu", "masked-fill", "negative-dimensions", "torch-arange"]
 uses = [
-    "attention", "query-key-value", "attention-matmul", "residual", "variances-add", "variance",
-    "nn-linear", "nn-module-subclass", "nn-embedding", "softmax", "training-loop", "gradient-clipping",
-    "perplexity", "leaderboard", "temperature", "windows", "attention-map", "torch-flip",
-    "floor-division", "transpose",
+    "attention", "query-key-value", "attention-matmul", "variances-add", "variance",
+    "nn-linear", "nn-module-subclass", "softmax", "torch-flip", "floor-division", "transpose",
+]
+
+[chapters.17]
+introduces = [
+    "transformer", "position-table", "layer-norm", "torch-var", "block", "pre-norm",
+    "list-from-end", "gpt",
+]
+toolbox = ["torch-var", "list-from-end"]
+uses = [
+    "self-attention", "future-mask", "attention-scale", "multi-head", "permutation-blindness",
+    "torch-arange", "residual", "variance", "nn-linear", "nn-module-subclass", "nn-embedding",
+    "softmax", "training-loop", "gradient-clipping", "perplexity", "leaderboard", "temperature",
+    "windows", "attention-map", "broadcasting",
 ]
 
 [chapters.18]

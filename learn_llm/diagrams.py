@@ -71,3 +71,40 @@ def looking(read: list[str], shares: list[float], asker: str, label: str):
         parts.append(f'<text x="{x}" y="{y + 5}" font-size="14" fill="{TEXT}">{escape(text)}</text>')
     parts.append("</svg>")
     return mo.Html("".join(parts))
+
+
+def block_road(x: str, norm: str, attention: str, think: str, label: str):
+    """A transformer block: two parts, each on an `x + f(x)` road that passes it by.
+
+    The four names are the box labels, in the lesson's language; `label` describes the
+    picture for screen readers.
+    """
+    import marimo as mo
+
+    y, up = 120, 44
+    boxes = [(60, x), (190, norm), (330, attention), (530, norm), (670, think)]
+    plus = [430, 770]
+    parts = [f'<svg viewBox="0 0 840 170" width="100%" style="max-width:840px" role="img" aria-label="{escape(label)}" '
+             'xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, monospace" text-anchor="middle">',
+             f'<defs><marker id="road" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+             f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{AXIS}"/></marker></defs>']
+
+    def arrow(x1, x2):
+        parts.append(f'<line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" stroke="{AXIS}" marker-end="url(#road)"/>')
+
+    half = 50
+    arrow(60 + half, 190 - half - 4), arrow(190 + half, 330 - half - 4), arrow(330 + half, plus[0] - 18)
+    arrow(plus[0] + 14, 530 - half - 4), arrow(530 + half, 670 - half - 4), arrow(670 + half, plus[1] - 18)
+    arrow(plus[1] + 14, 832)
+    for start, end in [(125, plus[0]), (plus[0] + 30, plus[1])]:  # the two roads that pass a part by
+        parts.append(f'<polyline points="{start},{y} {start},{up} {end},{up} {end},{y - 18}" fill="none" '
+                     f'stroke="{DOT}" stroke-width="2.5" marker-end="url(#road)"/>')
+    for cx, text in boxes:
+        parts.append(f'<rect x="{cx - half}" y="{y - _BH / 2}" width="{2 * half}" height="{_BH}" rx="6" fill="none" '
+                     f'stroke="{AXIS}" stroke-width="1.2"/>')
+        parts.append(f'<text x="{cx}" y="{y + 5}" font-size="14" fill="{TEXT}">{escape(text)}</text>')
+    for cx in plus:
+        parts.append(f'<circle cx="{cx}" cy="{y}" r="14" fill="none" stroke="{DOT}" stroke-width="2"/>')
+        parts.append(f'<text x="{cx}" y="{y + 6}" font-size="18" fill="{TEXT}">+</text>')
+    parts.append("</svg>")
+    return mo.Html("".join(parts))
