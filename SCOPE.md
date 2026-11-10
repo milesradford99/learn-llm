@@ -54,7 +54,7 @@ that covers the essential knowledge of CS231n → CS224N → CS336 → tiny-llm.
 | 17 | Tokenization | Byte-level BPE tokenizer | Bytes, Unicode, hashing/merging | 336 A1 |
 | 18 | A modern transformer | RMSNorm, RoPE, SwiGLU, AdamW, LR schedule, checkpoints | Rotations, schedules | 336 A1 |
 | 19 | Making it fast | Profiling, FLOPs/memory math, mixed precision, tiled (Flash-style) attention | Big-O, memory hierarchy, floats | 336 A2 |
-| 20 | Many devices | Data parallel, sharding (simulated on CPU processes) | Processes, communication | 336 A2 |
+| 20 | Many devices | Data parallel on real CPU processes, gradient accumulation, sharding, tensor parallel | Processes, all-reduce | 336 A2 |
 | 21 | Scaling laws | Fit laws to your own small runs | Log-log plots, power laws | 336 A3 |
 | 22 | Data | Filtering, dedup, quality classifiers | Hashing (MinHash), classifiers | 336 A4 |
 | 23 | Alignment | SFT, DPO, RL with verifiable rewards (GRPO-style) | Expectations, policy gradients | 336 A5 |
@@ -128,6 +128,8 @@ On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
 
 - Chapters 12–14 batch: the leaderboard scores perplexity per word on a 2,002-entry word vocabulary and lives in each learner's `my-work/.leaderboard.json`; chapter 14 teaches attention on reversing text instead of translation, since the course has no bundled translated text and every answer can be checked at a glance (agent-default, 2026-11-01)
 - Chapters 15–17 batch: chapter 16's task is naming a blanked-out animal, made from the stories, because the course has no hand-labelled data; it reports that pretraining gave no clear gain on this small model, and that a small BERT-style model scored below the baseline, instead of the textbook result (agent-default, 2026-11-01)
+
+- Chapters 18–20 batch: token models read the same text as the word models, with rare words as `<unk>`, and are scored per word; spelling rare words out costs about 40% more perplexity, so mixing the two would rig the leaderboard. Merges for the stories are bundled (`learn_llm/data/tinystories-bpe.json`, rebuilt with `python -m learn_llm.tokenizer`). Chapter 20 trains on real CPU processes with PyTorch's `gloo` backend (`learn_llm/parallel.py`); chapters 18–19 use NumPy's `cos`, `sin` and `exp` so the agent track can keep introducing the `math` module (agent-default, 2026-11-09)
 
 ## Open decisions
 - (none)
