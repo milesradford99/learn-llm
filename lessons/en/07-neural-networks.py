@@ -36,19 +36,19 @@ def _():
     then fall. A straight line can't follow that. Now meet the simplest possible bend, called
     **ReLU**:
 
-    > `relu(z) = z` when `z` is positive, and `0` otherwise
+    > $\operatorname{relu}(z) = z$ when $z$ is positive, and $0$ otherwise
 
-    For example `relu(-3) = 0`, `relu(0) = 0` and `relu(2) = 2`. It's flat at 0, then turns a
-    corner at `z = 0` and rises like a line. On its own that's
+    For example $\operatorname{relu}(-3) = 0$, $\operatorname{relu}(0) = 0$ and $\operatorname{relu}(2) = 2$. It's flat at 0, then turns a
+    corner at $z = 0$ and rises like a line. On its own that's
     dull. But **add** it to a line and you get a line that changes direction at a point you
     choose. Here is a line with one bend at 33 °C (the numbers −105, 12 and −20 are picked by
     hand):
 
-    > guess = −105 + 12 × t − 20 × relu(t − 33)
+    > $$\text{guess} = -105 + 12 \times t - 20 \times \operatorname{relu}(t - 33)$$
 
-    Below 33 °C, `t − 33` is negative, the ReLU gives 0, and it's the line `−105 + 12 × t`. Above
-    33 °C, the ReLU adds `t − 33`, and `− 20 ×` it bends the line down: from then on each degree
-    adds `12 − 20 = −8`.
+    Below 33 °C, $t - 33$ is negative, the ReLU gives 0, and it's the line $-105 + 12 \times t$. Above
+    33 °C, the ReLU adds $t - 33$, and $- 20 \times$ it bends the line down: from then on each degree
+    adds $12 - 20 = -8$.
     """)
     return
 
@@ -107,9 +107,9 @@ def _():
 
     1. `Z = X @ W1 + b1`: 64 weighted sums of the pixels, exactly like chapter 06's scores but 64
        of them. `W1` has shape `(784, 64)`: 64 templates. `Z` has shape `(n, 64)`.
-    2. `H = relu(Z)`: bend each one, just as `relu(t − 33)` bent the line above (`b1` sets where
+    2. `H = relu(Z)`: bend each one, just as $\operatorname{relu}(t - 33)$ bent the line above ($b_1$ sets where
        each bend sits). A template that matches poorly (negative sum) gives 0; one
-       that matches well gives how well. Each column of `H` is a little **detector**: it says
+       that matches well gives how well. Each column of $H$ is a little **detector**: it says
        how strongly its pattern is present in the picture, and stays silent otherwise.
     3. `S = H @ W2 + b2`: ten scores, each a weighted sum of the 64 detectors. `W2` has shape
        `(64, 10)`.
@@ -205,8 +205,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    All (almost) zeros: the same matrix either way. Numbers like `2.22044605e-16` mean 2.2 ×
-    0.0000000000000001, rounding in the last digit, and `e+00` on the zeros means "times 1":
+    All (almost) zeros: the same matrix either way. Numbers like `2.22044605e-16` mean $2.2 \times 0.0000000000000001$, rounding in the last digit, and `e+00` on the zeros means "times 1":
     just 0.
 
     This cell used something new: **random numbers**. `np.random.default_rng(0)` makes a
@@ -261,18 +260,18 @@ def _():
     `W1`, and so on.
 
     **Scores.** The loss is chapter 06's cross-entropy of `softmax(S)`, so the blame of the scores
-    is chapter 06's `G = (P − Y) / n`, with `P = softmax(S)`.
+    is chapter 06's $G = (P - Y) / n$, with $P = \operatorname{softmax}(S)$.
 
     **`W2` and `b2`.** `S = H @ W2 + b2` is exactly chapter 06's `X @ W + b`, with `H` in place of
     `X`. So the same result holds: `dW2 = H.T @ G` and `db2 = np.sum(G, axis=0)`.
 
-    **`H`.** This one is new: chapter 06 never needed the slope for its *inputs*. Take one hidden
-    value, `H[i, j]` (picture `i`, detector `j`). It appears in all ten scores of picture `i`:
-    written out, `S[i, c] = H[i, 0] × W2[0, c] + … + H[i, 63] × W2[63, c] + b2[c]`, so by chapter
-    03's rule for a product (in `a × c`, nudging `a` moves the result by `c`), nudging `H[i, j]` moves `S[i, c]` by `W2[j, c]` per unit: that's the local
+    **$H$.** This one is new: chapter 06 never needed the slope for its *inputs*. Take one hidden
+    value, `H[i, j]` (picture $i$, detector $j$). It appears in all ten scores of picture $i$:
+    written out, $S[i, c] = H[i, 0] \times W_2[0, c] + \ldots + H[i, 63] \times W_2[63, c] + b_2[c]$, so by chapter
+    03's rule for a product (in $a \times c$, nudging $a$ moves the result by $c$), nudging `H[i, j]` moves `S[i, c]` by `W2[j, c]` per unit: that's the local
     slope. One value feeding ten arrows: **blames add** (chapter 03). So
 
-    > blame of `H[i, j]` = `G[i, 0] × W2[j, 0] + G[i, 1] × W2[j, 1] + … + G[i, 9] × W2[j, 9]`
+    > blame of `H[i, j]` = $G[i, 0] \times W_2[j, 0] + G[i, 1] \times W_2[j, 1] + \ldots + G[i, 9] \times W_2[j, 9]$
 
     That's row `i` of `G` dotted with row `j` of `W2`, which is row `i` of `G` dotted with
     **column** `j` of `W2.T`. Since entry `[i, j]` of `A @ B` is row `i` of `A` dotted with
@@ -280,14 +279,14 @@ def _():
     `dH = G @ W2.T`, with shape
     `(n, 10) @ (10, 64) = (n, 64)`, the same shape as `H`.
 
-    **The bend.** `H = relu(Z)`, position by position. The slope of `relu(z)`: where `z` is
-    positive, `relu(z) = z`, slope 1; where `z` is negative, `relu(z) = 0`, slope 0. (Exactly at
+    **The bend.** `H = relu(Z)`, position by position. The slope of $\operatorname{relu}(z)$: where $z$ is
+    positive, $\operatorname{relu}(z) = z$, slope 1; where $z$ is negative, $\operatorname{relu}(z) = 0$, slope 0. (Exactly at
     0 there's a corner; we take slope 0 there.) So the bend passes blame straight through where
-    `Z > 0` and blocks it everywhere else:
+    $Z > 0$ and blocks it everywhere else:
 
     > `dZ = dH * (Z > 0)`
 
-    `Z > 0` gives `True`/`False` for each position, and multiplying by it counts `True` as 1 and
+    $Z > 0$ gives `True`/`False` for each position, and multiplying by it counts `True` as 1 and
     `False` as 0. An array like this, used to let some values through and block others, is called
     a **mask**. A detector that was silent for a picture takes no blame for it: nudging its
     knobs a tiny bit wouldn't change anything.
@@ -407,7 +406,7 @@ def _():
 
     ## What the detectors look for
 
-    Each column of `W1` is one detector's 784 knobs, drawn as a 28 × 28 map (blue: ink here
+    Each column of `W1` is one detector's 784 knobs, drawn as a $28 \times 28$ map (blue: ink here
     makes it fire; red: ink here silences it). Here are the first 16:
     """)
     return

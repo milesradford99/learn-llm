@@ -164,6 +164,35 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   chapter 06's surprise. `nn.Embedding`, then nearest words and analogies, with their limits. The
   leaderboard starts in chapter 12, once there is a language model to score.
 
+## Step plan: chapters 12–14 (written 2026-11-01)
+
+- **12 Predicting the next word.** No gradients: counting. Conditional probability from a tiny
+  text, a bigram table, smoothing because −log 0 is infinite, sampling, then perplexity derived so
+  that a know-nothing model over N words scores N. Scores: 2,002, unigram 282, bigram 54, trigram
+  mixed with bigram 38. The leaderboard starts. Counting can't share between `dog` and `cat`.
+- **13 Memory: RNNs.** tanh, a recurrent step, `nn.RNN` checked against the learner's own. Blame on
+  the first of 60 words: about 4e-15. A fresh LSTM is just as bad (forget gates near 0.5); with
+  them opened it's about 0.04, so the LSTM's advantage is that it has the dial. An LSTM of 128
+  scores about 31. Temperature.
+- **14 Attention.** Encoder and decoder on reversing text, so answers can be checked at a glance.
+  Without attention: 99% at 5 words, 23% at 20. Weighted averages, then query, key and value, then
+  compare, share out, blend: 95% at 20 words with the same memory. The attention picture is a
+  diagonal nobody asked for. Not on the leaderboard: that's for the transformer, which next chapter
+  answers the question of whether the LSTMs are needed at all.
+
+## Step plan: chapters 15–17 (written 2026-11-01)
+
+- **15 The Transformer.** Self-attention, the future mask, scaling by √d (variances add), multi-head
+  by cutting vectors, a measured demo that attention ignores order, a position table, layer norm,
+  and blocks of two `x + f(x)` steps. About 1.1 million knobs and perplexity about 23, first on the board.
+- **16 Pretrain, fine-tune, evaluate.** Name the blanked animal in a story. Majority baseline 40%,
+  precision and recall, a margin of error from variances adding. Pretraining reaches about 51% with
+  no labels, but with labels the three columns sit inside the margin. Leaving the word in gives 81%
+  on leaky test data and 45% on the real task.
+- **17 Tokenization.** UTF-8 bytes, then count pairs, merge, train, encode, decode. `while` is taught
+  here. 500 merges on 300 stories: 3 bytes per token, whole-story round trip, Chinese survives.
+  Scores stay per word when later chapters retrain on tokens.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a

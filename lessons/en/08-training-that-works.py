@@ -78,7 +78,7 @@ def _():
 def _():
     mo.md(r"""
     (`np.eye(10)[train_labels]` is a shortcut for chapter 06's `one_hot`: `np.eye(10)` is the
-    10 × 10 table with 1s on its diagonal, so row `k` of it is the one-hot row for digit `k`, and
+    $10 \times 10$ table with 1s on its diagonal, so row $k$ of it is the one-hot row for digit $k$, and
     giving a list of labels picks one such row per picture; picking several rows with a list is
     explained under Small batches.)
 
@@ -88,11 +88,11 @@ def _():
     their mean, then for each number its distance from the mean, squared (so negatives don't
     cancel, as in chapter 01), and average those:
 
-    > **variance** = mean of (number − mean)²
+    > $$\textbf{variance} = \text{mean of } (\text{number} - \text{mean})^2$$
 
     For `[1, 3]`: the mean is 2, the distances are −1 and 1, squared 1 and 1, so the variance
     is 1. Its square root is the **typical size** of the distances (in NumPy, `np.sqrt`; the
-    square root of 9 is 3, since 3 × 3 = 9). For numbers centred on 0, the mean is 0 and the
+    square root of 9 is 3, since $3 \times 3 = 9$). For numbers centred on 0, the mean is 0 and the
     variance is simply the mean of the squares.
 
     ## Exercise 1: variance
@@ -146,16 +146,16 @@ def _():
     `np.max(np.abs(...))` is the biggest size), and the test accuracy is about 12%: only `b2`,
     the scores' starting heights, learned (no blame reaches `b1` either), so it answers the same digit for every picture, about as good as guessing. Random starting knobs break the tie: every detector starts out different.
 
-    **How big?** Look at one detector's sum for one picture, `z = w0 × x0 + w1 × x1 + … ` over
-    `n` inputs, with random knobs of typical size `s` (so variance `s²`; `rng.normal(0, 0.05, …)` gives
-    typical size 0.05, variance 0.05²). The knobs are **independent**: each is drawn on its own,
+    **How big?** Look at one detector's sum for one picture, $z = w_0 \times x_0 + w_1 \times x_1 + \ldots$ over
+    $n$ inputs, with random knobs of typical size $s$ (so variance $s^2$; `rng.normal(0, 0.05, …)` gives
+    typical size 0.05, variance $0.05^2$). The knobs are **independent**: each is drawn on its own,
     without looking at the others. A useful fact about sums of independent random parts: **their
-    variances add**. Each part `w × x` (the picture is fixed; only the knobs are random)
-    has variance `s² × x²` (scaling a random number by `x`
-    scales its spread by `x`, so the variance by `x²`). Adding the `n` parts gives
-    `s² × (x0² + x1² + …)`, and that sum of `n` squares is `n` times their mean:
+    variances add**. Each part $w \times x$ (the picture is fixed; only the knobs are random)
+    has variance $s^2 \times x^2$ (scaling a random number by $x$
+    scales its spread by $x$, so the variance by $x^2$). Adding the $n$ parts gives
+    $s^2 \times (x_0^2 + x_1^2 + \ldots)$, and that sum of $n$ squares is $n$ times their mean:
 
-    > variance of `z` ≈ `n × s² × (mean of x²)`
+    > $$\text{variance of } z \approx n \times s^2 \times (\text{mean of } x^2)$$
 
     Let's test that on the first picture, with 2,000 different random choices of 784 knobs of size
     0.05:
@@ -197,20 +197,20 @@ def _(z_samples):
 def _():
     mo.md(r"""
     0.073 against 0.071: half. So after one layer, the mean square is
-    `n × s² × (mean of x²) / 2`. This layer's output is the next layer's input, so this mean
-    square becomes the next layer's "mean of x²". For it to stay the same from layer to layer,
-    the factor in front must be 1: `n × s² / 2 = 1`, that is
+    $n \times s^2 \times (\text{mean of } x^2) / 2$. This layer's output is the next layer's input, so this mean
+    square becomes the next layer's "mean of $x^2$". For it to stay the same from layer to layer,
+    the factor in front must be 1: $n \times s^2 / 2 = 1$, that is
 
-    > `s² = 2 / n`, so the typical starting size is `s = √(2 / n)`
+    > $s^2 = 2 / n$, so the typical starting size is $s = \sqrt{2 / n}$
 
-    For the first layer, `n = 784` inputs: `√(2 / 784) ≈ 0.05`. For the second, `n = 64`:
-    `√(2 / 64) ≈ 0.18`. Chapter 07's two numbers. This starting rule is called **He
+    For the first layer, $n = 784$ inputs: $\sqrt{2 / 784} \approx 0.05$. For the second, $n = 64$:
+    $\sqrt{2 / 64} \approx 0.18$. Chapter 07's two numbers. This starting rule is called **He
     initialisation**, after the researcher Kaiming He.
 
     Why it matters shows up in deeper networks. Below, pictures pass through 6 layers of 64 ReLU
-    detectors, with three choices of starting size. The numbers are √(mean of the squares)
+    detectors, with three choices of starting size. The numbers are $\sqrt{\text{mean of the squares}}$
     of the values after each layer (the input pixels start at about 0.33). As in chapter 07,
-    Python writes very small numbers with `e`: `1.18e-05` means 1.18 × 0.00001, that is
+    Python writes very small numbers with `e`: `1.18e-05` means $1.18 \times 0.00001$, that is
     0.0000118; the number after `e-` says how many places the point moves left.
     """)
     return
@@ -219,7 +219,7 @@ def _():
 @app.cell(hide_code=True)
 def _(X):
     _rows = ["| starting size | layer 1 | 2 | 3 | 4 | 5 | 6 |", "|---|---|---|---|---|---|---|"]
-    for _name, _size in (("0.01", lambda n: 0.01), ("0.3", lambda n: 0.3), ("√(2 / n)", lambda n: np.sqrt(2 / n))):
+    for _name, _size in (("0.01", lambda n: 0.01), ("0.3", lambda n: 0.3), (r"$\sqrt{2 / n}$", lambda n: np.sqrt(2 / n))):
         _r = np.random.default_rng(0)
         _h = X[:1000]
         _cells = []
@@ -238,7 +238,7 @@ def _():
     Too small and the values fade to 0 within a few layers: no signal, and (since blame is
     multiplied by the same small knobs on the way back) no blame either. Too big and they grow layer after layer
     (from 1.8 after layer 1 to 24 after layer 6, about 13 times bigger).
-    `√(2 / n)` keeps them steady. That's why deep networks need a reasoned start.
+    $\sqrt{2 / n}$ keeps them steady. That's why deep networks need a reasoned start.
 
     ## Small batches
 
@@ -256,7 +256,7 @@ def _():
 
     Three new tools:
 
-    - `rng.permutation(n)` gives the numbers `0, 1, …, n − 1` in a random order.
+    - `rng.permutation(n)` gives the numbers $0, 1, \ldots, n - 1$ in a random order.
     - `range(0, n, size)` counts from 0 in jumps of `size`: `range(0, 10, 4)` gives 0, 4, 8.
     - `a[start:stop]` is a **slice**: the items at positions `start`, `start + 1`, …, up to but not
       including `stop`. `a[4:8]` is 4 items. If `stop` is past the end, it just stops at the end.
@@ -380,11 +380,11 @@ def _():
     that: it keeps a running **velocity** that adds up recent slopes, each step forgetting a bit
     of the past:
 
-    > `velocity = 0.9 × velocity + slope`, then `knob = knob − rate × velocity`
+    > $\text{velocity} = 0.9 \times \text{velocity} + \text{slope}$, then $\text{knob} = \text{knob} - \text{rate} \times \text{velocity}$
 
     If the slope stays the same, the velocity grows until it stops changing, that is until
-    `V = 0.9 × V + slope`. Take `0.9 × V` from both sides: `0.1 × V = slope`, so
-    `V = 10 × slope`: steady progress becomes up to 10 times faster.
+    $V = 0.9 \times V + \text{slope}$. Take $0.9 \times V$ from both sides: $0.1 \times V = \text{slope}$, so
+    $V = 10 \times \text{slope}$: steady progress becomes up to 10 times faster.
 
     ## Exercise 3: momentum_step
 
@@ -427,27 +427,27 @@ def _():
 
     ## Adam: a step size for every knob
 
-    Momentum helps, but `w` and `b` still share one learning rate. **Adam** gives each knob its
-    own scale. It keeps an **average** of recent slopes, `m = 0.9 × m + 0.1 × slope`. This is
+    Momentum helps, but $w$ and $b$ still share one learning rate. **Adam** gives each knob its
+    own scale. It keeps an **average** of recent slopes, $m = 0.9 \times m + 0.1 \times \text{slope}$. This is
     momentum's velocity times 0.1, which makes it a true average: if the slope stays the same,
-    `m` settles at the slope itself (take `0.9 × m` from both sides of `m = 0.9 × m + 0.1 × slope`: `0.1 × m = 0.1 × slope`), not 10 times it. Next to it, Adam
+    $m$ settles at the slope itself (take $0.9 \times m$ from both sides of $m = 0.9 \times m + 0.1 \times \text{slope}$: $0.1 \times m = 0.1 \times \text{slope}$), not 10 times it. Next to it, Adam
     keeps an average of the slope **squared**, and divides by its square root, the knob's recent
     typical slope size:
 
-    > step = rate × (average slope) / √(average squared slope)
+    > $$\text{step} = \text{rate} \times \frac{\text{average slope}}{\sqrt{\text{average squared slope}}}$$
 
-    For a knob with huge slopes (`w`), the division makes the step smaller; for a knob with small
-    slopes (`b`), bigger. Every knob ends up moving at a similar pace: on the very first step,
-    each moves by exactly `rate` (then the average slope is just the slope, and √(slope²) is its
+    For a knob with huge slopes ($w$), the division makes the step smaller; for a knob with small
+    slopes ($b$), bigger. Every knob ends up moving at a similar pace: on the very first step,
+    each moves by exactly `rate` (then the average slope is just the slope, and $\sqrt{\text{slope}^2}$ is its
     size, so their ratio is +1 or −1). After that the averages settle and the steps shrink as
     the knobs near the best line. The cell below shows only the end, after 500 steps at rate
-    1.0; on the way there, `b` passes about −42 at step 100 and −99 at step 300. That is exactly what we did by hand when we rescaled temperatures in chapters 04 and
+    1.0; on the way there, $b$ passes about −42 at step 100 and −99 at step 300. That is exactly what we did by hand when we rescaled temperatures in chapters 04 and
     05, now done automatically, knob by knob.
 
     One detail: both averages start at 0, so in the first steps they're too small (after one step
-    the average slope is only `0.1 × slope`). Adam corrects this by dividing by `1 − 0.9^t` and
-    `1 − 0.999^t` (in code, powers are `**`: `0.9 ** t`), where `t` counts the steps from 1: after step 1 that divides by 0.1 and 0.001,
-    which undoes the shrinking exactly; as `t` grows, the correction fades to dividing by 1. (The
+    the average slope is only $0.1 \times \text{slope}$). Adam corrects this by dividing by $1 - 0.9^t$ and
+    $1 - 0.999^t$ (in code, powers are `**`: `0.9 ** t`), where $t$ counts the steps from 1: after step 1 that divides by 0.1 and 0.001,
+    which undoes the shrinking exactly; as $t$ grows, the correction fades to dividing by 1. (The
     `1e-8`, that is 0.00000001, is there so we never divide by zero.)
 
     ## Exercise 4: adam_step
@@ -526,13 +526,13 @@ def _():
     looks perfect and says nothing about new data. It's why we always keep test data aside.
 
     **Weight decay** is a standard counter-measure. Add a small penalty for big knobs to the
-    loss: `(decay / 2) × (sum of every weight squared)`, over the weights in `W1` and `W2`
-    (the `b`s, usually called *biases*, are left alone, hence the name *weight* decay). Nudging one weight `w` moves
-    only its own square; the others don't change. By chapter 02's rule, the slope of `w²` is
-    `2 × w`, so the slope of `(decay / 2) × w²` is `(decay / 2) × 2 × w = decay × w`, and the
+    loss: $(\text{decay} / 2) \times (\text{sum of every weight squared})$, over the weights in `W1` and `W2`
+    (the $b$s, usually called *biases*, are left alone, hence the name *weight* decay). Nudging one weight $w$ moves
+    only its own square; the others don't change. By chapter 02's rule, the slope of $w^2$ is
+    $2 \times w$, so the slope of $(\text{decay} / 2) \times w^2$ is $(\text{decay} / 2) \times 2 \times w = \text{decay} \times w$, and the
     step rule becomes
 
-    > `weight = weight − rate × (slope + decay × weight)`
+    > $\text{weight} = \text{weight} - \text{rate} \times (\text{slope} + \text{decay} \times \text{weight})$
 
     which is the `+ decay * W1` in `train`: every step also shrinks every weight a little towards
     0, so a weight stays big only if the data keeps asking for it. Here the effect is tiny: the
@@ -550,7 +550,7 @@ def _():
     ## What you can do now
 
     - measure spread with the variance, and its square root, the typical size
-    - explain why starting at zero fails, and derive the start `√(2 / n)`
+    - explain why starting at zero fails, and derive the start $\sqrt{2 / n}$
     - train with shuffled mini-batches and epochs, using slices and `rng.permutation`
     - speed up training with momentum (a velocity that adds up recent slopes)
     - give every knob its own pace with Adam, including its start-up correction
@@ -561,7 +561,7 @@ def _():
 
     <!-- go-deeper -->
     **Go deeper (optional):** mini-batch training is *stochastic gradient descent* (SGD). The
-    start `√(2 / n)` is *He* (or *Kaiming*) initialisation. *Dropout* and *batch normalisation*
+    start $\sqrt{2 / n}$ is *He* (or *Kaiming*) initialisation. *Dropout* and *batch normalisation*
     are two more tools in this family; the transformer chapters use *layer normalisation*.
     """)
     return

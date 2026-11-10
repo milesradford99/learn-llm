@@ -5,9 +5,9 @@
 Go from almost no maths or programming to building your own large language model, then
 serving it the way production systems do. Everything happens on one page in your browser.
 
-> **Status: early.** Chapters 00–11 are ready: from your first line of Python to convolutional
-> networks that find digits anywhere in a picture, and word vectors learned from stories.
-> Chapter 12 (Predicting the next word) is next.
+> **Status: early.** Chapters 00–17 are ready: from your first line of Python to a transformer
+> you build yourself, honest evaluation, and a real tokenizer. Chapter 18 (A modern transformer)
+> is next.
 > See the [full chapter map](SCOPE.md).
 
 ## Start

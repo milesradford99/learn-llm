@@ -100,15 +100,15 @@ def _():
 
     Here is a recipe that turns a temperature into a guess for the sales:
 
-    > guess = w × temperature + b
+    > $$\text{guess} = w \times \text{temperature} + b$$
 
     `w` and `b` are two numbers we get to choose. Let's see what each one does:
 
     - **`w`** is the **steepness**: how many more ice creams each extra degree brings. With
       `w = 12`, every degree warmer adds 12 sales. A bigger `w` makes the line steeper.
-    - **`b`** is the **starting height**: the line's height at 0 °C, because at 0 °C the
-      recipe gives `w × 0 + b`, and `w × 0` is 0. The big dot at the left edge of the chart
-      marks it. Mia never sells ice cream at 0 °C, so it doesn't matter that `b` turns out
+    - **$b$** is the **starting height**: the line's height at 0 °C, because at 0 °C the
+      recipe gives $w \times 0 + b$, and $w \times 0$ is 0. The big dot at the left edge of the chart
+      marks it. Mia never sells ice cream at 0 °C, so it doesn't matter that $b$ turns out
       negative; only the part of the line over her dots matters.
 
     Drag the two sliders and watch the red line. Try to lay it along the dots. Notice what `w`
@@ -176,8 +176,8 @@ def _():
     Start with one day. The **error** is the guess minus the truth. (A different meaning from
     chapter 00's red error box: here it's a number saying how far off a guess is.)
 
-    - guess 150, truth 137: error = 150 − 137 = **13** (guessed 13 too many)
-    - guess 120, truth 137: error = 120 − 137 = **−17** (guessed 17 too few)
+    - guess 150, truth 137: error = $150 - 137 = \boldsymbol{13}$ (guessed 13 too many)
+    - guess 120, truth 137: error = $120 - 137 = \boldsymbol{-17}$ (guessed 17 too few)
 
     On the chart, each error is the dashed gap between a dot and the line. The table lists them
     for the line your sliders set. (These are the same two sliders as above: moving any copy
@@ -214,13 +214,13 @@ def _():
     The fix is to **square** each error before adding: multiply it by itself.
 
     /// admonition | 🧰 Toolbox: squaring
-    Squaring a number means multiplying it by itself: 3² = 3 × 3 = 9. In Python, `3 ** 2`.
+    Squaring a number means multiplying it by itself: $3^2 = 3 \times 3 = 9$. In Python, `3 ** 2`.
     `**` happens before `+` and `-`, so the square of a difference needs parentheses:
-    `(10 - 7) ** 2` is 9, while `10 - 7 ** 2` is 10 − 49.
+    `(10 - 7) ** 2` is 9, while `10 - 7 ** 2` is $10 - 49$.
 
-    A negative number squared is positive. Why is (−3) × (−3) = 9? Follow the pattern as the
-    first number goes down by 1: 2 × (−3) = −6, 1 × (−3) = −3, 0 × (−3) = 0. Each time the result
-    goes **up** by 3. One more step: (−1) × (−3) = 3, then (−2) × (−3) = 6, (−3) × (−3) = 9.
+    A negative number squared is positive. Why is $(-3) \times (-3) = 9$? Follow the pattern as the
+    first number goes down by 1: $2 \times (-3) = -6$, $1 \times (-3) = -3$, $0 \times (-3) = 0$. Each time the result
+    goes **up** by 3. One more step: $(-1) \times (-3) = 3$, then $(-2) \times (-3) = 6$, $(-3) \times (-3) = 9$.
     So every squared error is zero or more, and nothing cancels.
 
     Squaring also makes big misses count much more than small ones: an error of 2 becomes 4,
@@ -304,8 +304,8 @@ def _():
     A strategy that works:
 
     1. Estimate the steepness from the data: the dots rise from 63 to 288 (225 more ice creams)
-       while the temperature goes from 14 to 33 (19 degrees warmer). That's about 225 ÷ 19 ≈ 12
-       more ice creams per degree, so set `w` near 12.
+       while the temperature goes from 14 to 33 (19 degrees warmer). That's about $225 \div 19 \approx 12$
+       more ice creams per degree, so set $w$ near 12.
     2. Move `b` while watching the loss number (not just the picture), and stop where the
        loss is smallest.
     3. Try `w` one notch up or down, then redo step 2. If the loss got smaller, keep going in

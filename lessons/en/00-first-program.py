@@ -67,12 +67,12 @@ def _():
 
     | On paper | In Python | Meaning | Result |
     |---|---|---|---|
-    | 7 × 6 | `7 * 6` | multiply | `42` |
-    | 10 ÷ 4 | `10 / 4` | divide | `2.5` |
+    | $7 \times 6$ | `7 * 6` | multiply | `42` |
+    | $10 \div 4$ | `10 / 4` | divide | `2.5` |
     | 2¹⁰ | `2 ** 10` | power: ten 2s multiplied together | `1024` |
 
     Try a few in the cell below, one at a time: Python shows the result of the **last** line
-    only. Python doesn't understand × or ÷, so type `*` and `/`. As on paper, `*` and `/`
+    only. Python doesn't understand $\times$ or $\div$, so type `*` and `/`. As on paper, `*` and `/`
     happen before `+` and `-`: `1 + 2 * 3` is `7`. Parentheses go first: `(1 + 2) * 3` is `9`.
     """)
     return
@@ -327,7 +327,7 @@ def _():
 
     /// admonition | 🧰 Toolbox: the average (mean)
     The **average** of some numbers, also called the **mean**, is their total divided by
-    how many there are. The average of 2, 4 and 9 is (2 + 4 + 9) ÷ 3 = 15 ÷ 3 = 5.
+    how many there are. The average of 2, 4 and 9 is $(2 + 4 + 9) \div 3 = 15 \div 3 = 5$.
     ///
 
     Write `average(numbers)`. Finish Exercise 2 first, because you can reuse it: a function
