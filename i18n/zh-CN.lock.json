@@ -16,5 +16,8 @@
   "14-attention.py": "sha256:50109447c5537792a1d04e7945a2fec187250a65549616bf85205cd8d4a5901a",
   "15-the-transformer.py": "sha256:b2c7914c56f6a5f35f3117fbedea43288cacdcdb4302fbc9bc02328615ef2453",
   "16-pretrain-fine-tune-evaluate.py": "sha256:5eadf055352a37bbca79547ef262a8465b9a710a911d203d33ff2165d28d3c3e",
-  "17-tokenization.py": "sha256:4d5435271c806c877d1da2bcf109da694ba8ecd0d23eb91ff2303c8a91ec2dfb"
+  "17-tokenization.py": "sha256:4d5435271c806c877d1da2bcf109da694ba8ecd0d23eb91ff2303c8a91ec2dfb",
+  "18-a-modern-transformer.py": "sha256:2ad759a868984f14c456b33566fe926a515d2b548bfae4a061f3a0312a10b039",
+  "19-making-it-fast.py": "sha256:bf1b43b5ca80386b1592a79f448526eefa7e60e4692df23d7dcc3864dca08fc2",
+  "20-many-devices.py": "sha256:84424db3fc4fdc8a5e5d4051cd21464b93d56893454043738abab2f66ea3ba78"
 }

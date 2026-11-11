@@ -152,3 +152,26 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | token | 词元（token） | 17 |
 | tokenizer | 分词器 | 17 |
 | merge | 合并 | 17 |
+| RMSNorm | 均方根归一化（RMSNorm） | 18 |
+| angle / radian | 角 / 弧度 | 18 |
+| cosine / sine | 余弦 / 正弦 | 18 |
+| rotation | 旋转 | 18 |
+| rotary positions (RoPE) | 旋转位置编码（RoPE） | 18 |
+| warmup | 预热 | 18 |
+| schedule | 调整计划 | 18 |
+| checkpoint | 检查点 | 18 |
+| set (Python) | 集合 | 18 |
+| FLOPs | 浮点运算次数（FLOPs） | 19 |
+| utilisation | 利用率 | 19 |
+| mixed precision | 混合精度 | 19 |
+| cache | 缓存 | 19 |
+| profiler | 性能分析器 | 19 |
+| process | 进程 | 20 |
+| data parallelism | 数据并行 | 20 |
+| gradient accumulation | 梯度累积 | 20 |
+| all-reduce | 全归约（all-reduce） | 20 |
+| sharding | 分片 | 20 |
+| tensor parallelism | 张量并行 | 20 |
+| tile (of attention) | 分块 | 19 |
+| chunk (in a ring) | 段 | 20 |
+| ZeRO stage | 级 | 20 |

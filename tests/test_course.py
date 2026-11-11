@@ -240,3 +240,15 @@ def test_every_leaderboard_model_has_a_name():
     for path in (LESSONS / SOURCE_LOCALE).glob("*.py"):
         for model in re.findall(r'record\("(\w+)"', path.read_text(encoding="utf-8")):
             assert f"board.{model}" in catalog(SOURCE_LOCALE)
+
+
+def test_tokenizer_round_trips_and_keeps_unk():
+    from learn_llm.tokenizer import Tokenizer, story_words
+
+    tokenizer = Tokenizer.load()
+    words = story_words(["Once upon a time, a xylophone sang."], known={"once", "upon", "a", "time"})
+    ids = tokenizer.encode(words)
+    assert ids[-1] == tokenizer.end and tokenizer.unk in ids
+    assert tokenizer.decode(ids) == "once upon a time a <unk> <unk> <end>"
+    spelled = tokenizer.encode(story_words(["A xylophone!"]))
+    assert tokenizer.decode(spelled) == "a xylophone <end>"

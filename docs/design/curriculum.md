@@ -193,6 +193,20 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   here. 500 merges on 300 stories: 3 bytes per token, whole-story round trip, Chinese survives.
   Scores stay per word when later chapters retrain on tokens.
 
+## Step plan: chapters 18–20 (written 2026-11-09)
+
+- **18 A modern transformer.** Fair tokens first (same text as the word models, scored per word).
+  RMSNorm, angles and rotations taught from the circle, RoPE, SwiGLU, AdamW checked against
+  PyTorch, warmup and cosine, checkpoints that resume exactly. Measured on the same text and time:
+  chapter 15's design 23.4, modern 19.3. Spelling rare words out costs about 40% more.
+- **19 Making it fast.** Timing, FLOPs of a product and of training (6N per token), the machine's
+  speed and a run's utilisation, Adam's 16 bytes per knob. bfloat16 measured on the learner's own
+  machine (about 100 times slower on the test CPU). Tiled attention with an online softmax, then
+  the fused version (8 to 13 times faster). A profile.
+- **20 Many devices.** Equal slices average to the whole batch, checked; gradient accumulation;
+  ring all-reduce bytes; real training on 2 and 4 processes matching one process to about 1e-7;
+  sharding stages from 112 to 14 GB per device; tensor parallel by columns.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a
