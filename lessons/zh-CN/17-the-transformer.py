@@ -178,7 +178,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
-    norm_boxes = hand.boxes(['均值', '方差', '第一个数', '最后一个数'])
+    norm_boxes = hand.boxes(['均值', '方差', '第一个数', '最后一个数'], step=0.1)
     return (norm_boxes,)
 
 
@@ -199,7 +199,7 @@ def _():
     ## 练习 2：layer_norm
 
     /// admonition | 🧰 工具箱：沿最后一维求均值和方差
-    对任意形状的张量 `T`，`torch.mean(T, dim=-1, keepdim=True)` 是沿最后一维的均值。`keepdim=True` 就是 PyTorch 版的 `keepdims=True`（第 06 章）：结果保留大小为 1 的最后一维，所以能逐行从 `T` 里减掉。
+    对任意形状的张量 `T`，`torch.mean(T, dim=-1, keepdim=True)` 是沿最后一维的均值。`keepdim=True` 就是 PyTorch 版的 `keepdims=True`（第 07 章）：结果保留大小为 1 的最后一维，所以能逐行从 `T` 里减掉。
 
     `torch.var(T, dim=-1, keepdim=True, unbiased=False)` 用同样的方式求方差。`unbiased=False` 要的是第 09 章那种普通方差。（不写的话，PyTorch 会除以“个数减 1”，那是统计学里的一个修正，我们用不着。）
     ///

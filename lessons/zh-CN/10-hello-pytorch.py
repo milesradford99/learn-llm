@@ -239,7 +239,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    算损失还需要一个新工具。`F.cross_entropy(S, labels)` 就是第 06 章的交叉熵，但多了两点方便：它接收原始的**分数**（softmax 由它自己做），**标签**用整数表示，不用 one-hot 行。`F` 是 PyTorch 里 `torch.nn.functional` 这一部分的通用简称。它已经替你加载好了，`torch`、`nn` 和 `np` 也一样。
+    算损失还需要一个新工具。`F.cross_entropy(S, labels)` 就是第 07 章的交叉熵，但多了两点方便：它接收原始的**分数**（softmax 由它自己做），**标签**用整数表示，不用 one-hot 行。`F` 是 PyTorch 里 `torch.nn.functional` 这一部分的通用简称。它已经替你加载好了，`torch`、`nn` 和 `np` 也一样。
 
     下面的单元格在 100 张图片上做完整的对比。前半段是你亲手写的版本。后半段把同样的数字放进张量（对 NumPy 数组用 `torch.tensor` 会保留 64 位的 dtype，所以两边精度相同），让 PyTorch 算斜率。最后一行显示 50,890 个斜率中最大的差别。
 

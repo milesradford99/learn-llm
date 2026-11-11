@@ -374,7 +374,7 @@ def _():
 
     1. **Compare.** Take the dot product of the decoder's state with each encoder state. A big dot product means "this one is relevant"
        (chapter 12: dot products measure how alike vectors are).
-    2. **Share out.** Softmax turns those scores into shares that add up to 1 (chapter 06).
+    2. **Share out.** Softmax turns those scores into shares that add up to 1 (chapter 07).
     3. **Blend.** Take the weighted average of the encoder states with those shares.
 
     **One step, with numbers.** Real states have 128 numbers. Here are three with 2 numbers each, for three words read, and a decoder state `q = [2, 1]`:
@@ -406,7 +406,7 @@ def _():
 def _():
     mo.md(r"""
     Notice how sharp softmax is. The score of `ran` is only 1 more than the score of `the`, yet its share is about 2.7 times as big, because
-    each extra point of score multiplies the share by $e$ (chapter 06).
+    each extra point of score multiplies the share by $e$ (chapter 07).
 
     The result is a fresh summary of the input, made for this one step of writing. The terms for the three parts come from looking
     things up. The **query** `q` is what you're looking for, the **keys** `K` are the labels you compare it with, and
@@ -500,7 +500,7 @@ def _():
 def _():
     mo.md(r"""
     About 0.09, 0.24 and 0.67. Those are the same three shares as in the table, though the scores were 2, 3, 4 there and 2, 1, 3 here. Softmax only sees the
-    gaps between scores, as chapter 06 showed: adding the same number to every score changes nothing.
+    gaps between scores, as chapter 07 showed: adding the same number to every score changes nothing.
     """)
     return
 
@@ -525,7 +525,7 @@ def _():
 
     > $$\text{scores} = Q K^\top \qquad A = \text{softmax}(\text{scores}) \qquad \text{blended} = A V$$
 
-    $K^\top$ is $K$ with rows and columns swapped (chapter 06), so that row $i$ of the scores holds the dot products of query $i$ with every key.
+    $K^\top$ is $K$ with rows and columns swapped (chapter 07), so that row $i$ of the scores holds the dot products of query $i$ with every key.
 
     Write `attend(Q, K, V)`. It gives back two things, the blended vectors and the shares `A`:
 

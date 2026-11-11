@@ -272,7 +272,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The loss needs one new tool. `F.cross_entropy(S, labels)` is chapter 06's cross-entropy, with
+    The loss needs one new tool. `F.cross_entropy(S, labels)` is chapter 07's cross-entropy, with
     two conveniences. It takes the raw **scores** (it does softmax itself), and it takes the
     **labels** as whole numbers instead of one-hot rows. `F` is the usual short name for a part of
     PyTorch called `torch.nn.functional`. It's already loaded for you, as are `torch`, `nn` and `np`.

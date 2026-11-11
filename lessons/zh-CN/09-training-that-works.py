@@ -73,7 +73,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    （`np.eye(10)[train_labels]` 是第 06 章 `one_hot` 的简便写法：`np.eye(10)` 是对角线上为 1 的 $10 \times 10$ 表格，它的第 $k$ 行正好是数字 $k$
+    （`np.eye(10)[train_labels]` 是第 07 章 `one_hot` 的简便写法：`np.eye(10)` 是对角线上为 1 的 $10 \times 10$ 表格，它的第 $k$ 行正好是数字 $k$
     的 one-hot 行；给它一串标签，就为每张图片挑出这样的一行；用列表一次挑出好几行，会在“小批量”一节讲。）
 
     ## 有多分散？方差

@@ -7,9 +7,10 @@ with app.setup(hide_code=True):
     import marimo as mo
     import numpy as np
 
-    from learn_llm import images, todo
+    from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
+    from learn_llm.diagrams import pipeline
     from learn_llm.plot import chart
 
     LOCALE = "en"
@@ -20,7 +21,7 @@ def _():
     mo.md(r"""
     # 08 · Neural networks
 
-    Chapter 06's model got about 90% of the test digits right. Train it longer and it creeps up
+    Chapter 07's model got about 90% of the test digits right. Train it longer and it creeps up
     to about 91%, and stops there. The problem isn't training: it's what the model **can**
     express. Each digit has one template, and a picture's score is a weighted sum of its pixels.
     A weighted sum can say "ink here adds, ink there subtracts". It can't say "a 4 has its top
@@ -74,13 +75,50 @@ def _():
     One bend already beats chapter 04's curve. With more bends, each at its own place and with
     its own size, you can follow any shape, one straight piece at a time. That's the whole idea
     of a neural network: many simple pieces, each with a bend, added up.
+    """)
+    return
 
-    In NumPy, `np.maximum(Z, 0)` compares each number with 0, position by position, and keeps
-    the larger: exactly ReLU for a whole array at once.
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: the bent line
+
+    Use the bent line above, $\text{guess} = -105 + 12 \times t - 20 \times \operatorname{relu}(t - 33)$. What does it guess at 30 °C, and at 40 °C?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    bend_boxes = hand.boxes(['guess at 30', 'guess at 40'])
+    return (bend_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(bend_boxes):
+    hand.marked(bend_boxes, {'guess at 30': 255, 'guess at 40': 235}, {
+        'guess at 30': r"""below the bend, $\operatorname{relu}(30 - 33) = 0$, so it's just $-105 + 12 \times 30$""",
+        'guess at 40': r"""above the bend, $\operatorname{relu}(40 - 33) = 7$: $-105 + 12 \times 40 - 20 \times 7$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 1: relu
 
-    Write `relu(Z)`: `return np.maximum(Z, 0)`.
+    /// admonition | 🧰 Toolbox: the larger of two
+    `np.maximum(A, 2)` compares each number of an array with 2, position by position, and keeps the larger:
+    `np.maximum(np.array([1, 5, -3]), 2)` gives `[2, 5, 2]`. The result has the shape of `A`.
+
+    Don't mix it up with `np.max`, which picks out the single largest number of an array.
+    ///
+
+    Write `relu(Z)` for an array `Z` of any shape: each positive number stays, and everything else becomes 0.
+
+    For example, `[[-2, 0, 3], [1.5, -0.5, 0]]` must give `[[0, 0, 3], [1.5, 0, 0]]`.
     """)
     return
 
@@ -99,19 +137,28 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""ReLU keeps the larger of each number and 0.""",
+        r"""One line, with `np.maximum`.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## A hidden layer
 
     Now the digits. Instead of going straight from pixels to ten scores, we go through a middle
     step of 64 numbers:
 
-    1. `Z = X @ W1 + b1`: 64 weighted sums of the pixels, exactly like chapter 06's scores but 64
+    1. $Z = X W_1 + b_1$: 64 weighted sums of the pixels, exactly like chapter 06's scores but 64
        of them. `W1` has shape `(784, 64)`: 64 templates. `Z` has shape `(n, 64)`.
-    2. `H = relu(Z)`: bend each one, just as $\operatorname{relu}(t - 33)$ bent the line above ($b_1$ sets where
+    2. $H = \operatorname{relu}(Z)$: bend each one, just as $\operatorname{relu}(t - 33)$ bent the line above ($b_1$ sets where
        each bend sits). A template that matches poorly (negative sum) gives 0; one
        that matches well gives how well. Each column of $H$ is a little **detector**: it says
        how strongly its pattern is present in the picture, and stays silent otherwise.
-    3. `S = H @ W2 + b2`: ten scores, each a weighted sum of the 64 detectors. `W2` has shape
+    3. $S = H W_2 + b_2$: ten scores, each a weighted sum of the 64 detectors. `W2` has shape
        `(64, 10)`.
 
     `H` is called a **hidden layer** (hidden because it's neither the input nor the answer: it
@@ -119,8 +166,24 @@ def _():
     say, for example, "detector 12 (open top) **or** detector 40 (closed top)" (made-up numbers):
     each detector that fires adds its share, and a silent one adds nothing.
 
-    The scores then go through chapter 06's softmax and cross-entropy, unchanged. Here they are
-    again, with chapter 06's `accuracy` and `one_hot`. They are finished; don't change them:
+    Here are the three steps as a picture, with the shape of each value for `n` pictures:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pipeline([('X', '(n, 784)'), ('Z', '(n, 64)'), ('H', '(n, 64)'), ('S', '(n, 10)')],
+             ['@ W1 + b1', 'relu', '@ W2 + b2'],
+             'X goes through W1 and b1 to give Z, relu gives H, and W2 and b2 give the scores S')
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The scores then go through chapter 07's softmax and cross-entropy, unchanged. Here they are
+    again, with `accuracy` from chapter 06 and `one_hot` from chapter 07. They are finished; don't change them:
     """)
     return
 
@@ -153,15 +216,44 @@ def one_hot(labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    ## By hand: one picture through a tiny network
+
+    Before writing it for 784 pixels, do it for 2. There is one picture, `x = [1, 2]`, with two detectors and two scores. Every `b` is 0, and
+
+    > $$W_1 = \begin{bmatrix} 1 & -3 \\ 1 & 1 \end{bmatrix} \qquad W_2 = \begin{bmatrix} 1 & 0 \\ 2 & 1 \end{bmatrix}$$
+
+    Column 0 of $W_1$ holds the knobs of detector 0, so $z_0 = 1 \times 1 + 2 \times 1 = 3$. Work out the rest: the other weighted sum, both hidden values, and both scores.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    forward_boxes = hand.boxes(['z1', 'h0', 'h1', 's0', 's1'])
+    return (forward_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(forward_boxes):
+    hand.marked(forward_boxes, {'z1': -1, 'h0': 3, 'h1': 0, 's0': 3, 's1': 0}, {
+        'z1': r"""`x` dotted with column 1 of $W_1$: $1 \times (-3) + 2 \times 1$""",
+        'h0': r"""$\operatorname{relu}(z_0)$, and $z_0$ is 3""",
+        'h1': r"""$\operatorname{relu}(z_1)$: a negative sum gives 0""",
+        's0': r"""`h` dotted with column 0 of $W_2$: $h_0 \times 1 + h_1 \times 2$""",
+        's1': r"""`h` dotted with column 1 of $W_2$: $h_0 \times 0 + h_1 \times 1$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 2: forward
 
-    Write `forward(X, W1, b1, W2, b2)`, returning all three steps (we'll need `Z` and `H` again
-    for the slopes):
+    Write `forward(X, W1, b1, W2, b2)`. It does the three steps for all the pictures at once, and gives back all three results, `Z`, `H` and `S`, in that order.
+    (We'll need `Z` and `H` again for the slopes.) Use your `relu`.
 
-    1. `Z = X @ W1 + b1`
-    2. `H = relu(Z)`
-    3. `S = H @ W2 + b2`
-    4. `return Z, H, S`
+    On the tiny network above, with `X = [[1, 2]]`, a matrix with one row for the one picture, it must give `[[3, -1]]`, `[[3, 0]]` and `[[3, 0]]`.
     """)
     return
 
@@ -175,6 +267,15 @@ def forward(X, W1, b1, W2, b2):
 @app.cell(hide_code=True)
 def _():
     check("08", "forward", forward, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""One line for each step, in the order of the picture: weighted sums, bend, weighted sums.""",
+        r"""`@` makes the weighted sums and `+` adds the `b`s. Give back three things, separated by commas.""",
+    ], LOCALE)
     return
 
 
@@ -259,13 +360,13 @@ def _():
     We name each blame with a `d` in front: `dH` is the blame of `H`, `dW1` the blame (slope) of
     `W1`, and so on.
 
-    **Scores.** The loss is chapter 06's cross-entropy of `softmax(S)`, so the blame of the scores
-    is chapter 06's $G = (P - Y) / n$, with $P = \operatorname{softmax}(S)$.
+    **Scores.** The loss is chapter 07's cross-entropy of `softmax(S)`, so the blame of the scores
+    is chapter 07's $G = (P - Y) / n$, with $P = \operatorname{softmax}(S)$.
 
-    **`W2` and `b2`.** `S = H @ W2 + b2` is exactly chapter 06's `X @ W + b`, with `H` in place of
-    `X`. So the same result holds: `dW2 = H.T @ G` and `db2 = np.sum(G, axis=0)`.
+    **`W2` and `b2`.** `S = H @ W2 + b2` is exactly chapter 07's `X @ W + b`, with `H` in place of
+    `X`. So the same result holds: $dW_2 = H^\top G$, and $db_2$ is the sum down each column of $G$.
 
-    **$H$.** This one is new: chapter 06 never needed the slope for its *inputs*. Take one hidden
+    **$H$.** This one is new: chapter 07 never needed the slope for its *inputs*. Take one hidden
     value, `H[i, j]` (picture $i$, detector $j$). It appears in all ten scores of picture $i$:
     written out, $S[i, c] = H[i, 0] \times W_2[0, c] + \ldots + H[i, 63] \times W_2[63, c] + b_2[c]$, so by chapter
     03's rule for a product (in $a \times c$, nudging $a$ moves the result by $c$), nudging `H[i, j]` moves `S[i, c]` by `W2[j, c]` per unit: that's the local
@@ -291,22 +392,76 @@ def _():
     a **mask**. A detector that was silent for a picture takes no blame for it: nudging its
     knobs a tiny bit wouldn't change anything.
 
-    **`W1` and `b1`.** `Z = X @ W1 + b1` is chapter 06's step once more, with `dZ` as the blame:
-    `dW1 = X.T @ dZ`, `db1 = np.sum(dZ, axis=0)`.
+    **`W1` and `b1`.** `Z = X @ W1 + b1` is chapter 07's step once more, with `dZ` as the blame:
+    $dW_1 = X^\top dZ$, and $db_1$ is the sum down each column of $dZ$.
 
     That's backpropagation through a whole network. Every step is chapter 03's rule; the
     matrices only do it for all pictures and all knobs at once.
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: blame through the tiny network
+
+    Back to the tiny network, where `x = [1, 2]`, `Z = [3, -1]` and `H = [3, 0]`. Say the blames of the two scores came out as `G = [1, -1]` (round numbers, to keep the arithmetic easy).
+    Pass the blame back, one step at a time. With a single picture, each formula is short:
+
+    - $dW_2[j, c] = H[j] \times G[c]$
+    - $dH[j]$ is $G$ dotted with row $j$ of $W_2$
+    - $dZ$ is $dH$ where $Z$ is positive, and 0 elsewhere
+    - $dW_1[i, j] = x[i] \times dZ[j]$
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    backward_boxes = hand.boxes(['dW2[0, 0]', 'dW2[1, 0]', 'dH[0]', 'dH[1]', 'dZ[0]', 'dZ[1]', 'dW1[1, 0]'])
+    return (backward_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(backward_boxes):
+    hand.marked(backward_boxes, {'dW2[0, 0]': 3, 'dW2[1, 0]': 0, 'dH[0]': 1, 'dH[1]': 1, 'dZ[0]': 1, 'dZ[1]': 0, 'dW1[1, 0]': 2}, {
+        'dW2[0, 0]': r"""$H[0] \times G[0]$""",
+        'dW2[1, 0]': r"""$H[1] \times G[0]$, and detector 1 was silent""",
+        'dH[0]': r"""row 0 of $W_2$ is `[1, 0]`: $1 \times 1 + (-1) \times 0$""",
+        'dH[1]': r"""row 1 of $W_2$ is `[2, 1]`: $1 \times 2 + (-1) \times 1$""",
+        'dZ[0]': r"""$Z[0]$ is positive, so the blame passes through unchanged""",
+        'dZ[1]': r"""$Z[1]$ is negative, so the blame is blocked""",
+        'dW1[1, 0]': r"""$x[1] \times dZ[0]$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Look at detector 1. It was silent for this picture, so the knobs leading out of it get no blame (`dW2[1, 0]` is 0). And the mask stops its blame from travelling further back (`dZ[1]` is 0),
+    so its own knobs in $W_1$ get none either. For this picture, only detector 0 learns.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 3: backward
 
-    Write `backward(X, Y, Z, H, S, W2)`, returning `dW1, db1, dW2, db2`:
+    Write `backward(X, Y, Z, H, S, W2)`, giving back the four slopes in the order `dW1, db1, dW2, db2`. Walk backwards, as in the text:
 
-    1. `G = (softmax(S) - Y) / len(X)`
-    2. `dW2 = H.T @ G` and `db2 = np.sum(G, axis=0)`
-    3. `dH = G @ W2.T`
-    4. `dZ = dH * (Z > 0)`
-    5. `dW1 = X.T @ dZ` and `db1 = np.sum(dZ, axis=0)`
-    6. `return dW1, db1, dW2, db2`
+    | step | formula | shape |
+    |---|---|---|
+    | blame of the scores | $G = (P - Y) / n$, with $P = \operatorname{softmax}(S)$ and $n$ the number of pictures, `len(X)` | `(n, 10)` |
+    | second layer | $dW_2 = H^\top G$, and $db_2$ is the sum of $G$ down each column | `(64, 10)` and `(10,)` |
+    | hidden values | $dH = G W_2^\top$ | `(n, 64)` |
+    | the bend | $dZ$ is $dH$ times the mask `Z > 0` | `(n, 64)` |
+    | first layer | $dW_1 = X^\top dZ$, and $db_1$ is the sum of $dZ$ down each column | `(784, 64)` and `(64,)` |
+
+    In code, $M^\top$ is `M.T`, and the sum down each column is `np.sum(M, axis=0)` (chapter 07).
     """)
     return
 
@@ -325,6 +480,15 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""One or two lines for each row of the table, in the table's order. Check each shape against the table as you go.""",
+        r"""The order inside each `@` matters: `H.T @ G`, but `G @ W2.T`. If the nudge check below disagrees only for `W1`, look at the mask.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## Checking it by nudging
 
@@ -332,7 +496,7 @@ def _():
     first layer, `W1[406, 0]` (from pixel 406, row 14 and column 14: the middle of the picture,
     into detector 0),
     and see how the loss moves; then do the same for a knob of the second layer, `W2[5, 3]`.
-    (This cell needs Exercises 2 and 3.)
+    (This cell needs all three exercises.)
     """)
     return
 
@@ -363,10 +527,44 @@ def _():
     They agree in their first three or four digits after the zeros (−0.01332… and −0.01333…;
     0.0029739… twice): a nudge is never exact. (A corner pixel would give slope exactly 0 and
     test nothing, so we picked one in the middle.)
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: how many knobs
+
+    Before training, count what will be trained. `W1` has shape `(784, 64)`, `b1` has 64 numbers, `W2` has shape `(64, 10)`, and `b2` has 10.
+    How many knobs are in `W1`? And how many in the whole network?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    count_boxes = hand.boxes(['W1', 'whole network'])
+    return (count_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(count_boxes):
+    hand.marked(count_boxes, {'W1': 50176, 'whole network': 50890}, {
+        'W1': r"""$784 \times 64$""",
+        'whole network': r"""`W1`, plus 64, plus $64 \times 10$, plus 10""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Chapter 07's model had 7,850 knobs. This one has over six times as many, and almost all of them are in the first layer.
 
     ## Training
 
-    Same loop as chapter 06, with four sets of knobs instead of two. 300 steps over all 10,000
+    Same loop as chapter 07, with four sets of knobs instead of two. 300 steps over all 10,000
     pictures take a while (up to a minute), so the training waits for the button. The first line
     of the training cell, `mo.stop(...)`, only makes it wait for the button.
     """)
@@ -421,7 +619,7 @@ def _(W1):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    They look much noisier than chapter 06's templates, and the noise is telling. Near the edges,
+    They look much noisier than chapter 07's templates, and the noise is telling. Near the edges,
     almost every picture is white paper: many of those pixels are 0 in every picture, and the
     rest almost always are. Their knobs take little or no blame (the slope `X.T @ dZ` multiplies
     by those zeros) and keep (nearly) their random starting values. Towards the middle, where the ink is,

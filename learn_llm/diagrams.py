@@ -108,3 +108,30 @@ def block_road(x: str, norm: str, attention: str, think: str, label: str):
         parts.append(f'<text x="{cx}" y="{y + 6}" font-size="18" fill="{TEXT}">+</text>')
     parts.append("</svg>")
     return mo.Html("".join(parts))
+
+
+def pipeline(boxes: list[tuple[str, str]], arrows: list[str], label: str):
+    """Values in a row, each made from the one before: a box per value, a named arrow per step.
+
+    Each box is (name, shape); `arrows` names the step between neighbours. `label` describes
+    the picture for screen readers, in the lesson's language.
+    """
+    import marimo as mo
+
+    half, gap, y = 62, 250, 60
+    width = gap * (len(boxes) - 1) + 2 * half + 20
+    xs = [10 + half + gap * i for i in range(len(boxes))]
+    parts = [f'<svg viewBox="0 0 {width} 120" width="100%" style="max-width:{width}px" role="img" aria-label="{escape(label)}" '
+             'xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, monospace" text-anchor="middle">',
+             f'<defs><marker id="step" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+             f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{AXIS}"/></marker></defs>']
+    for x1, x2, text in zip(xs, xs[1:], arrows):
+        parts.append(f'<line x1="{x1 + half}" y1="{y}" x2="{x2 - half - 4}" y2="{y}" stroke="{AXIS}" marker-end="url(#step)"/>')
+        parts.append(f'<text x="{(x1 + x2) / 2}" y="{y - 10}" font-size="13" fill="{TEXT}">{escape(text)}</text>')
+    for x, (name, shape) in zip(xs, boxes):
+        parts.append(f'<rect x="{x - half}" y="{y - 30}" width="{2 * half}" height="60" rx="6" fill="none" '
+                     f'stroke="{AXIS}" stroke-width="1.2"/>')
+        parts.append(f'<text x="{x}" y="{y - 4}" font-size="15" fill="{TEXT}">{escape(name)}</text>')
+        parts.append(f'<text x="{x}" y="{y + 17}" font-size="12" fill="{AXIS}">{escape(shape)}</text>')
+    parts.append("</svg>")
+    return mo.Html("".join(parts))

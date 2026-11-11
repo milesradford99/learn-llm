@@ -70,15 +70,27 @@ uses = [
 introduces = [
     "classification", "label", "pixel", "indexing", "reshape", "numpy-zeros",
     "matrix-times-matrix", "argmax", "axis", "comparing-arrays", "accuracy", "test-set",
+    "boolean-rows", "template",
+]
+toolbox = ["indexing", "numpy-zeros", "comparing-arrays", "boolean-rows"]
+uses = [
+    "matmul-operator", "shape", "shape-rule", "broadcasting", "elementwise", "numpy-array",
+    "numpy-mean", "vector-times-matrix", "dot-product", "builtin-range", "builtin-len", "loop",
+    "centering-inputs", "tuple",
+]
+
+[chapters.07]
+introduces = [
     "exp", "softmax", "softmax-shift", "keepdims", "log", "surprise", "cross-entropy",
     "one-hot", "exp-slope", "log-slope", "softmax-gradient", "transpose", "numpy-sum",
 ]
+toolbox = ["keepdims", "numpy-sum"]
 uses = [
-    "matmul-operator", "shape", "shape-rule", "broadcasting", "elementwise", "numpy-array",
-    "numpy-mean", "vector-times-matrix", "vectorized-gradient", "gradient-descent",
-    "learning-rate", "nudge", "chain-rule", "blame", "blames-add", "local-slope",
-    "derivative-rules", "power", "builtin-range", "builtin-len", "loop", "gradient-check",
-    "centering-inputs", "chart-reading", "tuple",
+    "classification", "label", "accuracy", "argmax", "axis", "test-set", "template",
+    "matrix-times-matrix", "matmul-operator", "shape-rule", "broadcasting", "elementwise",
+    "numpy-mean", "vectorized-gradient", "gradient-descent", "learning-rate", "nudge",
+    "chain-rule", "blame", "blames-add", "local-slope", "derivative-rules", "power",
+    "gradient-check", "chart-reading", "tuple",
 ]
 
 [chapters.08]
@@ -87,6 +99,7 @@ introduces = [
     "matmul-grouping", "random-generator", "random-init", "input-gradient", "relu-slope",
     "boolean-mask", "two-layer-backprop",
 ]
+toolbox = ["random-generator"]
 uses = [
     "softmax", "cross-entropy", "accuracy", "one-hot", "matrix-times-matrix", "transpose",
     "softmax-gradient", "numpy-sum", "axis", "keepdims", "chain-rule", "blames-add",
@@ -441,6 +454,8 @@ random-init = "networks start from small random knobs, not zeros"
 input-gradient = "dH = G @ W2.T: a value feeding many scores collects their blames"
 relu-slope = "ReLU passes blame where z > 0 (slope 1) and blocks it elsewhere (slope 0)"
 boolean-mask = "multiplying by Z > 0 counts True as 1 and False as 0"
+boolean-rows = "M[flags] keeps the rows of M where flags is True; flags often comes from labels == c"
+template = "a digit's column of knobs seen as a picture; the mean picture of a digit is a first template"
 two-layer-backprop = "G, dW2 = H.T @ G, dH = G @ W2.T, dZ = dH * (Z > 0), dW1 = X.T @ dZ"
 variance = "mean of (number − mean)²: how spread out numbers are"
 typical-size = "the square root of the variance (or of the mean square, for numbers centred on 0)"

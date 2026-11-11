@@ -77,7 +77,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    (`np.eye(10)[train_labels]` is a shortcut for chapter 06's `one_hot`: `np.eye(10)` is the
+    (`np.eye(10)[train_labels]` is a shortcut for chapter 07's `one_hot`: `np.eye(10)` is the
     $10 \times 10$ table with 1s on its diagonal, so row $k$ of it is the one-hot row for digit $k$, and
     giving a list of labels picks one such row per picture; picking several rows with a list is
     explained under Small batches.)

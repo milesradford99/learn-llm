@@ -260,7 +260,7 @@ def _():
     maximum and the total of all the scores, which we don't know until the end. But both can be kept as running values and fixed up as we go:
 
     - keep a running maximum `best`, a running total `total` of $e^{\text{score} - \text{best}}$, and a running weighted sum `acc` of values;
-    - when a new tile brings a bigger maximum, everything accumulated so far was computed against the old one, so multiply `total` and `acc` by $e^{\text{old best} - \text{new best}}$ (chapter 06: $e^{a-b}$ rescales correctly);
+    - when a new tile brings a bigger maximum, everything accumulated so far was computed against the old one, so multiply `total` and `acc` by $e^{\text{old best} - \text{new best}}$ (chapter 07: $e^{a-b}$ rescales correctly);
     - at the end, `acc / total` is exactly softmax's weighted average.
 
     This is the idea of **FlashAttention**.

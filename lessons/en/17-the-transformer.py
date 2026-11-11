@@ -192,7 +192,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
-    norm_boxes = hand.boxes(['mean', 'variance', 'first', 'last'])
+    norm_boxes = hand.boxes(['mean', 'variance', 'first', 'last'], step=0.1)
     return (norm_boxes,)
 
 
@@ -213,7 +213,7 @@ def _():
     ## Exercise 2: layer_norm
 
     /// admonition | 🧰 Toolbox: mean and variance along the last dimension
-    For a tensor `T` of any shape, `torch.mean(T, dim=-1, keepdim=True)` is the mean along the last dimension. `keepdim=True` is PyTorch's spelling of chapter 06's `keepdims=True`:
+    For a tensor `T` of any shape, `torch.mean(T, dim=-1, keepdim=True)` is the mean along the last dimension. `keepdim=True` is PyTorch's spelling of chapter 07's `keepdims=True`:
     the result keeps a last dimension of size 1, so it can be subtracted from `T` row by row.
 
     `torch.var(T, dim=-1, keepdim=True, unbiased=False)` is the variance, the same way. `unbiased=False` asks for chapter 09's plain variance. (Left to itself, PyTorch divides by one less

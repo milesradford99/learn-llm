@@ -135,7 +135,7 @@ def _():
     ## The trouble with zero
 
     To turn a row of counts into chances, divide by the row's total. But any pair never seen in
-    training then gets a chance of exactly 0, and chapter 06's surprise, $-\log 0$, is infinite. One unseen pair
+    training then gets a chance of exactly 0, and chapter 07's surprise, $-\log 0$, is infinite. One unseen pair
     in the test stories would make the whole score infinite, as if the model had called it impossible.
 
     The usual fix is to pretend every pair was seen a tiny number of extra times, `k`. This is called
@@ -248,7 +248,7 @@ def _():
     chances, we add their logs. Divide by the number of words and flip the sign, and you have
     a quantity you already know:
 
-    > mean surprise = $-$(mean of $\log p$), chapter 06's cross-entropy
+    > mean surprise = $-$(mean of $\log p$), chapter 07's cross-entropy
 
     To make it easier to read, we undo the log with $e^{\square}$. That gives the **perplexity**:
 

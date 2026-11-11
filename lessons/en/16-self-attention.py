@@ -228,7 +228,7 @@ def _():
 def _():
     mo.md(r"""
     With plain scores, the biggest share climbs from under 0.3 to nearly 0.9: at 512 numbers, one key takes nearly everything before any training has happened.
-    That's bad for learning. When one share is near 1, softmax is flat, and almost no blame reaches the other words (chapter 06).
+    That's bad for learning. When one share is near 1, softmax is flat, and almost no blame reaches the other words (chapter 07).
 
     Divided by $\sqrt{d}$, the biggest share stays near 0.2 at every size. So that's what self-attention does:
 

@@ -45,7 +45,7 @@ def _():
 def _():
     mo.md(r"""
     Networks work on numbers, so our first problem is how to turn a word into numbers. The obvious
-    way is chapter 06's one-hot rows: with 2,000 known words, each word is a row of 2,000 numbers
+    way is chapter 07's one-hot rows: with 2,000 known words, each word is a row of 2,000 numbers
     with a single 1. But that tells the network nothing. The dot product of any two
     different one-hot rows is 0, so `dog` is as unlike `cat` as it is unlike `yesterday`.
 
@@ -262,14 +262,14 @@ def _():
     Each word gets two vectors, one for when it's a centre ($u$) and one for when it's a context ($v$).
     The word's meaning will end up in $u$. We'd like $u \cdot v$ to be high when $v$ is a real neighbour.
 
-    The straightforward model is chapter 06's: the scores of all 2,000 words, then softmax. But
+    The straightforward model is chapter 07's: the scores of all 2,000 words, then softmax. But
     that means 2,000 dot products for every pair, millions of times. Instead, we'll ask a much
     cheaper question: *is this pair real?* For each real pair, we also draw a few **noise** words at
     random, and train the network to tell the real context from the fakes. This is **negative
     sampling**.
 
     A yes-or-no question needs a probability from one score $s$. Take softmax over two scores, $s$
-    for "real" and 0 for "fake". (Why 0? Softmax only cares about differences between scores, as chapter 06's shift
+    for "real" and 0 for "fake". (Why 0? Softmax only cares about differences between scores, as chapter 07's shift
     showed, so one of them may as well be 0.) Anything to the power 0 is 1, so $e^0 = 1$, and the share of "real" is
 
     > $$\sigma(s) = \frac{e^s}{e^s + e^0} = \frac{e^s}{e^s + 1}$$
@@ -279,14 +279,14 @@ def _():
     which equals $\sigma(-s)$. (Check it: $\sigma(-s) = e^{-s} / (e^{-s} + 1)$. Multiply top and bottom by $e^s$, remembering that
     $e^{-s} \times e^s = e^0 = 1$, and you get $1 / (1 + e^s)$, which is exactly $1 - e^s / (e^s + 1)$.)
 
-    The loss is chapter 06's surprise, $-\log$ of the share given to the right answer, added up
+    The loss is chapter 07's surprise, $-\log$ of the share given to the right answer, added up
     for one real word and $k$ noise words. For the real word, the right answer is "real", with share
     $\sigma(u \cdot v)$. For a noise word $n$, the right answer is "fake", with share $\sigma(-u \cdot n)$:
 
     > $$\text{loss for one pair} = -\log \sigma(u \cdot v) - \log \sigma(-u \cdot n_1) - \ldots - \log \sigma(-u \cdot n_k)$$
 
     The first term pulls $u$ towards its real neighbour. The others push it away from the fakes. In
-    PyTorch, `F.logsigmoid(s)` computes $\log \sigma(s)$ safely, in the spirit of chapter 06's softmax shift.
+    PyTorch, `F.logsigmoid(s)` computes $\log \sigma(s)$ safely, in the spirit of chapter 07's softmax shift.
 
     ## Exercise 4: pair_loss
 

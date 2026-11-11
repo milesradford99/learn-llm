@@ -571,7 +571,7 @@ def _():
     ## What's next
 
     You can now compute guesses, loss and gradient for many inputs and many days in a few lines.
-    In **Chapter 06** you'll teach a model to recognise handwritten digits: each image is a
+    In **Chapters 06 and 07** you'll teach a model to recognise handwritten digits: each image is a
     vector of hundreds of numbers, and instead of one guess the model makes ten, one per digit.
 
     ## What you can do now
