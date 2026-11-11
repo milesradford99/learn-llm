@@ -10,7 +10,7 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
     from learn_llm.images import digits as show_digits
@@ -156,16 +156,64 @@ def _():
     向右滑一步（第 1–3 列）：每一行都是 $(-1 \times 0) + (0 \times 1) + (1 \times 1) = 1$，还是 **3**。
 
     全是 0 或全是 1 的小块会得到 0，因为 −1 和 +1 互相抵消。所以结果只在数字从左到右发生变化的地方才大：这个卷积核是一个**竖直边缘探测器**。$3 \times 3$ 的卷积核在 $4 \times 4$ 的图片上，横着能放 2 个位置，竖着也是 2 个，所以输出是 $2 \times 2$。一般来说，高度为 $h$ 的图片，用大小为 $k$ 的卷积核，输出 $h - k + 1$ 行。
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：滑动卷积核
+
+    轮到你了。卷积核不变，换一张图片：
+
+    ```
+    图片             卷积核
+    0  0  0  1       -1  0  1
+    0  0  1  1       -1  0  1
+    0  1  1  1       -1  0  1
+    1  1  1  1
+    ```
+
+    在一小块的每一行里，这个卷积核算出的是右边的数减去左边的数。算出输出的四个数。
+    再加一问：$28 \times 28$ 的图片配 $5 \times 5$ 的卷积核，输出有多少行？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    slide_boxes = hand.boxes(['左上', '右上', '左下', '右下', '28 配 5 时的行数'])
+    return (slide_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(slide_boxes):
+    hand.marked(slide_boxes, {'左上': 2, '右上': 2, '左下': 2, '右下': 1, '28 配 5 时的行数': 24}, {
+        '左上': r"""第 0 到 2 行、第 0 到 2 列：三行分别得到 0、1、1""",
+        '右上': r"""第 0 到 2 行、第 1 到 3 列：三行分别得到 1、1、0""",
+        '左下': r"""第 1 到 3 行、第 0 到 2 列：三行分别得到 1、1、0""",
+        '右下': r"""第 1 到 3 行、第 1 到 3 列：三行分别得到 1、0、0""",
+        '28 配 5 时的行数': r"""$h - k + 1$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 练习 1：convolve
 
-    写 `convolve(image, kernel)`，卷积核是正方形的：
+    写出 `convolve(image, kernel)`，`image` 是一个矩阵，`kernel` 是一个方形的矩阵：
 
-    1. 两行：`h, w = image.shape` 和 `k = kernel.shape[0]`
-    2. `out = np.zeros((h - k + 1, w - k + 1))`
-    3. `for r in range(h - k + 1):`，里面再写 `for c in range(w - k + 1):`
-    4. 在两层循环里面：`patch = image[r:r + k, c:c + k]`，然后 `out[r, c] = np.sum(patch * kernel)`
-    5. 循环结束后，`return out`
+    1. 先拿到大小。`image.shape` 里是高和宽，`kernel.shape[0]` 是卷积核的大小 $k$。
+    2. 输出先设成全 0，有 $h - k + 1$ 行、$w - k + 1$ 列。
+    3. 用两层循环（一个套一个）走遍输出的每个位置：`r` 走输出的各行，`c` 走各列。
+    4. 在每个位置取出那一小块：图片里左上角在第 `r` 行、第 `c` 列的 $k \times k$ 方块。这是一个两个方向的切片，和上面的 `canvas[i, r:r + 28, c:c + 28]` 一样。
+       把这一小块和卷积核逐个位置相乘，用 `np.sum` 全部加起来，把结果存进 `out[r, c]`。
+    5. 返回输出。
+
+    在上面手算过的例子上，它应该得到 `[[3, 3], [3, 3]]`。
     """)
     return
 
@@ -179,6 +227,15 @@ def convolve(image, kernel):
 @app.cell(hide_code=True)
 def _():
     check("11", "convolve", convolve, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""`h, w = image.shape` 给两个大小起了名字。循环是 `for r in range(...)`，里面再套 `for c in range(...)`，要做的事写在两层循环的里面。""",
+        r"""那一小块是 `image[r:r + k, c:c + k]`，行的部分和列的部分之间用逗号隔开。`return` 在两层循环之后。""",
+    ], LOCALE)
     return
 
 
@@ -233,16 +290,54 @@ def _():
     0  0  4  1            1  6
     1  0  6  2
     ```
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：给一张图做池化
+
+    给下面这张图做池化：写出每个 $2 \times 2$ 方块里最大的数。
+
+    ```
+    2  0  1  1
+    0  3  0  1
+    7  1  0  0
+    2  2  0  5
+    ```
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pool_boxes = hand.boxes(['左上', '右上', '左下', '右下'])
+    return (pool_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(pool_boxes):
+    hand.marked(pool_boxes, {'左上': 3, '右上': 1, '左下': 7, '右下': 5}, {
+        '左上': r"""2、0、0、3 里最大的""",
+        '右上': r"""1、1、0、1 里最大的""",
+        '左下': r"""7、1、2、2 里最大的""",
+        '右下': r"""0、0、0、5 里最大的""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 练习 2：max_pool
 
-    写 `max_pool(M)`。`//` 是去掉小数部分的除法（`7 // 2` 是 3），所以边上多出来的一行会被丢掉。
+    写出 `max_pool(M)`，`M` 是一个矩阵。输出的行数和列数都是原来的一半。`//` 是丢掉小数部分的除法（`7 // 2` 是 3），所以行数是奇数时，最后一行会被舍去。
 
-    1. `h, w = M.shape`
-    2. `out = np.zeros((h // 2, w // 2))`
-    3. `for r in range(h // 2):`，里面再写 `for c in range(w // 2):`
-    4. 在两层循环里面：`out[r, c] = np.max(M[2 * r:2 * r + 2, 2 * c:2 * c + 2])`
-    5. 循环结束后，`return out`
+    沿用 `convolve` 的框架：形状合适的全 0 输出，两层循环走遍输出的每个位置，每个位置存一个数。输出位置 `r`、`c` 对应的方块，从 `M` 的第 $2 \times r$ 行、第 $2 \times c$ 列开始，高 2 行、宽 2 列。`np.max` 给出其中最大的数。
+
+    对上面正文里的那个例子，它应该得到 `[[5, 2], [1, 6]]`。对你刚才手算的例子，它应该得到你算出的四个数。
     """)
     return
 
@@ -256,6 +351,15 @@ def max_pool(M):
 @app.cell(hide_code=True)
 def _():
     check("11", "max_pool", max_pool, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""输出有 `h // 2` 行、`w // 2` 列，循环也按这两个数来走。""",
+        r"""方块是这样的切片：行从 `2 * r` 到 `2 * r + 2`，列同样用 `c` 来写。""",
+    ], LOCALE)
     return
 
 
@@ -296,15 +400,60 @@ def _():
     **保持大小。** `padding=1` 先在图的四周加一圈宽 1 像素的 0（这叫**填充**，padding），这样 $3 \times 3$ 的卷积核给出的输出和输入一样高一样宽，只有池化才会缩小它。
 
     网络的末尾用 `nn.AdaptiveMaxPool2d(1)`：不管每张图多大，只留整张图上最大的那一个数。它回答的问题是“图片里任何地方有这个特征吗？”之后 32 张图就变成了 32 个数字（`nn.Flatten()` 整理形状），最后的 `nn.Linear` 把它们变成 10 个分数。位置信息几乎没有留下，所以一个数字不管在哪里，分数都差不多。（下面列表里的 `nn.MaxPool2d(2)` 就是你刚写的 $2 \times 2$ 池化。）
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 一段一段地看这个网络
+
+    下面是你要搭的网络，用来处理 $40 \times 40$ 的图片：
+
+    | 阶段 | 做什么 |
+    |---|---|
+    | 1 | 一次卷积，从 1 张图变成 8 张图；弯折；$2 \times 2$ 最大池化 |
+    | 2 | 一次卷积，从 8 张图变成 16 张；弯折；$2 \times 2$ 最大池化 |
+    | 3 | 一次卷积，从 16 张图变成 32 张；弯折 |
+    | 4 | 每张图只留最大的那个数；展平；一个线性层，从 32 个数到 10 个分数 |
+
+    每次卷积都用 $3 \times 3$ 的卷积核和 `padding=1`，所以高和宽不变。
+
+    ## 动手算：跟着一张图片走
+
+    一张图片进来时形状是 `(1, 40, 40)`：1 张图，高 40，宽 40。填出阶段 1 和阶段 2 之后的结果。再数一数第一次卷积和最后一次卷积的旋钮，方法和正文里数出中间那次的 1,168 个一样。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    stage_boxes = hand.boxes(['阶段 1：图的张数', '阶段 1：高', '阶段 2：高', '第一次卷积的旋钮数', '最后一次卷积的旋钮数'])
+    return (stage_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(stage_boxes):
+    hand.marked(stage_boxes, {'阶段 1：图的张数': 8, '阶段 1：高': 20, '阶段 2：高': 10, '第一次卷积的旋钮数': 80, '最后一次卷积的旋钮数': 4640}, {
+        '阶段 1：图的张数': r"""阶段 1 的卷积给出 8 张图，池化不改变张数""",
+        '阶段 1：高': r"""padding 让高保持 40，池化再把它减半""",
+        '阶段 2：高': r"""再减半一次""",
+        '第一次卷积的旋钮数': r"""8 个卷积核，每个有 $3 \times 3 \times 1$ 个权重和 1 个偏置""",
+        '最后一次卷积的旋钮数': r"""32 个卷积核，每个有 $3 \times 3 \times 16$ 个权重和 1 个偏置""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 练习 3：make_cnn
 
-    写 `make_cnn()`，返回下面的网络（写成一个长长的 `return nn.Sequential(...)`，每层后面加逗号，愿意的话可以一层一行）：
+    写出 `make_cnn()`，把表里的网络作为一个 `nn.Sequential` 返回。它一共 11 层，每一层在上面的正文里都出现过：
+    `nn.Conv2d`（两个图的张数、卷积核大小，再加 `padding=1`）、`nn.ReLU()`、`nn.MaxPool2d(2)`、`nn.AdaptiveMaxPool2d(1)`、`nn.Flatten()`、`nn.Linear`。
 
-    1. `nn.Conv2d(1, 8, 3, padding=1)`、`nn.ReLU()`、`nn.MaxPool2d(2)`
-    2. `nn.Conv2d(8, 16, 3, padding=1)`、`nn.ReLU()`、`nn.MaxPool2d(2)`
-    3. `nn.Conv2d(16, 32, 3, padding=1)`、`nn.ReLU()`
-    4. `nn.AdaptiveMaxPool2d(1)`、`nn.Flatten()`、`nn.Linear(32, 10)`
+    每个阶段写一行，每一层后面加一个逗号。
     """)
     return
 
@@ -318,6 +467,15 @@ def make_cnn():
 @app.cell(hide_code=True)
 def _():
     check("11", "make_cnn", make_cnn, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""阶段 1 是 `nn.Conv2d(1, 8, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),`。阶段 2、3 是同样的写法，只是图的张数不同，而且阶段 3 没有池化。""",
+        r"""每次卷积输入的张数必须等于上一次输出的张数：1 到 8，8 到 16，16 到 32。最后三层是 `nn.AdaptiveMaxPool2d(1)`、`nn.Flatten()` 和 `nn.Linear(32, 10)`。""",
+    ], LOCALE)
     return
 
 
@@ -382,14 +540,47 @@ def _():
     > `out = x + f(x)`
 
     现在 `f` 只需要学对 `x` 的*修正*，这叫**残差**。看看斜率。根据第 02 章的加法规则，`x + f(x)` 的斜率是 `1 + f'`，其中 `f'` 是 `f` 的斜率。即使 `f'` 很小，斜率也接近 1，所以责任几乎不衰减地穿过这个块。这个 `x +` 是责任的直达通道，常叫**跳跃连接**（skip connection）。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：走一遍残差块
+
+    在你要写的块里，`f` 是第一层、一个弯折，再加第二层。然后加上 `x`，再对这个和做最后一次弯折：
+
+    > $$\text{out} = \operatorname{relu}(x + \text{layer}_2(\operatorname{relu}(\text{layer}_1(x))))$$
+
+    用单个的数和几个假的层来试试：第一层是减 5，第二层是乘 3。$x = 6$ 时出来的是多少？$x = 2$ 时呢？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    residual_boxes = hand.boxes(['x = 6 时的输出', 'x = 2 时的输出'])
+    return (residual_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(residual_boxes):
+    hand.marked(residual_boxes, {'x = 6 时的输出': 9, 'x = 2 时的输出': 2}, {
+        'x = 6 时的输出': r"""$6 - 5 = 1$，弯折之后还是 1，乘 3 得 3，而 $6 + 3 = 9$ 是正数""",
+        'x = 2 时的输出': r"""$2 - 5 = -3$，弯折把它变成 0。那还剩什么可以加到 $x$ 上？""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    $x = 2$ 时，`f` 给出 0，这个块就把 `x` 原样传了下去。一个什么都还没学会的残差块不会添乱，普通的块可做不到这一点。
 
     ## 练习 4：residual_block
 
-    写 `residual_block(x, conv1, conv2)`。`conv1` 和 `conv2` 是两个保持形状不变的卷积层：
-
-    1. `h = torch.relu(conv1(x))`
-    2. `h = conv2(h)`
-    3. `return torch.relu(x + h)`
+    写出 `residual_block(x, conv1, conv2)`，完成上面的公式。`conv1` 和 `conv2` 是两个保持形状不变的卷积层，像函数一样调用，弯折用 `torch.relu`。
     """)
     return
 
@@ -403,6 +594,15 @@ def residual_block(x, conv1, conv2):
 @app.cell(hide_code=True)
 def _():
     check("11", "residual_block", residual_block, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""三行：第一层和它的弯折，第二层，然后是求和以及最后的弯折。""",
+        r"""`x` 要在最后一次弯折之前加上去，不是之后。加的是原来的 `x`，不是已经过了某一层的东西。""",
+    ], LOCALE)
     return
 
 

@@ -9,7 +9,7 @@ with app.setup(hide_code=True):
     import marimo as mo
     import numpy as np
 
-    from learn_llm import todo
+    from learn_llm import hand, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
 
@@ -85,10 +85,43 @@ def _():
 
     对 `[1, 3]`：均值是 2，距离是 −1 和 1，平方后是 1 和 1，所以方差是 1。方差的平方根就是这些距离的**典型大小**（typical size）。NumPy 里用 `np.sqrt`
     求平方根：9 的平方根是 3，因为 $3 \times 3 = 9$。对以 0 为中心的数，均值是 0，方差就是平方的均值。
+    """)
+    return
 
-    ## 练习 1：方差
 
-    写出 `variance(v)`：`return np.mean((v - np.mean(v)) ** 2)`。（记得用英文输入法。）
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：一个方差
+
+    取 `[2, 4, 4, 6]` 这四个数。算出它们的均值，再算出方差。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    variance_boxes = hand.boxes(['均值', '方差'])
+    return (variance_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(variance_boxes):
+    hand.marked(variance_boxes, {'均值': 4, '方差': 2}, {
+        '均值': r"""四个数加起来，除以 4""",
+        '方差': r"""到均值的距离是 $-2, 0, 0, 2$。把它们平方，再求均值""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 练习 1：variance
+
+    按上面的公式写出 `variance(v)`，`v` 是一个 NumPy 数组。数组的算术是逐个位置进行的，`** 2` 是平方。
+
+    `[1, 3]` 应该得到 1，你刚才算的 `[2, 4, 4, 6]` 应该得到 2。
     """)
     return
 
@@ -102,6 +135,15 @@ def variance(v):
 @app.cell(hide_code=True)
 def _():
     check("09", "variance", variance, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""三步：均值，每个数到均值的距离的平方，再对这些平方求均值。""",
+        r"""只要一行。不要用 `np.sqrt`：那样得到的是典型大小，不是方差。""",
+    ], LOCALE)
     return
 
 
@@ -184,7 +226,38 @@ def _():
 
     第一层有 $n = 784$ 个输入：$\sqrt{2 / 784} \approx 0.05$。第二层 $n = 64$：$\sqrt{2 / 64} \approx 0.18$。正是第 08 章的那两个数。这条起始规则叫作
     **He 初始化**，以研究者何恺明（Kaiming He）的名字命名。
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：一个起始大小
+
+    某一层有 200 个输入。按上面的规则，它的起始旋钮的方差 $s^2$ 应该是多少？典型大小 $s$ 呢？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    he_boxes = hand.boxes(['s 的平方', 's'], step=0.01)
+    return (he_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(he_boxes):
+    hand.marked(he_boxes, {'s 的平方': 0.01, 's': 0.1}, {
+        's 的平方': r"""$2 / n$，其中 $n = 200$""",
+        's': r"""第一个答案的平方根""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     它的重要性在更深的网络里才看得出来。下面，图片依次经过 6 层、每层 64 个 ReLU 探测器，起始大小有三种选择。表里的数是每一层之后数值的 $\sqrt{\text{平方的均值}}$（输入的像素一开始约为 0.33）。和第 08 章一样，Python 用 `e` 来写很小的数：`1.18e-05` 表示 $1.18 \times 0.00001$，也就是 0.0000118；`e-` 后面的数表示小数点向左移几位。
     """)
     return
@@ -222,23 +295,53 @@ def _():
     3. 每批走一步，只用这 100 张图片的斜率。
 
     把所有批次都走一遍叫作一个**轮次**（epoch）：10,000 张图片、每批 100 张，一个轮次就是 100 步，花的却是一步全量计算的代价。
+    """)
+    return
 
-    三样新工具：
 
-    - `rng.permutation(n)` 给出随机顺序的 $0, 1, \ldots, n - 1$。
-    - `range(0, n, size)` 从 0 开始，每次加 `size`：`range(0, 10, 4)` 给出 0、4、8。
-    - `a[start:stop]` 是一个**切片**（slice）：位置 `start`、`start + 1`……一直到 `stop` 之前（不含 `stop`）的那些项。`a[4:8]` 是 4 项。
-      如果 `stop` 超过了末尾，就在末尾停下。
 
-    数组还可以用一整串位置来取：`X[[3, 0, 7]]` 是由 `X` 的第 3、0、7 行组成的矩阵。所以 `X[batch]` 就取出了这一批的图片。
 
-    ## 练习 2：分批
 
-    写出 `batches(n, size, rng)`，返回一个由各批组成的列表（每批是一个位置数组）：
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    /// admonition | 🧰 工具箱：打乱和切分
+    - `rng.permutation(n)` 给出 $0, 1, \ldots, n - 1$ 这些数的一个随机顺序。
+    - `range(0, n, size)` 从 0 开始，每次跳 `size`：`range(0, 10, 4)` 给出 0、4、8。
+    - `a[start:stop]` 是一个**切片**（slice）：位置 `start`、`start + 1`……一直到 `stop` 之前（不含 `stop`）的那些项。`a[4:8]` 有 4 项。如果 `stop` 超过了末尾，切片就到末尾为止。
+    - 数组可以用一整个位置列表来取数：`X[[3, 0, 7]]` 是由 `X` 的第 3、0、7 行组成的矩阵。所以如果 `batch` 里放的是位置，`X[batch]` 就取出这一批的图片。
+    ///
 
-    1. 分两行：先 `order = rng.permutation(n)`，再 `result = []`
-    2. `for start in range(0, n, size):`，在它里面写 `result.append(order[start:start + size])`
-    3. 循环结束后 `return result`
+    ## 动手算：切成小批
+
+    10 张图片，每批 4 张。一共切成多少批？最后一批有几张？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cut_boxes = hand.boxes(['批数', '最后一批的张数'])
+    return (cut_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(cut_boxes):
+    hand.marked(cut_boxes, {'批数': 3, '最后一批的张数': 2}, {
+        '批数': r"""切片分别从位置 0、4、8 开始""",
+        '最后一批的张数': r"""只剩下位置 8 和 9""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 练习 2：batches
+
+    写出 `batches(n, size, rng)`。它把位置 $0$ 到 $n - 1$ 打乱一次，再把打乱后的顺序依次切成每段 `size` 个位置的切片，最后把这些切片放进一个列表返回，每个切片是一个数组。
+
+    `n = 10`、`size = 4` 时，列表里应该有三个数组，分别有 4、4、2 个位置，合起来 0 到 9 的每个位置正好出现一次。
     """)
     return
 
@@ -252,6 +355,15 @@ def batches(n, size, rng):
 @app.cell(hide_code=True)
 def _():
     check("09", "batches", batches, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""只打乱一次，在循环之前。然后用 `for` 循环遍历各个起点 `range(0, n, size)`，每次把打乱后顺序的一个切片 `append` 进去。""",
+        r"""切的是打乱后的顺序，不是 `range(n)`。`return` 在循环之后，和 `for` 对齐。""",
+    ], LOCALE)
     return
 
 
@@ -282,6 +394,31 @@ def train(X, Y, epochs, batch_size, rate, decay, seed):
             W2 = W2 - rate * (dW2 + decay * W2)
             b2 = b2 - rate * db2
     return W1, b1, W2, b2
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：一共多少步
+
+    读一读 `train`。下一个单元格用 5 个轮次、每批 100 张来调用它，数据是那 10,000 张图片。它一共走多少步，也就是旋钮一共改变多少次？它总共看了多少张图片？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    step_boxes = hand.boxes(['步数', '看过的图片数'])
+    return (step_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(step_boxes):
+    hand.marked(step_boxes, {'步数': 500, '看过的图片数': 50000}, {
+        '步数': r"""里面的循环每一批跑一次：5 个轮次，每个轮次 100 批""",
+        '看过的图片数': r"""每个轮次把全部 10,000 张图片过一遍""",
+    }, LOCALE)
+    return
 
 
 @app.cell
@@ -343,13 +480,45 @@ def _():
 
     如果斜率保持不变，速度会一直增大，直到不再变化，也就是 $V = 0.9 \times V + \text{斜率}$。两边同时减去 $0.9 \times V$：$0.1 \times V = \text{斜率}$，所以 $V = 10 \times \text{斜率}$：
     稳定的前进最多能快 10 倍。
+    """)
+    return
 
-    ## 练习 3：动量的一步
 
-    写出 `momentum_step(w, velocity, grad, rate)`，返回新的旋钮和新的速度。它对单个旋钮或者一整个数组的旋钮都适用（逐个位置计算）：
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：速度是怎样攒起来的
 
-    1. `velocity = 0.9 * velocity + grad`
-    2. `return w - rate * velocity, velocity`
+    速度从 0 开始，假设每一步的斜率都是 1。走 1 步、2 步、3 步之后，速度各是多少？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    momentum_boxes = hand.boxes(['1 步之后', '2 步之后', '3 步之后'], step=0.01)
+    return (momentum_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(momentum_boxes):
+    hand.marked(momentum_boxes, {'1 步之后': 1, '2 步之后': 1.9, '3 步之后': 2.71}, {
+        '1 步之后': r"""$0.9 \times 0 + 1$""",
+        '2 步之后': r"""$0.9 \times$ 第一个答案，再加 1""",
+        '3 步之后': r"""$0.9 \times$ 第二个答案，再加 1""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    它朝着 10 爬上去，也就是上面算出的稳定值：一开始很快，然后越来越慢。
+
+    ## 练习 3：momentum_step
+
+    写出 `momentum_step(w, velocity, grad, rate)`，完成上面那两个公式：先用旧的速度和斜率 `grad` 算出新的速度，再算出新的旋钮。
+    返回新的旋钮和新的速度。它对单个旋钮能用，对一整个数组的旋钮也能用（逐个位置计算）。
     """)
     return
 
@@ -363,6 +532,15 @@ def momentum_step(w, velocity, grad, rate):
 @app.cell(hide_code=True)
 def _():
     check("09", "momentum_step", momentum_step, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""两行：一行算速度，一行返回这一对。""",
+        r"""旋钮移动的是 `rate` 乘以**新的**速度，所以要先更新速度。""",
+    ], LOCALE)
     return
 
 
@@ -395,17 +573,59 @@ def _():
     一个细节：两个平均都从 0 开始，所以前几步时它们都太小（走了一步之后，平均斜率只有 $0.1 \times \text{斜率}$）。Adam 的修正办法是除以 $1 - 0.9^t$ 和
     $1 - 0.999^t$（代码里乘方要写 `**`：`0.9 ** t`），其中 $t$ 从 1 开始数步数：第 1 步之后分别除以 0.1 和 0.001，正好把缩小的部分补回来；$t$ 越大，这个修正就越接近除以 1。
     （`1e-8` 也就是 0.00000001，是为了永远不会除以 0。）
+    """)
+    return
 
-    ## 练习 4：Adam 的一步
 
-    写出 `adam_step(w, m, v, grad, t, rate)`，返回新的旋钮和两个平均：
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    下面是 Adam 完整的一步，$g$ 是斜率，$t$ 是第几步：
 
-    1. `m = 0.9 * m + 0.1 * grad`（平均斜率）
-    2. `v = 0.999 * v + 0.001 * grad * grad`（平均平方斜率）
-    3. 分两行：先 `m_hat = m / (1 - 0.9 ** t)`，再 `v_hat = v / (1 - 0.999 ** t)`
-    4. `return w - rate * m_hat / (np.sqrt(v_hat) + 1e-8), m, v`
+    > $$m = 0.9 \times m + 0.1 \times g \qquad v = 0.999 \times v + 0.001 \times g^2$$
 
-    检查之后，有一个单元格在米娅的问题上走 500 步 Adam。`range(1, 501)` 数的是 1、2……500，所以 `t` 从 1 开始。
+    > $$\hat{m} = \frac{m}{1 - 0.9^t} \qquad \hat{v} = \frac{v}{1 - 0.999^t}$$
+
+    > $$w \leftarrow w - \text{rate} \times \frac{\hat{m}}{\sqrt{\hat{v}} + 0.00000001}$$
+
+    $\hat{m}$ 和 $\hat{v}$（读作“m 帽”和“v 帽”）是修正之后的平均。
+
+    ## 动手算：Adam 的第一步
+
+    一个旋钮的第一步：$m$ 和 $v$ 从 0 开始，$t = 1$，斜率 $g = 4$，学习率是 0.5。把公式一个个算下来。最后一格填旋钮移动了多少。（那个很小的 0.00000001 不用管。）
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    adam_boxes = hand.boxes(['m', 'v', 'm 帽', 'v 帽', '旋钮移动了'], step=0.001)
+    return (adam_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(adam_boxes):
+    hand.marked(adam_boxes, {'m': 0.4, 'v': 0.016, 'm 帽': 4, 'v 帽': 16, '旋钮移动了': 0.5}, {
+        'm': r"""$0.9 \times 0 + 0.1 \times 4$""",
+        'v': r"""$0.999 \times 0 + 0.001 \times 4^2$""",
+        'm 帽': r"""$m / (1 - 0.9)$""",
+        'v 帽': r"""$v / (1 - 0.999)$""",
+        '旋钮移动了': r"""$\text{rate} \times \hat{m} / \sqrt{\hat{v}}$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    旋钮正好移动了学习率那么多，0.5，和前面说的一样。在脑子里把斜率换成 4,000 再算一遍：答案还是 0.5。
+
+    ## 练习 4：adam_step
+
+    写出 `adam_step(w, m, v, grad, t, rate)`，按顺序完成上面的公式。返回新的旋钮和两个平均，也就是没有修正过的 `m` 和 `v`，因为下一步要用的是它们。
+    在代码里，乘方写作 `**`，`1e-8` 就是 0.00000001。
+
+    检查之后，有一个单元格会在米娅的问题上跑 500 步 Adam。`range(1, 501)` 数的是 1、2……500，所以 `t` 从 1 开始。
     """)
     return
 
@@ -419,6 +639,15 @@ def adam_step(w, m, v, grad, t, rate):
 @app.cell(hide_code=True)
 def _():
     check("09", "adam_step", adam_step, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""五行，每个公式一行：`m`、`v`、两个修正后的平均（另起名字），最后是 `return`。""",
+        r"""不要把修正后的平均存回 `m` 和 `v`：返回的是没有修正过的。如果得到 `nan`，多半是 `np.sqrt(...) + 1e-8` 外面少了括号。""",
+    ], LOCALE)
     return
 
 
@@ -465,7 +694,38 @@ def _():
     在自己的 500 张训练图片上 100% 正确，在新图片上却只有大约 87%。网络的旋钮多到足以把这 500 张图片**背下来**，连划痕和污渍一起，
     而背下来的细节到了新的笔迹上就派不上用场。这叫作**过拟合**（overfitting）：训练成绩看起来完美，却说明不了模型在新数据上的表现。
     这就是我们总要留出测试数据的原因。
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：读懂这两个分数
+
+    这个网络把 500 张训练图片全部认对（100%），2,000 张测试图片认对了 87.25%。两组图片各认错了多少张？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    fit_boxes = hand.boxes(['认错的训练图片', '认错的测试图片'])
+    return (fit_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(fit_boxes):
+    hand.marked(fit_boxes, {'认错的训练图片': 0, '认错的测试图片': 255}, {
+        '认错的训练图片': r"""全对，就一张也没错""",
+        '认错的测试图片': r"""2,000 的百分之 $100 - 87.25 = 12.75$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     **权重衰减**（weight decay）是一种常用的对策。给损失加上一个对大旋钮的小小惩罚：$(\text{decay} / 2) \times (\text{所有权重平方的和})$，这里的权重指 `W1` 和 `W2`
     里的数（各个 $b$，通常叫作*偏置*（bias），一般不管，所以叫*权重*衰减）。轻推一个权重 $w$，只有它自己的平方会变，其他的不变。按第 02 章的规则，$w^2$ 的斜率是 $2 \times w$，
     所以 $(\text{decay} / 2) \times w^2$ 的斜率是 $(\text{decay} / 2) \times 2 \times w = \text{decay} \times w$，步进规则变成

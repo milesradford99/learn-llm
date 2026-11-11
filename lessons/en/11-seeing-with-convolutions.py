@@ -10,7 +10,7 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
     from learn_llm.images import digits as show_digits
@@ -180,17 +180,64 @@ def _():
     the result is big exactly where the numbers change from left to right: this kernel is a
     **vertical edge detector**. A $3 \times 3$ kernel fits in 2 positions across and 2 down on a $4 \times 4$ picture,
     so the output is $2 \times 2$. In general, a picture of height $h$ gives $h - k + 1$ rows for a kernel of size $k$.
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: slide the kernel
+
+    Your turn, with the same kernel and a new picture:
+
+    ```
+    picture          kernel
+    0  0  0  1       -1  0  1
+    0  0  1  1       -1  0  1
+    0  1  1  1       -1  0  1
+    1  1  1  1
+    ```
+
+    In each row of a patch, this kernel gives the right-hand number minus the left-hand one. Work out the four numbers of the output.
+    Then one more: how many rows does the output have for a $28 \times 28$ picture and a $5 \times 5$ kernel?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    slide_boxes = hand.boxes(['top left', 'top right', 'bottom left', 'bottom right', 'rows for 28 and 5'])
+    return (slide_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(slide_boxes):
+    hand.marked(slide_boxes, {'top left': 2, 'top right': 2, 'bottom left': 2, 'bottom right': 1, 'rows for 28 and 5': 24}, {
+        'top left': r"""rows 0 to 2, columns 0 to 2: the three rows give 0, 1 and 1""",
+        'top right': r"""rows 0 to 2, columns 1 to 3: the three rows give 1, 1 and 0""",
+        'bottom left': r"""rows 1 to 3, columns 0 to 2: the three rows give 1, 1 and 0""",
+        'bottom right': r"""rows 1 to 3, columns 1 to 3: the three rows give 1, 0 and 0""",
+        'rows for 28 and 5': r"""$h - k + 1$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 1: convolve
 
-    Write `convolve(image, kernel)`, for a square kernel:
+    Write `convolve(image, kernel)` for a matrix `image` and a square matrix `kernel`:
 
-    1. Two lines: `h, w = image.shape` and `k = kernel.shape[0]`
-    2. `out = np.zeros((h - k + 1, w - k + 1))`
-    3. `for r in range(h - k + 1):`, and inside it `for c in range(w - k + 1):`
-    4. Inside both: `patch = image[r:r + k, c:c + k]`, then
-       `out[r, c] = np.sum(patch * kernel)`
-    5. After the loops, `return out`
+    1. Get the sizes. `image.shape` holds the height and the width, and `kernel.shape[0]` is the kernel's size $k$.
+    2. Start the output as zeros, with $h - k + 1$ rows and $w - k + 1$ columns.
+    3. Visit every output position with two loops, one inside the other: `r` over the output's rows, `c` over its columns.
+    4. At each position, take the patch: the $k \times k$ square of the picture whose top-left corner is at row `r`, column `c`. It's a slice in two directions, as in `canvas[i, r:r + 28, c:c + 28]` above.
+       Multiply the patch by the kernel, position by position, add everything up with `np.sum`, and store the result at `out[r, c]`.
+    5. Give back the output.
+
+    On the worked example above, it must give `[[3, 3], [3, 3]]`.
     """)
     return
 
@@ -204,6 +251,15 @@ def convolve(image, kernel):
 @app.cell(hide_code=True)
 def _():
     check("11", "convolve", convolve, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""`h, w = image.shape` names the two sizes. The loops are `for r in range(...)` with `for c in range(...)` inside it, and the work happens inside both.""",
+        r"""The patch is `image[r:r + k, c:c + k]`, with a comma between the rows part and the columns part. The `return` comes after both loops.""",
+    ], LOCALE)
     return
 
 
@@ -267,17 +323,54 @@ def _():
     0  0  4  1            1  6
     1  0  6  2
     ```
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: pool a map
+
+    Pool this map: write the largest number of each $2 \times 2$ square.
+
+    ```
+    2  0  1  1
+    0  3  0  1
+    7  1  0  0
+    2  2  0  5
+    ```
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pool_boxes = hand.boxes(['top left', 'top right', 'bottom left', 'bottom right'])
+    return (pool_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(pool_boxes):
+    hand.marked(pool_boxes, {'top left': 3, 'top right': 1, 'bottom left': 7, 'bottom right': 5}, {
+        'top left': r"""the largest of 2, 0, 0 and 3""",
+        'top right': r"""the largest of 1, 1, 0 and 1""",
+        'bottom left': r"""the largest of 7, 1, 2 and 2""",
+        'bottom right': r"""the largest of 0, 0, 0 and 5""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 2: max_pool
 
-    Write `max_pool(M)`. `//` is division that drops what's after the point (`7 // 2` is 3), so an
-    odd row at the edge gets left out.
+    Write `max_pool(M)` for a matrix `M`. The output has half the rows and half the columns. `//` is division that drops what's after the point (`7 // 2` is 3), so with an odd number of rows, the last one gets left out.
 
-    1. `h, w = M.shape`
-    2. `out = np.zeros((h // 2, w // 2))`
-    3. `for r in range(h // 2):`, and inside it `for c in range(w // 2):`
-    4. Inside both: `out[r, c] = np.max(M[2 * r:2 * r + 2, 2 * c:2 * c + 2])`
-    5. After the loops, `return out`
+    Use the frame of `convolve`: zeros of the right shape, two loops over the output's positions, one number stored at each. The square for output position `r`, `c` starts at row $2 \times r$ and column $2 \times c$ of `M`, and is 2 rows high and 2 columns wide. `np.max` gives its largest number.
+
+    On the example in the text above, it must give `[[5, 2], [1, 6]]`. On your hand example, it must give your four numbers.
     """)
     return
 
@@ -291,6 +384,15 @@ def max_pool(M):
 @app.cell(hide_code=True)
 def _():
     check("11", "max_pool", max_pool, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""The output has `h // 2` rows and `w // 2` columns, and the loops run over those.""",
+        r"""The square is the slice from `2 * r` up to `2 * r + 2` in the rows, and the same with `c` in the columns.""",
+    ], LOCALE)
     return
 
 
@@ -345,16 +447,60 @@ def _():
     After it, the 32 maps have become 32 numbers (`nn.Flatten()` tidies the shape), which a final
     `nn.Linear` turns into 10 scores. Since almost nothing about the position survives, a digit
     scores nearly the same wherever it is. (`nn.MaxPool2d(2)`, in the list below, is the $2 \times 2$ pooling you just wrote.)
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## The network, stage by stage
+
+    Here is the network you'll build, for the $40 \times 40$ pictures:
+
+    | stage | what it does |
+    |---|---|
+    | 1 | a convolution from 1 map to 8 maps, a bend, $2 \times 2$ max pooling |
+    | 2 | a convolution from 8 maps to 16, a bend, $2 \times 2$ max pooling |
+    | 3 | a convolution from 16 maps to 32, a bend |
+    | 4 | the largest number of each whole map, flatten, a linear layer from 32 numbers to 10 scores |
+
+    Every convolution has $3 \times 3$ kernels and `padding=1`, so it keeps the height and width.
+
+    ## By hand: follow one picture
+
+    One picture goes in with shape `(1, 40, 40)`: 1 map, 40 high, 40 wide. Fill in what comes out of stage 1 and stage 2. Then count the knobs of the first and the last convolution, the way the text counted 1,168 for the middle one.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    stage_boxes = hand.boxes(['stage 1: maps', 'stage 1: height', 'stage 2: height', 'knobs, first convolution', 'knobs, last convolution'])
+    return (stage_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(stage_boxes):
+    hand.marked(stage_boxes, {'stage 1: maps': 8, 'stage 1: height': 20, 'stage 2: height': 10, 'knobs, first convolution': 80, 'knobs, last convolution': 4640}, {
+        'stage 1: maps': r"""the convolution of stage 1 gives 8 maps, and pooling doesn't change the number of maps""",
+        'stage 1: height': r"""padding keeps 40, then pooling halves it""",
+        'stage 2: height': r"""halved once more""",
+        'knobs, first convolution': r"""8 kernels, each with $3 \times 3 \times 1$ weights and 1 bias""",
+        'knobs, last convolution': r"""32 kernels, each with $3 \times 3 \times 16$ weights and 1 bias""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 3: make_cnn
 
-    Write `make_cnn()`, giving back this network (type it as one long
-    `return nn.Sequential(...)`, with a comma after each layer, one layer per line if you like):
+    Write `make_cnn()`, giving back the network of the table as one `nn.Sequential`. It has 11 layers, and all of them appeared in the text above:
+    `nn.Conv2d` with its two numbers of maps, the kernel size and `padding=1`; `nn.ReLU()`; `nn.MaxPool2d(2)`; `nn.AdaptiveMaxPool2d(1)`; `nn.Flatten()`; `nn.Linear`.
 
-    1. `nn.Conv2d(1, 8, 3, padding=1)`, `nn.ReLU()`, `nn.MaxPool2d(2)`
-    2. `nn.Conv2d(8, 16, 3, padding=1)`, `nn.ReLU()`, `nn.MaxPool2d(2)`
-    3. `nn.Conv2d(16, 32, 3, padding=1)`, `nn.ReLU()`
-    4. `nn.AdaptiveMaxPool2d(1)`, `nn.Flatten()`, `nn.Linear(32, 10)`
+    Put one stage on each line, with a comma after every layer.
     """)
     return
 
@@ -368,6 +514,15 @@ def make_cnn():
 @app.cell(hide_code=True)
 def _():
     check("11", "make_cnn", make_cnn, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Stage 1 is `nn.Conv2d(1, 8, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),`. Stages 2 and 3 follow the same pattern with other numbers of maps, and stage 3 has no pooling.""",
+        r"""Each convolution's maps in must equal the previous one's maps out: 1 to 8, 8 to 16, 16 to 32. The last three layers are `nn.AdaptiveMaxPool2d(1)`, `nn.Flatten()` and `nn.Linear(32, 10)`.""",
+    ], LOCALE)
     return
 
 
@@ -445,14 +600,47 @@ def _():
     chapter 02's sum rule, the slope of `x + f(x)` is `1 + f'`, where `f'` is the slope of `f`. Even when
     `f'` is tiny, the slope stays near 1, so blame passes through the block nearly undimmed. The
     `x +` is a direct road for the blame, which is often called a **skip connection**.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: once through a residual block
+
+    In the block you'll write, `f` is a first layer, a bend, and a second layer. Then `x` is added, and one last bend is applied to the sum:
+
+    > $$\text{out} = \operatorname{relu}(x + \text{layer}_2(\operatorname{relu}(\text{layer}_1(x))))$$
+
+    Try it on single numbers, with made-up layers: the first layer subtracts 5, and the second multiplies by 3. What comes out for $x = 6$? And for $x = 2$?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    residual_boxes = hand.boxes(['out for x = 6', 'out for x = 2'])
+    return (residual_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(residual_boxes):
+    hand.marked(residual_boxes, {'out for x = 6': 9, 'out for x = 2': 2}, {
+        'out for x = 6': r"""$6 - 5 = 1$, the bend leaves 1, times 3 is 3, and $6 + 3 = 9$ is positive""",
+        'out for x = 2': r"""$2 - 5 = -3$, and the bend turns that into 0. What is left to add to $x$?""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    For $x = 2$, `f` gave 0 and the block passed `x` on unchanged. A residual block that has learned nothing yet does no harm, which a plain block can't promise.
 
     ## Exercise 4: residual_block
 
-    Write `residual_block(x, conv1, conv2)`. `conv1` and `conv2` are two convolution layers that keep the shape:
-
-    1. `h = torch.relu(conv1(x))`
-    2. `h = conv2(h)`
-    3. `return torch.relu(x + h)`
+    Write `residual_block(x, conv1, conv2)`, doing the formula above. `conv1` and `conv2` are two convolution layers that keep the shape, called like functions, and the bend is `torch.relu`.
     """)
     return
 
@@ -466,6 +654,15 @@ def residual_block(x, conv1, conv2):
 @app.cell(hide_code=True)
 def _():
     check("11", "residual_block", residual_block, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Three lines: the first layer and its bend, the second layer, then the sum with its bend.""",
+        r"""Add `x` before the last bend, not after it. And add the plain `x`, not something that has already been through a layer.""",
+    ], LOCALE)
     return
 
 

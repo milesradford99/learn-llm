@@ -9,7 +9,7 @@ with app.setup(hide_code=True):
     import marimo as mo
     import numpy as np
 
-    from learn_llm import todo
+    from learn_llm import hand, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
 
@@ -94,10 +94,43 @@ def _():
     is 1. Its square root is the **typical size** of the distances (in NumPy, `np.sqrt`; the
     square root of 9 is 3, since $3 \times 3 = 9$). For numbers centred on 0, the mean is 0 and the
     variance is simply the mean of the squares.
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: a variance
+
+    Take the four numbers `[2, 4, 4, 6]`. Work out their mean, then their variance.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    variance_boxes = hand.boxes(['mean', 'variance'])
+    return (variance_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(variance_boxes):
+    hand.marked(variance_boxes, {'mean': 4, 'variance': 2}, {
+        'mean': r"""add the four numbers and divide by 4""",
+        'variance': r"""the distances from the mean are $-2, 0, 0, 2$. Square them and take the mean""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 1: variance
 
-    Write `variance(v)`: `return np.mean((v - np.mean(v)) ** 2)`.
+    Write `variance(v)` for a NumPy array `v`, following the formula above. Arithmetic on an array works position by position, and `** 2` squares.
+
+    For `[1, 3]` it must give 1, and for your `[2, 4, 4, 6]` it must give 2.
     """)
     return
 
@@ -111,6 +144,15 @@ def variance(v):
 @app.cell(hide_code=True)
 def _():
     check("09", "variance", variance, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Three steps: the mean, each number's distance from it squared, and the mean of those.""",
+        r"""One line. No `np.sqrt`: that would give the typical size, not the variance.""",
+    ], LOCALE)
     return
 
 
@@ -206,7 +248,38 @@ def _():
     For the first layer, $n = 784$ inputs: $\sqrt{2 / 784} \approx 0.05$. For the second, $n = 64$:
     $\sqrt{2 / 64} \approx 0.18$. Chapter 08's two numbers. This starting rule is called **He
     initialisation**, after the researcher Kaiming He.
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: a starting size
+
+    A layer takes 200 inputs. By the rule above, what variance $s^2$ should its starting knobs have? And what typical size $s$?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    he_boxes = hand.boxes(['s squared', 's'], step=0.01)
+    return (he_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(he_boxes):
+    hand.marked(he_boxes, {'s squared': 0.01, 's': 0.1}, {
+        's squared': r"""$2 / n$ with $n = 200$""",
+        's': r"""the square root of your first answer""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     Why it matters shows up in deeper networks. Below, pictures pass through 6 layers of 64 ReLU
     detectors, with three choices of starting size. The numbers are $\sqrt{\text{mean of the squares}}$
     of the values after each layer (the input pixels start at about 0.33). As in chapter 08,
@@ -253,25 +326,55 @@ def _():
 
     One pass through all the batches is called an **epoch**: 10,000 pictures in batches of 100
     gives 100 steps per epoch, for the price of one full step.
+    """)
+    return
 
-    Three new tools:
 
+
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    /// admonition | 🧰 Toolbox: shuffling and cutting
     - `rng.permutation(n)` gives the numbers $0, 1, \ldots, n - 1$ in a random order.
     - `range(0, n, size)` counts from 0 in jumps of `size`: `range(0, 10, 4)` gives 0, 4, 8.
     - `a[start:stop]` is a **slice**: the items at positions `start`, `start + 1`, …, up to but not
-      including `stop`. `a[4:8]` is 4 items. If `stop` is past the end, it just stops at the end.
+      including `stop`. `a[4:8]` is 4 items. If `stop` is past the end, the slice just stops at the end.
+    - An array can be indexed with a whole list of positions: `X[[3, 0, 7]]` is a matrix made of rows
+      3, 0 and 7 of `X`. So if `batch` holds positions, `X[batch]` picks that batch's pictures.
+    ///
 
-    And an array can be indexed with a whole list of positions: `X[[3, 0, 7]]` is a matrix of rows
-    3, 0 and 7 of `X`. So `X[batch]` picks the batch's pictures.
+    ## By hand: cutting into batches
 
+    Ten pictures are cut into batches of 4. How many batches is that? And how many pictures are in the last one?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cut_boxes = hand.boxes(['batches', 'in the last batch'])
+    return (cut_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(cut_boxes):
+    hand.marked(cut_boxes, {'batches': 3, 'in the last batch': 2}, {
+        'batches': r"""the slices start at positions 0, 4 and 8""",
+        'in the last batch': r"""positions 8 and 9 are all that's left""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 2: batches
 
-    Write `batches(n, size, rng)`, returning a list of batches (each an array of positions):
+    Write `batches(n, size, rng)`. It shuffles the positions $0$ to $n - 1$ once, cuts that shuffled order into consecutive slices of `size` positions, and gives back the slices as a list of arrays.
 
-    1. Two lines: `order = rng.permutation(n)`, then `result = []`
-    2. `for start in range(0, n, size):` and inside it
-       `result.append(order[start:start + size])`
-    3. After the loop, `return result`
+    For `n = 10` and `size = 4` the list must hold three arrays, with 4, 4 and 2 positions, and together they must hold every position from 0 to 9 exactly once.
     """)
     return
 
@@ -285,6 +388,15 @@ def batches(n, size, rng):
 @app.cell(hide_code=True)
 def _():
     check("09", "batches", batches, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Shuffle once, before the loop. Then a `for` loop over the starting positions `range(0, n, size)`, appending one slice of the shuffled order each time.""",
+        r"""Slice the shuffled order, not `range(n)`. The `return` comes after the loop, lined up with `for`.""",
+    ], LOCALE)
     return
 
 
@@ -318,6 +430,31 @@ def train(X, Y, epochs, batch_size, rate, decay, seed):
             W2 = W2 - rate * (dW2 + decay * W2)
             b2 = b2 - rate * db2
     return W1, b1, W2, b2
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: how many steps
+
+    Read `train`. The next cell calls it with 5 epochs and batches of 100, on the 10,000 pictures. How many steps will it take, that is, how many times will the knobs change? And how many pictures will it look at in all?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    step_boxes = hand.boxes(['steps', 'pictures looked at'])
+    return (step_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(step_boxes):
+    hand.marked(step_boxes, {'steps': 500, 'pictures looked at': 50000}, {
+        'steps': r"""the inner loop runs once per batch: 100 batches in each of 5 epochs""",
+        'pictures looked at': r"""every epoch goes through all 10,000 pictures once""",
+    }, LOCALE)
+    return
 
 
 @app.cell
@@ -385,14 +522,45 @@ def _():
     If the slope stays the same, the velocity grows until it stops changing, that is until
     $V = 0.9 \times V + \text{slope}$. Take $0.9 \times V$ from both sides: $0.1 \times V = \text{slope}$, so
     $V = 10 \times \text{slope}$: steady progress becomes up to 10 times faster.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: a velocity building up
+
+    Start with a velocity of 0, and say the slope is 1 at every step. What is the velocity after 1, 2 and 3 steps?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    momentum_boxes = hand.boxes(['after 1 step', 'after 2 steps', 'after 3 steps'], step=0.01)
+    return (momentum_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(momentum_boxes):
+    hand.marked(momentum_boxes, {'after 1 step': 1, 'after 2 steps': 1.9, 'after 3 steps': 2.71}, {
+        'after 1 step': r"""$0.9 \times 0 + 1$""",
+        'after 2 steps': r"""$0.9 \times$ your first answer, plus 1""",
+        'after 3 steps': r"""$0.9 \times$ your second answer, plus 1""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    It climbs towards 10, the steady value worked out above, quickly at first and then more and more slowly.
 
     ## Exercise 3: momentum_step
 
-    Write `momentum_step(w, velocity, grad, rate)`, returning the new knobs and the new velocity.
-    It works for a single knob or for a whole array of knobs at once (position by position):
-
-    1. `velocity = 0.9 * velocity + grad`
-    2. `return w - rate * velocity, velocity`
+    Write `momentum_step(w, velocity, grad, rate)`, doing the two formulas above: first the new velocity from the old one and the slope `grad`, then the new knobs.
+    Give back the new knobs and the new velocity. It works for a single knob or for a whole array of knobs at once, position by position.
     """)
     return
 
@@ -406,6 +574,15 @@ def momentum_step(w, velocity, grad, rate):
 @app.cell(hide_code=True)
 def _():
     check("09", "momentum_step", momentum_step, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Two lines: one for the velocity, one to give back the pair.""",
+        r"""The knobs move by `rate` times the *new* velocity, so update the velocity first.""",
+    ], LOCALE)
     return
 
 
@@ -449,15 +626,57 @@ def _():
     $1 - 0.999^t$ (in code, powers are `**`: `0.9 ** t`), where $t$ counts the steps from 1: after step 1 that divides by 0.1 and 0.001,
     which undoes the shrinking exactly; as $t$ grows, the correction fades to dividing by 1. (The
     `1e-8`, that is 0.00000001, is there so we never divide by zero.)
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Here is one whole step of Adam, with $g$ for the slope and $t$ for the number of the step:
+
+    > $$m = 0.9 \times m + 0.1 \times g \qquad v = 0.999 \times v + 0.001 \times g^2$$
+
+    > $$\hat{m} = \frac{m}{1 - 0.9^t} \qquad \hat{v} = \frac{v}{1 - 0.999^t}$$
+
+    > $$w \leftarrow w - \text{rate} \times \frac{\hat{m}}{\sqrt{\hat{v}} + 0.00000001}$$
+
+    $\hat{m}$ and $\hat{v}$ (read "m hat" and "v hat") are the corrected averages.
+
+    ## By hand: Adam's first step
+
+    A knob's very first step: $m$ and $v$ start at 0, $t = 1$, the slope is $g = 4$, and the rate is 0.5. Work through the formulas. The last box is how far the knob moves. (Leave out the tiny 0.00000001.)
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    adam_boxes = hand.boxes(['m', 'v', 'm hat', 'v hat', 'the knob moves by'], step=0.001)
+    return (adam_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(adam_boxes):
+    hand.marked(adam_boxes, {'m': 0.4, 'v': 0.016, 'm hat': 4, 'v hat': 16, 'the knob moves by': 0.5}, {
+        'm': r"""$0.9 \times 0 + 0.1 \times 4$""",
+        'v': r"""$0.999 \times 0 + 0.001 \times 4^2$""",
+        'm hat': r"""$m / (1 - 0.9)$""",
+        'v hat': r"""$v / (1 - 0.999)$""",
+        'the knob moves by': r"""$\text{rate} \times \hat{m} / \sqrt{\hat{v}}$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The knob moves by exactly the rate, 0.5, as promised. Try it in your head with a slope of 4,000: the answer is still 0.5.
 
     ## Exercise 4: adam_step
 
-    Write `adam_step(w, m, v, grad, t, rate)`, returning the new knobs and both averages:
-
-    1. `m = 0.9 * m + 0.1 * grad` (average slope)
-    2. `v = 0.999 * v + 0.001 * grad * grad` (average squared slope)
-    3. Two lines: `m_hat = m / (1 - 0.9 ** t)`, then `v_hat = v / (1 - 0.999 ** t)`
-    4. `return w - rate * m_hat / (np.sqrt(v_hat) + 1e-8), m, v`
+    Write `adam_step(w, m, v, grad, t, rate)`, doing the formulas above in order. Give back the new knobs and both averages, the uncorrected `m` and `v`,
+    because those are what the next step needs. In code, a power is `**`, and `1e-8` is 0.00000001.
 
     After the check, a cell runs 500 Adam steps on Mia's problem. `range(1, 501)` counts
     1, 2, …, 500, so `t` starts at 1.
@@ -474,6 +693,15 @@ def adam_step(w, m, v, grad, t, rate):
 @app.cell(hide_code=True)
 def _():
     check("09", "adam_step", adam_step, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Five lines, one per formula: `m`, `v`, the two corrected averages under new names, and the `return`.""",
+        r"""Don't store the corrected averages back into `m` and `v`: the uncorrected ones are given back. If you get `nan`, a bracket is probably missing around `np.sqrt(...) + 1e-8`.""",
+    ], LOCALE)
     return
 
 
@@ -524,7 +752,38 @@ def _():
     knobs to **memorise** its 500 pictures, scratches and smudges included, and memorised details
     don't carry over to new handwriting. This is called **overfitting**: the training score
     looks perfect and says nothing about new data. It's why we always keep test data aside.
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: reading the two scores
+
+    The network got 100% of its 500 training pictures right, and 87.25% of the 2,000 test pictures. How many pictures did it get wrong in each set?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    fit_boxes = hand.boxes(['training pictures wrong', 'test pictures wrong'])
+    return (fit_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(fit_boxes):
+    hand.marked(fit_boxes, {'training pictures wrong': 0, 'test pictures wrong': 255}, {
+        'training pictures wrong': r"""100% right leaves none""",
+        'test pictures wrong': r"""$100 - 87.25 = 12.75$ percent of 2,000""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     **Weight decay** is a standard counter-measure. Add a small penalty for big knobs to the
     loss: $(\text{decay} / 2) \times (\text{sum of every weight squared})$, over the weights in `W1` and `W2`
     (the $b$s, usually called *biases*, are left alone, hence the name *weight* decay). Nudging one weight $w$ moves

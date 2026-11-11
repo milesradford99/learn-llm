@@ -12,7 +12,7 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
 
@@ -79,6 +79,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    /// admonition | 🧰 Toolbox: kinds of numbers
     The kind of number stored is called the **dtype** (data type), and there are three you'll meet:
 
     | dtype | holds | used for |
@@ -91,6 +92,7 @@ def _():
     A tensor made from a NumPy array keeps that array's dtype, usually 64 bits. PyTorch refuses to
     mix two dtypes in `@`, so if you ever see an error saying `must have the same dtype`, that's
     the cause.
+    ///
 
     ## Your engine, built in
 
@@ -154,19 +156,52 @@ def _():
 
     (Notice that we had to calculate `L_again` from scratch. PyTorch throws its book away after
     going backward, to save memory, so each step needs a fresh forward pass, as in chapter 04.)
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: what should PyTorch say?
+
+    Before asking PyTorch, work out an answer to compare with. Take the line with `w = 1` and `b = 0`, and two days: `xs = [1, 2]` and `ys = [2, 4]`.
+    The errors are $1 \times 1 + 0 - 2 = -1$ and $1 \times 2 + 0 - 4 = -2$. By chapter 03, the slope of the mean squared error for `w` is the mean of $2 \times e \times x$, and for `b` the mean of $2 \times e$.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    gradient_boxes = hand.boxes(['slope for w', 'slope for b'])
+    return (gradient_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(gradient_boxes):
+    hand.marked(gradient_boxes, {'slope for w': -5, 'slope for b': -3}, {
+        'slope for w': r"""the mean of $2 \times (-1) \times 1$ and $2 \times (-2) \times 2$""",
+        'slope for b': r"""the mean of $2 \times (-1)$ and $2 \times (-2)$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 1: torch_gradient
 
     Back in chapter 04 your `engine_gradient` took about twenty lines. Write the same thing with
     tensors. `torch_gradient(w, b, xs, ys)` gets plain numbers `w` and `b` and two lists, and gives
-    back the two slopes of the mean squared error as plain numbers:
+    back the two slopes of the mean squared error, as plain numbers. The table above is your guide:
 
-    1. Two lines: `w = torch.tensor(w, requires_grad=True)`, and the same for `b`
-    2. Two lines: `x = torch.tensor(xs, dtype=torch.float32)`, and `y` from `ys` the same way
-    3. `e = w * x + b - y` (the single number `w` broadcasts over the whole vector `x`)
-    4. `L = torch.mean(e * e)`
-    5. `L.backward()`
-    6. `return w.grad.item(), b.grad.item()`
+    1. Turn `w` and `b` into knobs: tensors that PyTorch keeps the books on.
+    2. Turn the lists into tensors `x` and `y`, with `dtype=torch.float32`. (Lists of whole numbers would otherwise make whole-number tensors, which can't be mixed with the knobs.)
+    3. Work out the errors for all the days at once. A tensor holding the single number `w` broadcasts over the whole vector `x`.
+    4. The loss is the mean of the squared errors, with `torch.mean`.
+    5. Go backward from the loss, and give back the two slopes with `.item()`.
+
+    For your hand example, `torch_gradient(1.0, 0.0, [1, 2], [2, 4])` must give the two numbers you worked out.
     """)
     return
 
@@ -180,6 +215,15 @@ def torch_gradient(w, b, xs, ys):
 @app.cell(hide_code=True)
 def _():
     check("10", "torch_gradient", torch_gradient, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""About eight short lines. The names `w` and `b` can be reused: `w = torch.tensor(w, ...)` replaces the plain number with a knob.""",
+        r"""The slopes appear in `w.grad` and `b.grad` only after `backward()` has run on the loss. If you get an error about dtypes, check step 2.""",
+    ], LOCALE)
     return
 
 
@@ -244,14 +288,10 @@ def _():
     mo.md(r"""
     ## Exercise 2: scores
 
-    Write the forward pass in tensors. `scores(X, W1, b1, W2, b2)` gives back the scores in one
-    line, with `torch.relu` for the bend:
+    Write the forward pass in tensors. `scores(X, W1, b1, W2, b2)` is chapter 08's `forward`: weighted sums, the bend, weighted sums again. PyTorch's bend is `torch.relu`.
+    Give back only the scores.
 
-    ```
-    return torch.relu(X @ W1 + b1) @ W2 + b2
-    ```
-
-    Compared with chapter 08's `forward`, there's no need to keep `Z` and `H` this time. You kept
+    Compared with chapter 08, there's no need to keep `Z` and `H` this time. You kept
     them so that `backward` could use them, and now the book keeps them for you.
     """)
     return
@@ -271,6 +311,15 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""`@` and `+` work on tensors as they do on arrays.""",
+        r"""It fits in one line. The bend goes around the first weighted sums only.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     The loss needs one new tool. `F.cross_entropy(S, labels)` is chapter 07's cross-entropy, with
     two conveniences. It takes the raw **scores** (it does softmax itself), and it takes the
@@ -282,9 +331,11 @@ def _():
     its 64-bit dtype, so both sides have the same precision) and lets PyTorch find the slopes. The
     last line shows the largest difference between any of the 50,890 slopes.
 
+    /// admonition | 🧰 Toolbox: two short forms
     Two new forms appear in the cell. `[torch.tensor(k, requires_grad=True) for k in (…)]` builds a
     list by running the expression once for each item: a short way to write a loop with `append`.
     And `.numpy()` turns a tensor back into a NumPy array. `max` is Python's own: the larger of two numbers.
+    ///
     """)
     return
 
@@ -348,14 +399,17 @@ def _():
 
     `nn.Sequential(...)` chains layers: each one's output is the next one's input.
     `nn.ReLU()` is the bend, as a layer with no knobs.
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 3: make_model
 
-    Write `make_model(hidden)`, giving back chapter 08's network with `hidden` detectors:
-
-    ```
-    return nn.Sequential(nn.Linear(784, hidden), nn.ReLU(), nn.Linear(hidden, 10))
-    ```
+    Write `make_model(hidden)`, giving back chapter 08's network with `hidden` detectors, as one `nn.Sequential` of three layers:
+    from 784 pixels to the detectors, the bend, and from the detectors to 10 scores.
 
     The cell after the check asks the model for its knobs. `model.parameters()` goes through them,
     and `p.numel()` is how many numbers one of them holds.
@@ -375,6 +429,15 @@ def _():
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Three layers inside `nn.Sequential(...)`, separated by commas: an `nn.Linear`, an `nn.ReLU()`, an `nn.Linear`.""",
+        r"""The first layer's number of outputs and the last layer's number of inputs are both `hidden`, the input of your function, not a fixed 64.""",
+    ], LOCALE)
+    return
+
+
 @app.cell
 def _():
     torch.manual_seed(0)
@@ -391,7 +454,38 @@ def _():
     mo.md(r"""
     PyTorch prints the model layer by layer (`bias=True` just says the layer has biases), then our count:
     50,890 knobs: $784 \times 64$ weights, then 64 biases, then $64 \times 10$ weights, then 10 biases.
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: half the detectors
+
+    How many knobs would `make_model(32)` have? First the first layer alone, weights and biases, then the whole model.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    count_boxes = hand.boxes(['first layer', 'whole model'])
+    return (count_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(count_boxes):
+    hand.marked(count_boxes, {'first layer': 25120, 'whole model': 25450}, {
+        'first layer': r"""$784 \times 32$ weights and 32 biases""",
+        'whole model': r"""add the last layer: $32 \times 10$ weights and 10 biases""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Your Adam, built in
 
     An **optimizer** is the object that holds the knobs and applies a step rule. Here is your
@@ -455,18 +549,53 @@ def _():
     - `optimizer.step()` moves every knob, using its `.grad`.
 
     With the forward pass between the first two, that's the whole recipe: clear, forward, backward, step.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Find the mistake
+
+    Here is a training step someone wrote in a hurry:
+
+    ```
+    def hasty_step(model, optimizer, X, labels):
+        loss = F.cross_entropy(model(X), labels)
+        loss.backward()
+        optimizer.step()
+        return loss
+    ```
+
+    It runs without an error, and the first step is even correct. Compare it with the recipe: clear (1), forward (2), backward (3), step (4). Which of the four is missing?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    bug_boxes = hand.boxes(['missing part'])
+    return (bug_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(bug_boxes):
+    hand.marked(bug_boxes, {'missing part': 1}, {
+        'missing part': r"""the forward pass is the `model(X)` inside the first line. Look for the call that empties `.grad`""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    From the second step on, each knob's `.grad` holds the new blame *plus* everything left from earlier steps, as in the doubled 952 above. The knobs move, but in the wrong direction and too far.
 
     ## Exercise 4: train_step
 
-    Write `train_step(model, optimizer, X, labels)`, one step of training on one batch, giving back
-    the loss as a plain number:
-
-    1. `optimizer.zero_grad()`
-    2. `S = model(X)`
-    3. `loss = F.cross_entropy(S, labels)`
-    4. `loss.backward()`
-    5. `optimizer.step()`
-    6. `return loss.item()`
+    Write `train_step(model, optimizer, X, labels)`: one correct step of training on one batch, with the whole recipe in order. The loss is `F.cross_entropy` of the model's scores and the labels.
+    Give back the loss as a plain number.
     """)
     return
 
@@ -480,6 +609,15 @@ def train_step(model, optimizer, X, labels):
 @app.cell(hide_code=True)
 def _():
     check("10", "train_step", train_step, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Six short lines: clear, the scores, the loss, backward, step, and the `return`.""",
+        r"""A model is called like a function, `model(X)`. `.item()` turns the one-number loss tensor into a plain number.""",
+    ], LOCALE)
     return
 
 

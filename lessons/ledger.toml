@@ -114,6 +114,7 @@ introduces = [
     "slicing", "index-array", "argument-unpacking", "momentum", "moving-average", "adam",
     "bias-correction", "overfitting", "weight-decay", "numpy-eye", "numpy-abs",
 ]
+toolbox = ["permutation", "range-step", "slicing", "index-array"]
 uses = [
     "neural-network", "softmax", "two-layer-backprop", "accuracy", "one-hot", "random-generator",
     "random-init", "relu", "mean", "squaring", "gradient-descent", "learning-rate",
@@ -129,6 +130,7 @@ introduces = [
     "nn-sequential", "parameters", "optimizer", "detach", "training-loop", "randperm",
     "float-method", "no-grad", "gpu", "device", "pytorch",
 ]
+toolbox = ["dtype", "list-comprehension", "numpy-from-tensor", "builtin-max"]
 uses = [
     "numpy-array", "matmul-operator", "shape", "indexing", "slicing", "axis", "recording-book",
     "blame", "backpropagation", "gradient-check", "softmax", "cross-entropy", "two-layer-backprop",

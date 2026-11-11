@@ -12,7 +12,7 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
 
@@ -65,6 +65,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    /// admonition | 🧰 工具箱：数字的种类
     存的是哪一种数字，叫**数据类型**（dtype）。你会遇到三种：
 
     | dtype | 存什么 | 用在哪里 |
@@ -74,6 +75,7 @@ def _():
     | `torch.long` | 整数 | 标签和位置 |
 
     `torch.tensor` 可以指定 dtype，比如 `torch.tensor(labels, dtype=torch.long)`。从 NumPy 数组造出的张量会保留数组原来的 dtype，通常是 64 位。PyTorch 不允许 `@` 的两边 dtype 不同，所以如果你看到提示 `must have the same dtype` 的报错，原因就在这里。
+    ///
 
     ## 你的引擎，已经内置
 
@@ -127,17 +129,51 @@ def _():
     翻倍了：952 和 68。（再运行一次这个单元格，它还会继续变大；运行带 `L.backward()` 的那个单元格就能重新开始。）新的责任加到了旧的上面。所以训练的每一步都要先清掉旧的责任。忘了这一点是 PyTorch 里最经典的错误，后面有专门的工具来做这件事。
 
     （注意 `L_again` 必须从头再算一遍。PyTorch 走完反向就把账本扔掉，以节省内存，所以每一步都需要一次新的正向计算，和第 04 章一样。）
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：PyTorch 应该给出什么？
+
+    问 PyTorch 之前，先自己算出一个答案来对照。取 `w = 1`、`b = 0` 的直线，以及两天的数据：`xs = [1, 2]`，`ys = [2, 4]`。
+    误差是 $1 \times 1 + 0 - 2 = -1$ 和 $1 \times 2 + 0 - 4 = -2$。按第 03 章，均方误差对 `w` 的斜率是 $2 \times e \times x$ 的均值，对 `b` 的斜率是 $2 \times e$ 的均值。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    gradient_boxes = hand.boxes(['w 的斜率', 'b 的斜率'])
+    return (gradient_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(gradient_boxes):
+    hand.marked(gradient_boxes, {'w 的斜率': -5, 'b 的斜率': -3}, {
+        'w 的斜率': r"""$2 \times (-1) \times 1$ 和 $2 \times (-2) \times 2$ 的均值""",
+        'b 的斜率': r"""$2 \times (-1)$ 和 $2 \times (-2)$ 的均值""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 练习 1：torch_gradient
 
-    第 04 章的 `engine_gradient` 写了大约二十行。现在用张量写同样的东西。`torch_gradient(w, b, xs, ys)` 接收普通数字 `w`、`b` 和两个列表，返回均方误差的两个斜率，也是普通数字：
+    在第 04 章，你的 `engine_gradient` 写了大约二十行。现在用张量把同样的事再做一遍。`torch_gradient(w, b, xs, ys)` 接收普通的数 `w`、`b` 和两个列表，
+    返回均方误差的两个斜率，也是普通的数。照着上面那张对照表来：
 
-    1. 两行：`w = torch.tensor(w, requires_grad=True)`，`b` 也一样
-    2. 两行：`x = torch.tensor(xs, dtype=torch.float32)`，`y` 用 `ys` 同样处理
-    3. `e = w * x + b - y`（单个数字 `w` 会广播到整个向量 `x` 上）
-    4. `L = torch.mean(e * e)`
-    5. `L.backward()`
-    6. `return w.grad.item(), b.grad.item()`
+    1. 把 `w` 和 `b` 变成旋钮：让 PyTorch 给它们记账的张量。
+    2. 把两个列表变成张量 `x` 和 `y`，加上 `dtype=torch.float32`。（不然，整数列表会变成整数张量，没法和旋钮混在一起算。）
+    3. 一次算出所有天的误差。只装着一个数 `w` 的张量会广播到整个向量 `x` 上。
+    4. 损失是误差平方的均值，用 `torch.mean`。
+    5. 从损失往回走，再用 `.item()` 返回两个斜率。
+
+    对你刚才手算的例子，`torch_gradient(1.0, 0.0, [1, 2], [2, 4])` 应该给出你算出的那两个数。
     """)
     return
 
@@ -151,6 +187,15 @@ def torch_gradient(w, b, xs, ys):
 @app.cell(hide_code=True)
 def _():
     check("10", "torch_gradient", torch_gradient, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""大约八行短短的代码。`w` 和 `b` 这两个名字可以接着用：`w = torch.tensor(w, ...)` 把普通的数换成了旋钮。""",
+        r"""只有对损失运行过 `backward()` 之后，斜率才会出现在 `w.grad` 和 `b.grad` 里。如果报 dtype 的错，检查第 2 步。""",
+    ], LOCALE)
     return
 
 
@@ -213,13 +258,9 @@ def _():
     mo.md(r"""
     ## 练习 2：scores
 
-    用张量写正向计算。`scores(X, W1, b1, W2, b2)` 用一行返回分数，弯折用 `torch.relu`：
+    用张量写出正向计算。`scores(X, W1, b1, W2, b2)` 就是第 08 章的 `forward`：加权和、弯折、再一次加权和。PyTorch 的弯折是 `torch.relu`。只返回分数。
 
-    ```
-    return torch.relu(X @ W1 + b1) @ W2 + b2
-    ```
-
-    和第 08 章的 `forward` 相比，这次不用留着 `Z` 和 `H` 了。当时留着是为了给 `backward` 用，现在账本替你留着。
+    和第 08 章相比，这次不用保留 `Z` 和 `H`。当初保留它们，是为了让 `backward` 能用，现在账本替你记着了。
     """)
     return
 
@@ -238,12 +279,23 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""`@` 和 `+` 用在张量上，和用在数组上一样。""",
+        r"""一行就够。弯折只包住第一次加权和。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     算损失还需要一个新工具。`F.cross_entropy(S, labels)` 就是第 07 章的交叉熵，但多了两点方便：它接收原始的**分数**（softmax 由它自己做），**标签**用整数表示，不用 one-hot 行。`F` 是 PyTorch 里 `torch.nn.functional` 这一部分的通用简称。它已经替你加载好了，`torch`、`nn` 和 `np` 也一样。
 
     下面的单元格在 100 张图片上做完整的对比。前半段是你亲手写的版本。后半段把同样的数字放进张量（对 NumPy 数组用 `torch.tensor` 会保留 64 位的 dtype，所以两边精度相同），让 PyTorch 算斜率。最后一行显示 50,890 个斜率中最大的差别。
 
+    /// admonition | 🧰 工具箱：两种简写
     单元格里有两种新写法。`[torch.tensor(k, requires_grad=True) for k in (…)]` 对每一项运行一次表达式，造出一个列表：这是带 `append` 的循环的简写。`.numpy()` 把张量变回 NumPy 数组。`max` 是 Python 自带的：取两个数中较大的那个。
+    ///
     """)
     return
 
@@ -296,16 +348,18 @@ def _():
     有一点和我们的习惯相反：我们的 `W1` 是 `(784, 64)`，每个探测器占一列；PyTorch 存的是 `(64, 784)`，每个探测器占一行。数字是一样的，只是转置了。调用 `layer(X)` 算的是 `X @ layer.weight.T + layer.bias`，也就是我们的 `Z`。把对象当函数来调用，看起来有点怪，其实只是运行它内部计算的简写。
 
     `nn.Sequential(...)` 把层串起来：每一层的输出是下一层的输入。`nn.ReLU()` 就是弯折，一个没有旋钮的层。
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 练习 3：make_model
 
-    写 `make_model(hidden)`，返回第 08 章的网络，有 `hidden` 个探测器：
+    写出 `make_model(hidden)`，返回第 08 章的网络，有 `hidden` 个探测器。它是一个装着三层的 `nn.Sequential`：从 784 个像素到探测器，弯折，再从探测器到 10 个分数。
 
-    ```
-    return nn.Sequential(nn.Linear(784, hidden), nn.ReLU(), nn.Linear(hidden, 10))
-    ```
-
-    检查之后的单元格会向模型要它的旋钮。`model.parameters()` 逐个给出旋钮，`p.numel()` 是其中一个旋钮含有多少个数字。
+    检查之后的单元格会向模型要它的旋钮。`model.parameters()` 把它们一个个给出来，`p.numel()` 是其中一个里面有多少个数。
     """)
     return
 
@@ -319,6 +373,15 @@ def make_model(hidden):
 @app.cell(hide_code=True)
 def _():
     check("10", "make_model", make_model, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""`nn.Sequential(...)` 里放三层，用逗号隔开：一个 `nn.Linear`，一个 `nn.ReLU()`，再一个 `nn.Linear`。""",
+        r"""第一层的输出个数和最后一层的输入个数都是 `hidden`，也就是你这个函数的输入，不是固定的 64。""",
+    ], LOCALE)
     return
 
 
@@ -337,7 +400,38 @@ def _():
 def _():
     mo.md(r"""
     PyTorch 逐层打印出模型（`bias=True` 只是说这一层有偏置），后面是我们的计数：50,890 个旋钮：$784 \times 64$ 个权重，64 个偏置，$64 \times 10$ 个权重，10 个偏置。
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 动手算：探测器减半
+
+    `make_model(32)` 会有多少个旋钮？先算第一层（权重和偏置），再算整个模型。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    count_boxes = hand.boxes(['第一层', '整个模型'])
+    return (count_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(count_boxes):
+    hand.marked(count_boxes, {'第一层': 25120, '整个模型': 25450}, {
+        '第一层': r"""$784 \times 32$ 个权重和 32 个偏置""",
+        '整个模型': r"""再加上最后一层：$32 \times 10$ 个权重和 10 个偏置""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 你的 Adam，已经内置
 
     **优化器**（optimizer）是一个对象，它拿着所有旋钮，并执行一条步进规则。下面把你第 09 章的 `adam_step` 和 `torch.optim.Adam` 放在一起，解决米娅的问题：原始气温，同样从 `[6, 0]` 出发，学习率 1.0，500 步。
@@ -396,17 +490,53 @@ def _():
     - `optimizer.step()` 根据 `.grad` 移动每个旋钮。
 
     再加上夹在前两步之间的正向计算，就是完整的配方：清空、正向、反向、走一步。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 找出错误
+
+    下面是有人匆忙写出的一步训练：
+
+    ```
+    def hasty_step(model, optimizer, X, labels):
+        loss = F.cross_entropy(model(X), labels)
+        loss.backward()
+        optimizer.step()
+        return loss
+    ```
+
+    它运行起来不报错，第一步甚至是对的。拿它和那套步骤比一比：清零（1）、正向（2）、反向（3）、走一步（4）。四样里少了哪一样？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    bug_boxes = hand.boxes(['少了第几样'])
+    return (bug_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(bug_boxes):
+    hand.marked(bug_boxes, {'少了第几样': 1}, {
+        '少了第几样': r"""正向计算就是第一行里的 `model(X)`。找一找把 `.grad` 清空的那个调用""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    从第二步开始，每个旋钮的 `.grad` 里装的是新的责任**加上**前面几步剩下的全部，就像上面翻倍成 952 那样。旋钮在动，但方向不对，也走得太远。
 
     ## 练习 4：train_step
 
-    写 `train_step(model, optimizer, X, labels)`：在一批数据上训练一步，把损失作为普通数字返回：
-
-    1. `optimizer.zero_grad()`
-    2. `S = model(X)`
-    3. `loss = F.cross_entropy(S, labels)`
-    4. `loss.backward()`
-    5. `optimizer.step()`
-    6. `return loss.item()`
+    写出 `train_step(model, optimizer, X, labels)`：在一批数据上正确地训练一步，整套步骤按顺序做完。损失是模型的分数和标签的 `F.cross_entropy`。
+    把损失作为普通的数返回。
     """)
     return
 
@@ -420,6 +550,15 @@ def train_step(model, optimizer, X, labels):
 @app.cell(hide_code=True)
 def _():
     check("10", "train_step", train_step, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""六行短短的代码：清零、分数、损失、反向、走一步，还有 `return`。""",
+        r"""模型像函数一样调用：`model(X)`。`.item()` 把只有一个数的损失张量变成普通的数。""",
+    ], LOCALE)
     return
 
 
