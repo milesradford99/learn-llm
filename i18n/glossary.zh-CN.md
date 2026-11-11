@@ -71,107 +71,138 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | transpose | 转置 | 06 |
 | template | 模板 | 06 |
 | test set | 测试集（测试图片） | 06 |
-| neural network | 神经网络 | 07 |
-| bend (ReLU) | 弯折 | 07 |
-| hidden layer | 隐藏层 | 07 |
-| detector (hidden unit) | 探测器 | 07 |
-| seed (random) | 种子 | 07 |
-| mask | 掩码 | 07 |
+| neural network | 神经网络 | 08 |
+| bend (ReLU) | 弯折 | 08 |
+| hidden layer | 隐藏层 | 08 |
+| detector (hidden unit) | 探测器 | 08 |
+| seed (random) | 种子 | 08 |
+| mask | 掩码 | 08 |
 | classifier | 分类器 | 06 |
-| variance | 方差 | 08 |
-| typical size | 典型大小 | 07 |
-| He initialisation | He 初始化 | 08 |
-| batch / mini-batch | 批 / 小批量 | 08 |
-| epoch | 轮次 | 08 |
-| slice | 切片 | 08 |
-| momentum | 动量 | 08 |
-| velocity | 速度 | 08 |
-| overfitting | 过拟合 | 08 |
-| weight | 权重 | 08 |
-| bias | 偏置 | 08 |
-| weight decay | 权重衰减 | 08 |
-| tensor | 张量 | 09 |
-| bit | 位 | 09 |
-| dtype | 数据类型（dtype） | 09 |
-| optimizer | 优化器 | 09 |
-| layer | 层 | 09 |
-| training loop | 训练循环 | 09 |
-| GPU | GPU（显卡） | 09 |
-| device | 设备 | 09 |
-| convolution | 卷积 | 10 |
-| kernel | 卷积核 | 10 |
-| feature map | 特征图 | 10 |
-| max pooling | 最大池化 | 10 |
-| padding | 填充 | 10 |
-| residual | 残差 | 10 |
-| skip connection | 跳跃连接 | 10 |
-| word vector | 词向量 | 11 |
-| vocabulary | 词表 | 11 |
-| dictionary (Python) | 字典 | 11 |
-| key / value | 键 / 值 | 11 |
-| id (of a word) | 编号 | 11 |
-| cosine similarity | 余弦相似度 | 11 |
-| centre word / context word | 中心词 / 上下文词 | 11 |
-| skip-gram | skip-gram | 11 |
-| negative sampling | 负采样 | 11 |
-| noise word | 噪声词 | 11 |
-| sigmoid | sigmoid | 11 |
-| leaderboard | 排行榜 | 11 |
-| language model | 语言模型 | 12 |
-| conditional probability | 条件概率 | 12 |
-| bigram / trigram / unigram | 二元 / 三元 / 一元模型 | 12 |
-| smoothing | 平滑 | 12 |
-| sampling | 采样 | 12 |
-| perplexity | 困惑度 | 12 |
-| hyperparameter | 超参数 | 12 |
-| recurrent neural network (RNN) | 循环神经网络 | 13 |
-| memory (of an RNN) | 记忆 | 13 |
-| LSTM cell | 细胞 | 13 |
-| gate | 门 | 13 |
-| forget / input / output gate | 遗忘门 / 输入门 / 输出门 | 13 |
-| clipping | 裁剪 | 13 |
-| temperature | 温度 | 13 |
-| encoder / decoder | 编码器 / 解码器 | 14 |
-| teacher forcing | 教师强制 | 14 |
-| weighted average | 加权平均 | 14 |
-| attention | 注意力 | 14 |
-| query / key / value | 查询 / 键 / 值 | 14 |
-| self-attention | 自注意力 | 15 |
-| head (of attention) | 头 | 15 |
-| layer normalisation | 层归一化 | 15 |
-| block | 块 | 15 |
-| pretraining | 预训练 | 16 |
-| fine-tuning | 微调 | 16 |
-| freeze | 冻结 | 16 |
-| baseline | 基线 | 16 |
-| precision / recall | 精确率 / 召回率 | 16 |
-| margin of error | 误差范围 | 16 |
-| leakage | 泄漏 | 16 |
-| benchmark | 基准 | 16 |
-| byte | 字节 | 17 |
-| token | 词元（token） | 17 |
-| tokenizer | 分词器 | 17 |
-| merge | 合并 | 17 |
-| RMSNorm | 均方根归一化（RMSNorm） | 18 |
-| angle / radian | 角 / 弧度 | 18 |
-| cosine / sine | 余弦 / 正弦 | 18 |
-| rotation | 旋转 | 18 |
-| rotary positions (RoPE) | 旋转位置编码（RoPE） | 18 |
-| warmup | 预热 | 18 |
-| schedule | 调整计划 | 18 |
-| checkpoint | 检查点 | 18 |
-| set (Python) | 集合 | 18 |
-| FLOPs | 浮点运算次数（FLOPs） | 19 |
-| utilisation | 利用率 | 19 |
-| mixed precision | 混合精度 | 19 |
-| cache | 缓存 | 19 |
-| profiler | 性能分析器 | 19 |
-| process | 进程 | 20 |
-| data parallelism | 数据并行 | 20 |
-| gradient accumulation | 梯度累积 | 20 |
-| all-reduce | 全归约（all-reduce） | 20 |
-| sharding | 分片 | 20 |
-| tensor parallelism | 张量并行 | 20 |
-| tile (of attention) | 分块 | 19 |
-| chunk (in a ring) | 段 | 20 |
-| ZeRO stage | 级 | 20 |
+| variance | 方差 | 09 |
+| typical size | 典型大小 | 08 |
+| He initialisation | He 初始化 | 09 |
+| batch / mini-batch | 批 / 小批量 | 09 |
+| epoch | 轮次 | 09 |
+| slice | 切片 | 09 |
+| momentum | 动量 | 09 |
+| velocity | 速度 | 09 |
+| overfitting | 过拟合 | 09 |
+| weight | 权重 | 09 |
+| bias | 偏置 | 09 |
+| weight decay | 权重衰减 | 09 |
+| tensor | 张量 | 10 |
+| bit | 位 | 10 |
+| dtype | 数据类型（dtype） | 10 |
+| optimizer | 优化器 | 10 |
+| layer | 层 | 10 |
+| training loop | 训练循环 | 10 |
+| GPU | GPU（显卡） | 10 |
+| device | 设备 | 10 |
+| convolution | 卷积 | 11 |
+| kernel | 卷积核 | 11 |
+| feature map | 特征图 | 11 |
+| max pooling | 最大池化 | 11 |
+| padding | 填充 | 11 |
+| residual | 残差 | 11 |
+| skip connection | 跳跃连接 | 11 |
+| word vector | 词向量 | 12 |
+| vocabulary | 词表 | 12 |
+| dictionary (Python) | 字典 | 12 |
+| key / value | 键 / 值 | 12 |
+| id (of a word) | 编号 | 12 |
+| cosine similarity | 余弦相似度 | 12 |
+| centre word / context word | 中心词 / 上下文词 | 12 |
+| skip-gram | skip-gram | 12 |
+| negative sampling | 负采样 | 12 |
+| noise word | 噪声词 | 12 |
+| sigmoid | sigmoid | 12 |
+| leaderboard | 排行榜 | 12 |
+| language model | 语言模型 | 13 |
+| conditional probability | 条件概率 | 13 |
+| bigram / trigram / unigram | 二元 / 三元 / 一元模型 | 13 |
+| smoothing | 平滑 | 13 |
+| sampling | 采样 | 13 |
+| perplexity | 困惑度 | 13 |
+| hyperparameter | 超参数 | 13 |
+| recurrent neural network (RNN) | 循环神经网络 | 14 |
+| memory (of an RNN) | 记忆 | 14 |
+| LSTM cell | 细胞 | 14 |
+| gate | 门 | 14 |
+| forget / input / output gate | 遗忘门 / 输入门 / 输出门 | 14 |
+| clipping | 裁剪 | 14 |
+| temperature | 温度 | 14 |
+| encoder / decoder | 编码器 / 解码器 | 15 |
+| teacher forcing | 教师强制 | 15 |
+| weighted average | 加权平均 | 15 |
+| attention | 注意力 | 15 |
+| query / key / value | 查询 / 键 / 值 | 15 |
+| self-attention | 自注意力 | 16 |
+| head (of attention) | 头 | 16 |
+| layer normalisation | 层归一化 | 16 |
+| block | 块 | 16 |
+| pretraining | 预训练 | 18 |
+| fine-tuning | 微调 | 18 |
+| freeze | 冻结 | 18 |
+| baseline | 基线 | 18 |
+| precision / recall | 精确率 / 召回率 | 18 |
+| margin of error | 误差范围 | 18 |
+| leakage | 泄漏 | 18 |
+| benchmark | 基准 | 18 |
+| byte | 字节 | 19 |
+| token | 词元（token） | 19 |
+| tokenizer | 分词器 | 19 |
+| merge | 合并 | 19 |
+| agent | 智能体 | 40 |
+| tool / tool call / tool result | 工具 / 工具调用 / 工具结果 | 40 |
+| harness | harness（运行底座） | 40 |
+| turn | 轮 | 40 |
+| context window | 上下文窗口 | 40 |
+| exception | 异常 | 40 |
+| steering / follow-up | 转向 / 后续 | 41 |
+| stream / event / delta | 流 / 事件 / delta | 42 |
+| block | 块 | 40 |
+| leaf / active branch | 叶子 / 当前分支 | 44 |
+| projection | 投影 | 44 |
+| compaction | 压缩 | 45 |
+| skill / extension | 技能 / 扩展 | 46 |
+| progressive disclosure | 渐进式披露 | 46 |
+| hook | 钩子 | 41 |
+| sub-agent | 子智能体 | 46 |
+| Router / Worker | Router / Worker | 47 |
+| Source / Trigger / Thread | 来源 / 触发 / 线程 | 47 |
+| Eval / Ticket / Mandate | 评估 / 工单 / 授权 | 47 |
+| Subscription / Assignment / Channel | 订阅 / 派工 / 渠道 | 47 |
+| idempotence | 幂等 | 47 |
+| strength (explicit / inferred) | 强度（明确 / 推断） | 48 |
+| gate / admission table | 准入 / 准入表 | 48 |
+| accept mode | 接单模式 | 48 |
+| hand back | 交回 | 49 |
+| stage | 阶段 | 49 |
+| transaction | 事务 | 50 |
+| effect / outbox | 效果 / 发件箱 | 50 |
+| exponential backoff | 指数退避 | 50 |
+| prefix cache | 前缀缓存 | 51 |
+| regular expression | 正则表达式 | 51 |
+| RMSNorm | 均方根归一化（RMSNorm） | 20 |
+| angle / radian | 角 / 弧度 | 20 |
+| cosine / sine | 余弦 / 正弦 | 20 |
+| rotation | 旋转 | 20 |
+| rotary positions (RoPE) | 旋转位置编码（RoPE） | 20 |
+| warmup | 预热 | 20 |
+| schedule | 调整计划 | 20 |
+| checkpoint | 检查点 | 20 |
+| set (Python) | 集合 | 20 |
+| FLOPs | 浮点运算次数（FLOPs） | 22 |
+| utilisation | 利用率 | 22 |
+| mixed precision | 混合精度 | 22 |
+| cache | 缓存 | 22 |
+| profiler | 性能分析器 | 22 |
+| process | 进程 | 23 |
+| data parallelism | 数据并行 | 23 |
+| gradient accumulation | 梯度累积 | 23 |
+| all-reduce | 全归约（all-reduce） | 23 |
+| sharding | 分片 | 23 |
+| tensor parallelism | 张量并行 | 23 |
+| tile (of attention) | 分块 | 22 |
+| chunk (in a ring) | 段 | 23 |
+| ZeRO stage | 级 | 23 |

@@ -3,26 +3,29 @@
 import numpy as np
 
 
-def variance(v):
-    return np.mean((v - np.mean(v)) ** 2)
+def softmax(S):
+    S = S - np.max(S, axis=1, keepdims=True)
+    E = np.exp(S)
+    return E / np.sum(E, axis=1, keepdims=True)
 
 
-def batches(n, size, rng):
-    order = rng.permutation(n)
-    result = []
-    for start in range(0, n, size):
-        result.append(order[start:start + size])
-    return result
+def relu(Z):
+    return np.maximum(Z, 0)
 
 
-def momentum_step(w, velocity, grad, rate):
-    velocity = 0.9 * velocity + grad
-    return w - rate * velocity, velocity
+def forward(X, W1, b1, W2, b2):
+    Z = X @ W1 + b1
+    H = relu(Z)
+    S = H @ W2 + b2
+    return Z, H, S
 
 
-def adam_step(w, m, v, grad, t, rate):
-    m = 0.9 * m + 0.1 * grad
-    v = 0.999 * v + 0.001 * grad * grad
-    m_hat = m / (1 - 0.9 ** t)
-    v_hat = v / (1 - 0.999 ** t)
-    return w - rate * m_hat / (np.sqrt(v_hat) + 1e-8), m, v
+def backward(X, Y, Z, H, S, W2):
+    G = (softmax(S) - Y) / len(X)
+    dW2 = H.T @ G
+    db2 = np.sum(G, axis=0)
+    dH = G @ W2.T
+    dZ = dH * (Z > 0)
+    dW1 = X.T @ dZ
+    db1 = np.sum(dZ, axis=0)
+    return dW1, db1, dW2, db2

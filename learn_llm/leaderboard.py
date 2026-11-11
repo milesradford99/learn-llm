@@ -1,4 +1,4 @@
-"""The leaderboard: one perplexity per model, on the same held-out stories, from chapter 12 on.
+"""The leaderboard: one perplexity per model, on the same held-out stories, from chapter 13 on.
 
 Each learner's own scores live in `my-work/.leaderboard.json`, so they carry across chapters.
 """

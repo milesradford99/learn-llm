@@ -1,48 +1,55 @@
-import math
-
 import numpy as np
+import torch
 
 from learn_llm.checking import Case
 from learn_llm.checks.ch05 import _plain
-
-TINY = [0, 1, 2, 0, 1, 3, 0, 4, 2]
-TABLE = {(0, 1): {2: 3, 3: 1}, (1, 2): {0: 5}}
+from learn_llm.checks.ch10 import _plain as _plain_t
 
 
-def _sums(f):
-    P = f(np.array([[1.0, 3.0], [0.0, 0.0]]), 1)
-    return _plain(np.sum(P, axis=1)) if isinstance(P, np.ndarray) else _plain(P)
+def _batch():
+    u = torch.tensor([[1.0, 0.0], [0.0, 2.0]])
+    v = torch.tensor([[1.0, 1.0], [1.0, 1.0]])
+    n = torch.tensor([[[1.0, 0.0], [-1.0, 0.0], [0.0, 0.0]], [[0.0, 1.0], [0.0, 0.0], [2.0, 0.0]]])
+    return u, v, n
 
 
-def _draws(f, chance, draws):
-    """How many of `draws` samples landed on id 0, when id 0 has this chance."""
-    p = np.array([chance, 1 - chance])
-    rng = np.random.default_rng(5)
-    return sum(int(f(p, rng)) == 0 for _ in range(draws))
+def _reference_loss():
+    def surprise(s):
+        return float(np.log1p(np.exp(-s)))
+
+    first = surprise(1) + surprise(-1) + surprise(1) + surprise(0)
+    second = surprise(2) + surprise(-2) + surprise(0) + surprise(0)
+    return (first + second) / 2
+
+
+def _no_noise(f):
+    u = torch.tensor([[0.0, 0.0]])
+    return _plain_t(f(u, torch.tensor([[1.0, 2.0]]), torch.tensor([[[3.0, 4.0]]])))
+
+
+def _lengths(f):
+    out = f([1, 2, 3, 4, 5, 6], 2)
+    return [len(part) for part in out] if isinstance(out, tuple) else _plain(out)
 
 
 EXERCISES = {
-    "bigram_counts": [
-        Case("ch12.bigram_counts.pair", lambda f: _plain(f(TINY, 5))[0], [0.0, 2.0, 0.0, 0.0, 1.0], hint="ch12.bigram_counts.hint"),
-        Case("ch12.bigram_counts.total", lambda f: _plain(np.sum(f(TINY, 5))), 8.0, hint="ch12.bigram_counts.hint"),
+    "count_words": [
+        Case("ch12.count_words.small", lambda f: f(["the", "dog", "the"]), {"the": 2, "dog": 1}, hint="ch12.count_words.hint"),
+        Case("ch12.count_words.empty", lambda f: f([]), {}, hint="ch12.count_words.hint"),
     ],
-    "bigram_probs": [
-        Case("ch12.bigram_probs.none", lambda f: _plain(f(np.array([[1.0, 3.0], [0.0, 0.0]]), 0.5)), [[0.3, 0.7], [0.5, 0.5]], tolerance=1e-9, hint="ch12.bigram_probs.hint"),
-        Case("ch12.bigram_probs.sums", _sums, [1.0, 1.0], tolerance=1e-9, hint="ch12.bigram_probs.hint"),
+    "similarity": [
+        Case("ch12.similarity.same", lambda f: _plain(f(np.array([3.0, 4.0]), np.array([6.0, 8.0]))), 1.0, tolerance=1e-9, hint="ch12.similarity.hint"),
+        Case("ch12.similarity.right", lambda f: _plain(f(np.array([1.0, 0.0]), np.array([0.0, 5.0]))), 0.0, tolerance=1e-9, hint="ch12.similarity.hint"),
+        Case("ch12.similarity.opposite", lambda f: _plain(f(np.array([1.0, 2.0]), np.array([-2.0, -4.0]))), -1.0, tolerance=1e-9, hint="ch12.similarity.hint"),
+        Case("ch12.similarity.mixed", lambda f: _plain(f(np.array([1.0, 0.0]), np.array([3.0, 4.0]))), 0.6, tolerance=1e-9, hint="ch12.similarity.hint"),
     ],
-    "sample_next": [
-        Case("ch12.sample_next.sure", lambda f: _draws(f, 1.0, 20), 20, hint="ch12.sample_next.hint"),
-        Case("ch12.sample_next.never", lambda f: _draws(f, 0.0, 20), 0, hint="ch12.sample_next.hint"),
-        Case("ch12.sample_next.fair", lambda f: 300 < _draws(f, 0.4, 1000) < 500, True, hint="ch12.sample_next.hint"),
+    "skipgram_pairs": [
+        Case("ch12.skipgram_pairs.page", lambda f: f([0, 1, 2, 3], 1), ([0, 1, 1, 2, 2, 3], [1, 0, 2, 1, 3, 2]), hint="ch12.skipgram_pairs.hint"),
+        Case("ch12.skipgram_pairs.wide", _lengths, [18, 18], hint="ch12.skipgram_pairs.hint"),
+        Case("ch12.skipgram_pairs.one", lambda f: f([7], 2), ([], []), hint="ch12.skipgram_pairs.hint"),
     ],
-    "perplexity": [
-        Case("ch12.perplexity.uniform", lambda f: _plain(f(np.full(5, math.log(1 / 50)))), 50.0, tolerance=1e-6, hint="ch12.perplexity.hint"),
-        Case("ch12.perplexity.perfect", lambda f: _plain(f(np.zeros(3))), 1.0, tolerance=1e-9, hint="ch12.perplexity.hint"),
-        Case("ch12.perplexity.mixed", lambda f: _plain(f(np.log(np.array([0.5, 0.125])))), 4.0, tolerance=1e-6, hint="ch12.perplexity.hint"),
-    ],
-    "trigram_chance": [
-        Case("ch12.trigram_chance.share", lambda f: f(TABLE, 0, 1, 2), 0.75, tolerance=1e-9, hint="ch12.trigram_chance.hint"),
-        Case("ch12.trigram_chance.unseen_next", lambda f: f(TABLE, 0, 1, 4), 0.0, tolerance=1e-9, hint="ch12.trigram_chance.hint"),
-        Case("ch12.trigram_chance.unseen_pair", lambda f: f(TABLE, 3, 3, 0), 0.0, tolerance=1e-9, hint="ch12.trigram_chance.hint"),
+    "pair_loss": [
+        Case("ch12.pair_loss.batch", lambda f: _plain_t(f(*_batch())), _reference_loss(), tolerance=1e-4, hint="ch12.pair_loss.hint"),
+        Case("ch12.pair_loss.zero", _no_noise, 2 * float(np.log(2)), tolerance=1e-4, hint="ch12.pair_loss.hint"),
     ],
 }

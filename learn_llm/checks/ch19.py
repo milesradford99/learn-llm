@@ -1,58 +1,37 @@
-import numpy as np
-import torch
-
 from learn_llm.checking import Case
-from learn_llm.checks.ch09 import _plain
+
+TEXT = "aaabdaaabac"
+A = list(TEXT.encode("utf-8"))
 
 
-def _calls(f):
-    calls = []
-    f(lambda: calls.append(1), 4)
-    return len(calls)
-
-
-def _seconds(f):
-    """The first call is slow (0.1 s), later ones take 0.01 s: a mean near 0.01 means the clock
-    started after the warm-up and the total was divided by the repeats."""
-    import time
-
-    calls = []
-
-    def task():
-        time.sleep(0.1 if not calls else 0.01)
-        calls.append(1)
-
-    out = f(task, 5)
-    return isinstance(out, float) and 0.0095 < out < 0.022
-
-
-def _tiled(f, tile, scale=4):
-    torch.manual_seed(5)
-    q, K, V = torch.rand(8) * scale, torch.rand(10, 8) * scale, torch.rand(10, 3)
-    reference = torch.softmax(K @ q / np.sqrt(8), dim=0) @ V
-    out = f(q, K, V, tile)
-    return bool(torch.max(torch.abs(out - reference)) < 1e-5) if isinstance(out, torch.Tensor) else _plain(out)
+MERGES = {(97, 97): 256, (256, 97): 257, (257, 98): 258}
 
 
 EXERCISES = {
-    "time_it": [
-        Case("ch19.time_it.calls", _calls, 5, hint="ch19.time_it.hint"),
-        Case("ch19.time_it.mean", _seconds, True, hint="ch19.time_it.hint"),
+    "to_bytes": [
+        Case("ch19.to_bytes.dog", lambda f: f("dog"), [100, 111, 103], hint="ch19.to_bytes.hint"),
+        Case("ch19.to_bytes.chinese", lambda f: len(f("你好")), 6, hint="ch19.to_bytes.hint"),
     ],
-    "matmul_flops": [
-        Case("ch19.matmul_flops.small", lambda f: f(2, 3, 4), 48, hint="ch19.matmul_flops.hint"),
-        Case("ch19.matmul_flops.square", lambda f: f(1024, 1024, 1024), 2 * 1024 ** 3, hint="ch19.matmul_flops.hint"),
+    "count_pairs": [
+        Case("ch19.count_pairs.page", lambda f: f([1, 2, 1, 2, 3]), {(1, 2): 2, (2, 1): 1, (2, 3): 1}, hint="ch19.count_pairs.hint"),
+        Case("ch19.count_pairs.one", lambda f: f([1]), {}, hint="ch19.count_pairs.hint"),
     ],
-    "training_flops": [
-        Case("ch19.training_flops.page", lambda f: f(7e9, 1e12), 4.2e22, tolerance=1e10, hint="ch19.training_flops.hint"),
+    "merge": [
+        Case("ch19.merge.some", lambda f: f([1, 2, 3, 1, 2], (1, 2), 9), [9, 3, 9], hint="ch19.merge.hint"),
+        Case("ch19.merge.overlap", lambda f: f([1, 1, 1], (1, 1), 9), [9, 1], hint="ch19.merge.hint"),
+        Case("ch19.merge.end", lambda f: f([3, 1], (1, 2), 9), [3, 1], hint="ch19.merge.hint"),
     ],
-    "adam_bytes": [
-        Case("ch19.adam_bytes.page", lambda f: f(7e9), 1.12e11, tolerance=1e-3, hint="ch19.adam_bytes.hint"),
+    "train_bpe": [
+        Case("ch19.train_bpe.page", lambda f: f(A, 3), MERGES, hint="ch19.train_bpe.hint"),
+        Case("ch19.train_bpe.none", lambda f: f(A, 0), {}, hint="ch19.train_bpe.hint"),
     ],
-    "tiled_attention": [
-        Case("ch19.tiled_attention.one", lambda f: _tiled(f, 10), True, hint="ch19.tiled_attention.hint"),
-        Case("ch19.tiled_attention.tiles", lambda f: _tiled(f, 3), True, hint="ch19.tiled_attention.hint"),
-        Case("ch19.tiled_attention.single", lambda f: _tiled(f, 1), True, hint="ch19.tiled_attention.hint"),
-        Case("ch19.tiled_attention.big", lambda f: _tiled(f, 3, 60), True, hint="ch19.tiled_attention.hint"),
+    "encode": [
+        Case("ch19.encode.page", lambda f: f(TEXT, MERGES), [258, 100, 258, 97, 99], hint="ch19.encode.hint"),
+        Case("ch19.encode.none", lambda f: f("hi", {}), [104, 105], hint="ch19.encode.hint"),
+    ],
+    "decode": [
+        Case("ch19.decode.page", lambda f: f([258, 100, 258, 97, 99], MERGES), TEXT, hint="ch19.decode.hint"),
+        Case("ch19.decode.bytes", lambda f: f(list("你好".encode("utf-8")), {}), "你好", hint="ch19.decode.hint"),
+        Case("ch19.decode.broken", lambda f: "�" in f([228], {}), True, hint="ch19.decode.hint"),
     ],
 }

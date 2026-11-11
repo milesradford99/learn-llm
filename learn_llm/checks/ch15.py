@@ -1,100 +1,70 @@
-import numpy as np
 import torch
-from torch import nn
 
 from learn_llm.checking import Case
-from learn_llm.checks.ch09 import _plain
+from learn_llm.checks.ch10 import _plain
 
-Q = torch.tensor([[[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]]])
-K = torch.tensor([[[1.0, 1.0], [0.0, 1.0], [2.0, 0.0]]])
-V = torch.tensor([[[1.0], [2.0], [3.0]]])
-OPEN = torch.zeros(3, 3, dtype=torch.bool)
-TRI = torch.triu(torch.ones(3, 3, dtype=torch.bool), diagonal=1)
+Q = torch.tensor([[[1.0, 0.0], [0.0, 2.0]]])
+K = torch.tensor([[[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]])
+V = torch.tensor([[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]])
 
 
-def _reference(mask):
-    scores = (Q @ K.transpose(-2, -1) / np.sqrt(2)).masked_fill(mask, -torch.inf)
-    A = torch.softmax(scores, dim=-1)
+def _reference_attend():
+    A = torch.softmax(Q @ K.transpose(1, 2), dim=2)
     return (A @ V).tolist(), A.tolist()
 
 
-def _four_way(f):
-    """Works with a heads dimension too, so masks and transposes must use the last dimensions."""
-    x = torch.rand(2, 4, 5, 8)
-    return [list(part.shape) for part in f(x, x, x, torch.zeros(5, 5, dtype=torch.bool))]
+def _attend(f):
+    return _plain(f(Q, K, V))
 
 
-def _blocked(f):
-    return _plain(f(Q, K, V, TRI)[1])[0][0][1:]
+def _sums_to_one(f):
+    return _plain(torch.sum(f(torch.tensor([1.0, 2.0]), K[0])))
 
 
-def _split(f):
-    x = torch.arange(12.0).reshape(1, 2, 6)
-    return _plain(f(x, 3))
+def _shape(f):
+    blended, A = f(torch.zeros(2, 4, 3), torch.zeros(2, 5, 3), torch.zeros(2, 5, 7))
+    return list(blended.shape), list(A.shape)
 
 
-def _split_shape(f):
-    out = f(torch.zeros(5, 7, 128), 4)
-    return list(out.shape) if isinstance(out, torch.Tensor) else _plain(out)
+def _reference_with():
+    blended, A = _reference_attend_on(Q, K, K)
+    return torch.cat([Q, blended], dim=2).tolist(), A.tolist()
 
 
-def _norm(f):
-    torch.manual_seed(2)
-    out = f(torch.rand(3, 4, 8) * 10)
-    return round(torch.mean(torch.abs(torch.mean(out, dim=-1))).item(), 3), round(torch.mean(torch.var(out, dim=-1, unbiased=False)).item(), 2)
+def _reference_attend_on(Q, K, V):
+    A = torch.softmax(Q @ K.transpose(1, 2), dim=2)
+    return A @ V, A
 
 
-def _matches_pytorch(f):
-    torch.manual_seed(3)
-    x = torch.rand(2, 3, 8)
-    mine = f(x)
-    theirs = nn.LayerNorm(8, eps=1e-5, elementwise_affine=False)(x)
-    return bool(torch.max(torch.abs(mine - theirs)) < 1e-4)
+def _with_shape(f):
+    joined, A = f(torch.zeros(2, 4, 3), torch.zeros(2, 5, 3))
+    return list(joined.shape), list(A.shape)
 
 
-def _block(f):
-    x = torch.ones(1, 2, 3)
-    double = lambda t: 2 * t
-    add_one = lambda t: t + 1
-    # 1 + 2 × (2 × 1) = 5, then 5 + 2 × (5 + 1) = 17
-    out = f(x, double, double, add_one, double)
-    return None if out is None else _plain(out)[0][0][0]
-
-
-def _order(f):
-    calls = []
-
-    def note(name):
-        def layer(t):
-            calls.append(name)
-            return t
-        return layer
-
-    f(torch.ones(1, 1, 1), note("norm1"), note("attention"), note("norm2"), note("think"))
-    return calls
+def _keeps_states(f):
+    return _plain(f(Q, K)[0][:, :, :2])
 
 
 EXERCISES = {
-    "future_mask": [
-        Case("ch15.future_mask.three", lambda f: _plain(f(3)), [[False, True, True], [False, False, True], [False, False, False]], hint="ch15.future_mask.hint"),
-        Case("ch15.future_mask.one", lambda f: _plain(f(1)), [[False]], hint="ch15.future_mask.hint"),
+    "shift_right": [
+        Case("ch15.shift_right.page", lambda f: _plain(f(torch.tensor([[7, 8, 9], [4, 5, 6]]))), [[0, 7, 8], [0, 4, 5]], hint="ch15.shift_right.hint"),
+    ],
+    "weighted_average": [
+        Case("ch15.weighted_average.pick", lambda f: _plain(f(torch.tensor([1.0, 0.0]), torch.tensor([[1.0, 2.0], [3.0, 4.0]]))), [1.0, 2.0], tolerance=1e-6, hint="ch15.weighted_average.hint"),
+        Case("ch15.weighted_average.blend", lambda f: _plain(f(torch.tensor([0.5, 0.5]), torch.tensor([[1.0, 2.0], [3.0, 4.0]]))), [2.0, 3.0], tolerance=1e-6, hint="ch15.weighted_average.hint"),
+    ],
+    "attention_shares": [
+        Case("ch15.attention_shares.equal", lambda f: _plain(f(torch.tensor([0.0, 0.0]), K[0])), [1 / 3, 1 / 3, 1 / 3], tolerance=1e-6, hint="ch15.attention_shares.hint"),
+        Case("ch15.attention_shares.sum", _sums_to_one, 1.0, tolerance=1e-6, hint="ch15.attention_shares.hint"),
+        Case("ch15.attention_shares.tiny", lambda f: _plain(f(torch.tensor([1.0, 0.0]), K[0])), torch.softmax(torch.tensor([1.0, 0.0, 1.0]), dim=0).tolist(), tolerance=1e-6, hint="ch15.attention_shares.hint"),
     ],
     "attend": [
-        Case("ch15.attend.open", lambda f: _plain(f(Q, K, V, OPEN)), _reference(OPEN), tolerance=1e-5, hint="ch15.attend.hint"),
-        Case("ch15.attend.masked", lambda f: _plain(f(Q, K, V, TRI)), _reference(TRI), tolerance=1e-5, hint="ch15.attend.hint"),
-        Case("ch15.attend.blocked", _blocked, [0.0, 0.0], tolerance=1e-9, hint="ch15.attend.hint"),
-        Case("ch15.attend.heads", _four_way, [[2, 4, 5, 8], [2, 4, 5, 5]], hint="ch15.attend.hint"),
+        Case("ch15.attend.shapes", _shape, ([2, 4, 7], [2, 4, 5]), hint="ch15.attend.hint"),
+        Case("ch15.attend.values", _attend, _reference_attend(), tolerance=1e-5, hint="ch15.attend.hint"),
     ],
-    "split_heads": [
-        Case("ch15.split_heads.shape", _split_shape, [5, 4, 7, 32], hint="ch15.split_heads.hint"),
-        Case("ch15.split_heads.values", _split, [[[[0.0, 1.0], [6.0, 7.0]], [[2.0, 3.0], [8.0, 9.0]], [[4.0, 5.0], [10.0, 11.0]]]], hint="ch15.split_heads.hint"),
-    ],
-    "layer_norm": [
-        Case("ch15.layer_norm.scale", _norm, (0.0, 1.0), tolerance=0.01, hint="ch15.layer_norm.hint"),
-        Case("ch15.layer_norm.pytorch", _matches_pytorch, True, hint="ch15.layer_norm.hint"),
-    ],
-    "block_step": [
-        Case("ch15.block_step.value", _block, 17.0, tolerance=1e-6, hint="ch15.block_step.hint"),
-        Case("ch15.block_step.order", _order, ["norm1", "attention", "norm2", "think"], hint="ch15.block_step.hint"),
+    "with_attention": [
+        Case("ch15.with_attention.shapes", _with_shape, ([2, 4, 6], [2, 4, 5]), hint="ch15.with_attention.hint"),
+        Case("ch15.with_attention.keeps", _keeps_states, Q.tolist(), tolerance=1e-6, hint="ch15.with_attention.hint"),
+        Case("ch15.with_attention.values", lambda f: _plain(f(Q, K)), _reference_with(), tolerance=1e-5, hint="ch15.with_attention.hint"),
     ],
 }

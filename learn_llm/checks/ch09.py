@@ -1,120 +1,79 @@
-import torch
-from torch import nn
+import numpy as np
 
 from learn_llm.checking import Case
-from learn_llm.checks.ch05 import _plain as _plain_np
-
-MIA_T = [14, 17, 20, 22, 25, 28, 31, 33]
-MIA_S = [63, 90, 137, 148, 193, 234, 257, 288]
+from learn_llm.checks.ch05 import _plain
 
 
-def _plain(value):
-    """Tensor results as plain numbers and lists, so feedback reads like the lesson."""
-    if isinstance(value, torch.Tensor):
-        return value.detach().tolist()
-    if isinstance(value, (tuple, list)):
-        return type(value)(_plain(v) for v in value)
-    return _plain_np(value)
+def _batches(f, n, size):
+    """What the learner's batches gave: sizes, and whether together they cover 0..n-1 once."""
+    out = f(n, size, np.random.default_rng(3))
+    if not isinstance(out, list):
+        return _plain(out)
+    sizes = [len(b) for b in out]
+    joined = sorted(int(i) for b in out for i in b)
+    return sizes, joined == list(range(n))
 
 
-def _tiny_knobs():
-    X = torch.tensor([[1.0, 2.0], [0.0, -1.0]], dtype=torch.float64)
-    W1 = torch.tensor([[1.0, -1.0, 0.5], [2.0, 0.0, -1.0]], dtype=torch.float64)
-    b1 = torch.tensor([0.0, 1.0, -3.0], dtype=torch.float64)
-    W2 = torch.tensor([[1.0, 0.0], [0.0, 2.0], [-1.0, 1.0]], dtype=torch.float64)
-    b2 = torch.tensor([0.5, -0.5], dtype=torch.float64)
-    return X, W1, b1, W2, b2
+def _shuffled(f):
+    """The first batch differs from 0, 1, 2, ... (with this seed, a shuffle can't give that)."""
+    out = f(100, 10, np.random.default_rng(3))
+    return isinstance(out, list) and len(out) > 0 and [int(i) for i in out[0]] != list(range(10))
 
 
-def _scores(f):
-    return _plain(f(*_tiny_knobs()))
+def _adam(f, steps):
+    w, m, v = np.array([1.0, -2.0]), np.zeros(2), np.zeros(2)
+    for t in range(1, steps + 1):
+        out = f(w, m, v, np.array([0.5, -3.0]) * t, t, 0.1)
+        if not isinstance(out, tuple) or len(out) != 3:
+            return _plain(out)
+        w, m, v = out
+    return _plain(w)
 
 
-def _reference_scores():
-    X, W1, b1, W2, b2 = _tiny_knobs()
-    return (torch.relu(X @ W1 + b1) @ W2 + b2).tolist()
+def _adam_count(f):
+    """How many things adam_step gave back (None counts as 0, a single array as 1)."""
+    out = f(np.array([1.0, -2.0]), np.zeros(2), np.zeros(2), np.array([0.5, -3.0]), 1, 0.1)
+    return 0 if out is None else len(out) if isinstance(out, tuple) else 1
 
 
-def _kinds(f):
-    """The layers of a model, by name; anything else is reported as it is."""
-    model = f(32)
-    return [type(layer).__name__ for layer in model] if isinstance(model, nn.Sequential) else _plain(model)
+def _adam_reference(steps):
+    w, m, v = np.array([1.0, -2.0]), np.zeros(2), np.zeros(2)
+    for t in range(1, steps + 1):
+        g = np.array([0.5, -3.0]) * t
+        m = 0.9 * m + 0.1 * g
+        v = 0.999 * v + 0.001 * g * g
+        w = w - 0.1 * (m / (1 - 0.9 ** t)) / (np.sqrt(v / (1 - 0.999 ** t)) + 1e-8)
+    return w.tolist()
 
 
-def _knob_count(f):
-    return sum(p.numel() for p in f(32).parameters())
-
-
-def _layer_sizes(f):
-    a, _, b = f(32)
-    return [a.in_features, a.out_features, b.in_features, b.out_features]
-
-
-def _tiny_task():
-    torch.manual_seed(1)
-    return torch.rand(6, 4), torch.tensor([0, 1, 2, 0, 1, 2], dtype=torch.long)
-
-
-def _tiny_model():
-    torch.manual_seed(2)
-    return nn.Sequential(nn.Linear(4, 5), nn.ReLU(), nn.Linear(5, 3))
-
-
-def _steps(f, steps):
-    """Weights after `steps` of plain SGD; old blame left in .grad shows up as a wrong result."""
-    model, (X, labels) = _tiny_model(), _tiny_task()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
-    out = None
+def _momentum(f, steps):
+    w, velocity = np.array([1.0, -2.0]), np.zeros(2)
     for _ in range(steps):
-        out = f(model, optimizer, X, labels)
-    return out, model
-
-
-def _returns_number(f):
-    return type(_steps(f, 1)[0]).__name__
-
-
-def _moved(f):
-    return round(sum(p.sum().item() for p in _steps(f, 3)[1].parameters()), 5)
-
-
-def _losses(f):
-    model, (X, labels) = _tiny_model(), _tiny_task()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
-    first = f(model, optimizer, X, labels)
-    for _ in range(30):
-        last = f(model, optimizer, X, labels)
-    return last < first
-
-
-def _reference_moved():
-    from torch.nn.functional import cross_entropy
-
-    model, (X, labels) = _tiny_model(), _tiny_task()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
-    for _ in range(3):
-        optimizer.zero_grad()
-        cross_entropy(model(X), labels).backward()
-        optimizer.step()
-    return round(sum(p.sum().item() for p in model.parameters()), 5)
+        out = f(w, velocity, np.array([0.5, -3.0]), 0.1)
+        if not isinstance(out, tuple) or len(out) != 2:
+            return _plain(out)
+        w, velocity = out
+    return _plain((w, velocity))
 
 
 EXERCISES = {
-    "torch_gradient": [
-        Case("ch09.torch_gradient.tiny", lambda f: _plain(f(1.0, 0.0, [1, 2], [2, 4])), (-5, -3), tolerance=1e-4, hint="ch09.torch_gradient.hint"),
-        Case("ch09.torch_gradient.mia", lambda f: _plain(f(10.0, -60.0, MIA_T, MIA_S)), (-94, 2.5), tolerance=1e-3, hint="ch09.torch_gradient.hint"),
+    "variance": [
+        Case("ch09.variance.small", lambda f: _plain(f(np.array([1.0, 3.0]))), 1.0, tolerance=1e-12, hint="ch09.variance.hint"),
+        Case("ch09.variance.five", lambda f: _plain(f(np.array([2.0, 4.0, 4.0, 4.0, 6.0]))), 1.6, tolerance=1e-12, hint="ch09.variance.hint"),
+        Case("ch09.variance.same", lambda f: _plain(f(np.array([7.0, 7.0, 7.0]))), 0.0, tolerance=1e-12, hint="ch09.variance.hint"),
     ],
-    "scores": [
-        Case("ch09.scores.tiny", _scores, _reference_scores(), tolerance=1e-9, hint="ch09.scores.hint"),
+    "batches": [
+        Case("ch09.batches.even", lambda f: _batches(f, 10, 5), ([5, 5], True), hint="ch09.batches.hint"),
+        Case("ch09.batches.uneven", lambda f: _batches(f, 10, 4), ([4, 4, 2], True), hint="ch09.batches.hint"),
+        Case("ch09.batches.shuffled", _shuffled, True, hint="ch09.batches.shuffle_hint"),
     ],
-    "make_model": [
-        Case("ch09.make_model.layers", _kinds, ["Linear", "ReLU", "Linear"], hint="ch09.make_model.hint"),
-        Case("ch09.make_model.sizes", _layer_sizes, [784, 32, 32, 10], hint="ch09.make_model.hint"),
-        Case("ch09.make_model.knobs", _knob_count, 784 * 32 + 32 + 32 * 10 + 10, hint="ch09.make_model.hint"),
+    "momentum_step": [
+        Case("ch09.momentum_step.one", lambda f: _momentum(f, 1), ([0.95, -1.7], [0.5, -3.0]), tolerance=1e-12, hint="ch09.momentum_step.hint"),
+        Case("ch09.momentum_step.two", lambda f: _momentum(f, 2), ([0.855, -1.13], [0.95, -5.7]), tolerance=1e-12, hint="ch09.momentum_step.hint"),
     ],
-    "train_step": [
-        Case("ch09.train_step.number", _returns_number, "float", hint="ch09.train_step.number_hint"),
-        Case("ch09.train_step.steps", _moved, _reference_moved(), tolerance=1e-4, hint="ch09.train_step.hint"),
-        Case("ch09.train_step.learns", _losses, True, hint="ch09.train_step.hint"),
+    "adam_step": [
+        Case("ch09.adam_step.count", _adam_count, 3, hint="ch09.adam_step.hint"),
+        Case("ch09.adam_step.one", lambda f: _adam(f, 1), _adam_reference(1), tolerance=1e-6, hint="ch09.adam_step.hint"),
+        Case("ch09.adam_step.five", lambda f: _adam(f, 5), _adam_reference(5), tolerance=1e-6, hint="ch09.adam_step.hint"),
     ],
 }

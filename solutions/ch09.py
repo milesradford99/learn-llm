@@ -1,33 +1,28 @@
 """Reference solutions for chapter 09. Peek only after trying!"""
 
-import torch
-import torch.nn.functional as F
-from torch import nn
+import numpy as np
 
 
-def torch_gradient(w, b, xs, ys):
-    w = torch.tensor(w, requires_grad=True)
-    b = torch.tensor(b, requires_grad=True)
-    x = torch.tensor(xs, dtype=torch.float32)
-    y = torch.tensor(ys, dtype=torch.float32)
-    e = w * x + b - y
-    L = torch.mean(e * e)
-    L.backward()
-    return w.grad.item(), b.grad.item()
+def variance(v):
+    return np.mean((v - np.mean(v)) ** 2)
 
 
-def scores(X, W1, b1, W2, b2):
-    return torch.relu(X @ W1 + b1) @ W2 + b2
+def batches(n, size, rng):
+    order = rng.permutation(n)
+    result = []
+    for start in range(0, n, size):
+        result.append(order[start:start + size])
+    return result
 
 
-def make_model(hidden):
-    return nn.Sequential(nn.Linear(784, hidden), nn.ReLU(), nn.Linear(hidden, 10))
+def momentum_step(w, velocity, grad, rate):
+    velocity = 0.9 * velocity + grad
+    return w - rate * velocity, velocity
 
 
-def train_step(model, optimizer, X, labels):
-    optimizer.zero_grad()
-    S = model(X)
-    loss = F.cross_entropy(S, labels)
-    loss.backward()
-    optimizer.step()
-    return loss.item()
+def adam_step(w, m, v, grad, t, rate):
+    m = 0.9 * m + 0.1 * grad
+    v = 0.999 * v + 0.001 * grad * grad
+    m_hat = m / (1 - 0.9 ** t)
+    v_hat = v / (1 - 0.999 ** t)
+    return w - rate * m_hat / (np.sqrt(v_hat) + 1e-8), m, v

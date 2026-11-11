@@ -70,23 +70,36 @@ uses = [
 introduces = [
     "classification", "label", "pixel", "indexing", "reshape", "numpy-zeros",
     "matrix-times-matrix", "argmax", "axis", "comparing-arrays", "accuracy", "test-set",
-    "exp", "softmax", "softmax-shift", "keepdims", "log", "surprise", "cross-entropy",
-    "one-hot", "exp-slope", "log-slope", "softmax-gradient", "transpose", "numpy-sum",
+    "boolean-rows", "template",
 ]
+toolbox = ["indexing", "numpy-zeros", "comparing-arrays", "boolean-rows"]
 uses = [
     "matmul-operator", "shape", "shape-rule", "broadcasting", "elementwise", "numpy-array",
-    "numpy-mean", "vector-times-matrix", "vectorized-gradient", "gradient-descent",
-    "learning-rate", "nudge", "chain-rule", "blame", "blames-add", "local-slope",
-    "derivative-rules", "power", "builtin-range", "builtin-len", "loop", "gradient-check",
-    "centering-inputs", "chart-reading", "tuple",
+    "numpy-mean", "vector-times-matrix", "dot-product", "builtin-range", "builtin-len", "loop",
+    "centering-inputs", "tuple",
 ]
 
 [chapters.07]
+introduces = [
+    "exp", "softmax", "softmax-shift", "keepdims", "log", "surprise", "cross-entropy",
+    "one-hot", "exp-slope", "log-slope", "softmax-gradient", "transpose", "numpy-sum",
+]
+toolbox = ["keepdims", "numpy-sum"]
+uses = [
+    "classification", "label", "accuracy", "argmax", "axis", "test-set", "template",
+    "matrix-times-matrix", "matmul-operator", "shape-rule", "broadcasting", "elementwise",
+    "numpy-mean", "vectorized-gradient", "gradient-descent", "learning-rate", "nudge",
+    "chain-rule", "blame", "blames-add", "local-slope", "derivative-rules", "power",
+    "gradient-check", "chart-reading", "tuple",
+]
+
+[chapters.08]
 introduces = [
     "model-capacity", "relu", "piecewise-line", "hidden-layer", "neural-network",
     "matmul-grouping", "random-generator", "random-init", "input-gradient", "relu-slope",
     "boolean-mask", "two-layer-backprop",
 ]
+toolbox = ["random-generator"]
 uses = [
     "softmax", "cross-entropy", "accuracy", "one-hot", "matrix-times-matrix", "transpose",
     "softmax-gradient", "numpy-sum", "axis", "keepdims", "chain-rule", "blames-add",
@@ -94,13 +107,14 @@ uses = [
     "reshape", "numpy-zeros", "builtin-range", "curve-model", "comparing-arrays", "test-set",
 ]
 
-[chapters.08]
+[chapters.09]
 introduces = [
     "variance", "typical-size", "numpy-sqrt", "zero-init-symmetry", "variances-add",
     "he-init", "vanishing-exploding", "mini-batch", "epoch", "permutation", "range-step",
     "slicing", "index-array", "argument-unpacking", "momentum", "moving-average", "adam",
     "bias-correction", "overfitting", "weight-decay", "numpy-eye", "numpy-abs",
 ]
+toolbox = ["permutation", "range-step", "slicing", "index-array"]
 uses = [
     "neural-network", "softmax", "two-layer-backprop", "accuracy", "one-hot", "random-generator",
     "random-init", "relu", "mean", "squaring", "gradient-descent", "learning-rate",
@@ -108,7 +122,7 @@ uses = [
     "derivative-rules", "centering-inputs", "elementwise", "function", "return-pair",
 ]
 
-[chapters.09]
+[chapters.10]
 introduces = [
     "library", "tensor", "bits-and-precision", "dtype", "dim", "requires-grad", "torch-backward",
     "item", "grads-accumulate", "fresh-forward", "torch-relu", "torch-cross-entropy",
@@ -116,6 +130,7 @@ introduces = [
     "nn-sequential", "parameters", "optimizer", "detach", "training-loop", "randperm",
     "float-method", "no-grad", "gpu", "device", "pytorch",
 ]
+toolbox = ["dtype", "list-comprehension", "numpy-from-tensor", "builtin-max"]
 uses = [
     "numpy-array", "matmul-operator", "shape", "indexing", "slicing", "axis", "recording-book",
     "blame", "backpropagation", "gradient-check", "softmax", "cross-entropy", "two-layer-backprop",
@@ -124,7 +139,7 @@ uses = [
     "he-init", "neural-network", "relu",
 ]
 
-[chapters.10]
+[chapters.11]
 introduces = [
     "translation-problem", "rng-integers", "two-way-slice", "kernel", "convolution",
     "convolution-output-size", "feature-map", "numpy-roll", "knob-sharing", "max-pooling",
@@ -138,7 +153,7 @@ uses = [
     "argument-unpacking", "parameters", "if",
 ]
 
-[chapters.11]
+[chapters.12]
 introduces = [
     "text-dataset", "one-hot-words", "word-vector", "distributional-idea", "string-lower",
     "string-join", "dict", "dict-get", "builtin-sorted", "vocabulary", "word-id", "filtered-list",
@@ -152,7 +167,7 @@ uses = [
     "matmul-operator", "epoch", "mini-batch",
 ]
 
-[chapters.12]
+[chapters.13]
 introduces = [
     "language-model", "unk-and-end", "conditional-probability", "bigram", "list-from-one",
     "smoothing", "sampling", "rng-choice", "log-of-product", "perplexity", "pair-indexing",
@@ -165,7 +180,7 @@ uses = [
     "test-set", "overfitting", "argsort", "numpy-array", "if", "not-in", "string-join",
 ]
 
-[chapters.13]
+[chapters.14]
 introduces = [
     "recurrence", "tanh", "shared-knobs-in-time", "all-of-a-dimension", "torch-stack",
     "next-word-targets", "windows", "blame-through-time", "lstm", "lstm-cell", "gate", "torch-cat",
@@ -179,12 +194,13 @@ uses = [
     "torch-backward", "negative-sampling", "sampling", "vocabulary", "dict", "dict-get",
 ]
 
-[chapters.14]
+[chapters.15]
 introduces = [
     "encoder-decoder", "bottleneck", "torch-flip", "teacher-forcing", "greedy-decoding",
     "weighted-average", "query-key-value", "attention", "attention-matmul", "attention-map",
     "numpy-stack",
 ]
+toolbox = ["torch-flip", "numpy-stack"]
 uses = [
     "lstm", "nn-embedding", "softmax", "dot-product", "cosine-similarity", "vector-times-matrix",
     "torch-cat", "gradient-clipping", "residual", "transpose", "rng-integers",
@@ -192,20 +208,31 @@ uses = [
     "reshape-minus-one",
 ]
 
-[chapters.15]
+[chapters.16]
 introduces = [
-    "transformer", "self-attention", "future-mask", "torch-triu", "masked-fill", "attention-scale",
-    "negative-dimensions", "multi-head", "permutation-blindness", "position-table", "layer-norm",
-    "torch-var", "block", "pre-norm", "torch-arange", "list-from-end", "gpt",
+    "self-attention", "future-mask", "torch-triu", "masked-fill", "attention-scale",
+    "negative-dimensions", "multi-head", "permutation-blindness", "torch-arange",
 ]
+toolbox = ["torch-triu", "masked-fill", "negative-dimensions", "torch-arange"]
 uses = [
-    "attention", "query-key-value", "attention-matmul", "residual", "variances-add", "variance",
-    "nn-linear", "nn-module-subclass", "nn-embedding", "softmax", "training-loop", "gradient-clipping",
-    "perplexity", "leaderboard", "temperature", "windows", "attention-map", "torch-flip",
-    "floor-division", "transpose",
+    "attention", "query-key-value", "attention-matmul", "variances-add", "variance",
+    "nn-linear", "nn-module-subclass", "softmax", "torch-flip", "floor-division", "transpose",
 ]
 
-[chapters.16]
+[chapters.17]
+introduces = [
+    "transformer", "position-table", "layer-norm", "torch-var", "block", "pre-norm",
+    "list-from-end", "gpt",
+]
+toolbox = ["torch-var", "list-from-end"]
+uses = [
+    "self-attention", "future-mask", "attention-scale", "multi-head", "permutation-blindness",
+    "torch-arange", "residual", "variance", "nn-linear", "nn-module-subclass", "nn-embedding",
+    "softmax", "training-loop", "gradient-clipping", "perplexity", "leaderboard", "temperature",
+    "windows", "attention-map", "broadcasting",
+]
+
+[chapters.18]
 introduces = [
     "pretraining", "fine-tuning", "freezing", "conditional-expression", "bincount", "majority-baseline",
     "precision", "recall", "elementwise-and", "margin-of-error", "state-dict", "leakage", "benchmark",
@@ -217,7 +244,7 @@ uses = [
     "list-comprehension", "not-equal", "builtin-max", "mixing-models", "log",
 ]
 
-[chapters.17]
+[chapters.19]
 introduces = [
     "byte", "utf-8", "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "token", "bpe",
     "tie-breaking", "while-loop", "and-operator", "max-with-key", "dict-items", "byte-string",
@@ -229,7 +256,55 @@ uses = [
     "dict-values", "tuple-key", "update-variable",
 ]
 
-[chapters.18]
+[chapters.40]
+introduces = ["agent", "tool-call", "harness", "message-roles", "stop-reason", "tool-result", "try-except", "tool-failure-as-data", "agent-turn", "context-window", "fake-model", "f-string", "builtin-str", "raise-exception", "builtin-ValueError", "module-learn_llm.agents"]
+uses = ["function", "list", "dict", "list-comprehension", "while-loop", "if", "comparison", "loop", "list-append", "builtin-range", "builtin-sum"]
+
+[chapters.41]
+introduces = ["monorepo", "read-typescript", "steering", "follow-up", "list-pop", "agent-hooks", "agent-events", "length-stop", "lambda", "or-operator"]
+uses = ["agent", "tool-call", "tool-result", "stop-reason", "try-except", "while-loop"]
+
+[chapters.42]
+introduces = ["stream-event", "delta", "failure-as-message", "json", "module-json", "string-join-empty", "builtin-isinstance", "provider-formats", "transcript-tools"]
+uses = ["tool-call", "tool-result", "dict-get", "dict", "list-comprehension", "or-operator", "attribute"]
+
+[chapters.43]
+introduces = ["output-truncation", "unique-edit", "fuzzy-match", "string-tools", "parallel-tools", "file-mutation-queue"]
+uses = ["byte", "string-encode", "try-except", "tool-result", "dict", "list-comprehension", "string-join", "or-operator"]
+
+[chapters.44]
+introduces = ["append-only-log", "session-tree", "leaf-pointer", "active-branch", "is-none", "list-reverse", "projection", "jsonl"]
+uses = ["json", "module-json", "while-loop", "raise-exception", "dict", "list-comprehension", "tool-result", "string-tools", "string-join"]
+
+[chapters.45]
+introduces = ["token-estimate", "math-module", "math-ceil", "compaction", "cut-point", "structured-summary", "retry-backoff", "overflow-recovery"]
+uses = ["builtin-min", "builtin-max", "builtin-reversed", "builtin-range", "json", "module-json", "projection", "power", "tool-result", "or-operator"]
+
+[chapters.46]
+introduces = ["system-prompt-sections", "loop-continue", "skill", "progressive-disclosure", "xml-escaping", "extension", "first-block-wins", "project-trust", "mcp"]
+uses = ["dict-items", "string-tools", "string-join", "is-none", "list-comprehension", "agent-hooks", "agent-events"]
+
+[chapters.47]
+introduces = ["router-and-workers", "attention-principle", "trigger", "thread", "eval", "ticket", "mandate", "subscription", "idempotent-intake", "direct-delivery", "essay-vs-prototype"]
+uses = ["raise-exception", "builtin-ValueError", "dict", "dict-get", "list-append", "if", "loop", "agent"]
+
+[chapters.48]
+introduces = ["strength", "accept-mode", "admission-table", "admission-gate", "assessment", "model-proposes-code-disposes", "per-thread-batch", "eval-deadline", "mandate-revalidation"]
+uses = ["trigger", "thread", "eval", "mandate", "ticket", "is-none", "attention-principle", "read-typescript", "comparison"]
+
+[chapters.49]
+introduces = ["fan-out", "resume-rules", "follow-up-ownership", "hand-back", "ticket-stage", "follows-done", "explicit-states"]
+uses = ["subscription", "ticket", "mandate", "is-none", "builtin-sorted", "tuple", "indexing", "list-comprehension", "session-tree"]
+
+[chapters.50]
+introduces = ["one-writer", "transaction", "effect-outbox", "effect-coalescing", "worker-slots", "non-blocking-loop", "recovery-note", "not-a-boundary"]
+uses = ["retry-backoff", "builtin-min", "power", "dict", "ticket", "attention-principle", "append-only-log", "agent-hooks"]
+
+[chapters.51]
+introduces = ["prompt-order", "prompt-precedence", "inline-and-spill", "chain-of-recall", "module-re", "regex", "builtin-string-slice", "pi-vs-super-agent"]
+uses = ["transcript-tools", "output-truncation", "strength", "fan-out", "worker-slots"]
+
+[chapters.20]
 introduces = [
     "fair-tokens", "rms-norm", "angle", "cos-sin", "radian", "math-pi", "rotation", "rotation-dot",
     "rope", "ellipsis-index", "new-axis", "silu", "swiglu", "adamw", "warmup", "cosine-decay",
@@ -242,7 +317,7 @@ uses = [
     "chart-reading", "variance",
 ]
 
-[chapters.19]
+[chapters.22]
 introduces = [
     "module-time", "time-a-function", "flops", "machine-speed", "training-flops", "utilisation",
     "training-memory", "activations", "float-formats", "finfo", "mixed-precision", "memory-bound",
@@ -254,7 +329,7 @@ uses = [
     "torch-backward", "block", "builtin-print",
 ]
 
-[chapters.20]
+[chapters.23]
 introduces = [
     "process", "data-parallel", "mean-of-equal-means", "gradient-accumulation", "builtin-slice",
     "all-reduce", "ring-all-reduce", "spawned-process", "sharding", "zero-stages", "remainder",
@@ -267,6 +342,7 @@ uses = [
 ]
 
 [concepts]
+gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
 error-message = "a red error box means Python couldn't follow an instruction; read the last line, fix, re-run"
 arithmetic = "+ - * / on numbers, typed with * and / (not × ÷)"
@@ -380,6 +456,8 @@ random-init = "networks start from small random knobs, not zeros"
 input-gradient = "dH = G @ W2.T: a value feeding many scores collects their blames"
 relu-slope = "ReLU passes blame where z > 0 (slope 1) and blocks it elsewhere (slope 0)"
 boolean-mask = "multiplying by Z > 0 counts True as 1 and False as 0"
+boolean-rows = "M[flags] keeps the rows of M where flags is True; flags often comes from labels == c"
+template = "a digit's column of knobs seen as a picture; the mean picture of a digit is a first template"
 two-layer-backprop = "G, dW2 = H.T @ G, dH = G @ W2.T, dZ = dH * (Z > 0), dW1 = X.T @ dZ"
 variance = "mean of (number − mean)²: how spread out numbers are"
 typical-size = "the square root of the variance (or of the mean square, for numbers centred on 0)"
@@ -509,7 +587,6 @@ next-word-targets = "the answers are the same text moved along by one"
 blame-through-time = "blame on an early word is multiplied at every later word, so it fades"
 lstm = "a recurrent network with a cell changed by adding, controlled by gates"
 lstm-cell = "c = f × c + i × n, h = o × tanh(c)"
-gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
 torch-cat = "torch.cat([a, b], dim=1) joins tensors side by side"
 forget-gate-bias = "a fresh forget gate is near 0.5 and fades the cell; a big bias opens it and blame survives"
 reshape-minus-one = "reshape(-1, size): -1 means whatever number fits"
@@ -540,7 +617,7 @@ multi-head = "cut each vector into pieces and run attention on each piece side b
 permutation-blindness = "attention alone ignores word order"
 position-table = "a learned vector per position, added to the word's vector"
 layer-norm = "rescale each vector to mean 0 and typical size 1"
-torch-var = "torch.var(x, dim=-1, keepdim=True, unbiased=False) is chapter 08's variance"
+torch-var = "torch.var(x, dim=-1, keepdim=True, unbiased=False) is chapter 09's variance"
 block = "x = x + attention(norm1(x)), then x = x + think(norm2(x))"
 pre-norm = "normalising just before each part, on the way into x + f(x)"
 torch-arange = "torch.arange(n) is 0, 1, …, n − 1"
@@ -578,6 +655,118 @@ byte-string = "b''.join(list) joins bytes"
 errors-replace = "errors='replace' shows a broken sequence as � instead of stopping"
 vocabulary-size = "more merges mean fewer tokens per text, but a bigger table to learn"
 per-word-scoring = "total surprise divided by words keeps scores comparable across tokenizers"
+
+# agents track
+agent = "a model, some tools and a loop: run tools until the model answers without asking for one"
+tool-call = "a request from the model, with a name, arguments and an id, that our program carries out"
+harness = "the program around the model, which runs the loop and everything it needs"
+message-roles = "a conversation is a list of user, assistant and toolResult messages; assistant messages hold blocks"
+stop-reason = "why the model stopped: stop, toolUse, length, error or aborted"
+tool-result = "a message answering one tool call through its id; every call needs exactly one"
+try-except = "try: runs lines; if one raises, except Exception as error: runs instead, and str(error) is the message"
+tool-failure-as-data = "a failed tool goes back to the model as an error result, not a crash"
+agent-turn = "one model call and the tools it asked for; a harness limits how many"
+context-window = "how much text a model can read at once"
+fake-model = "a scripted stand-in for a model, so the chapters run offline"
+monorepo = "one repository holding several packages"
+read-typescript = "enough TypeScript to read Pi: const, let, =>, ?., ??, spreads, template strings, await"
+steering = "a user message delivered after the current reply's tools, before the next model call"
+follow-up = "a user message delivered only once the agent would otherwise stop"
+list-pop = "queue.pop(0) removes and gives back the first item; list[-1] reads the last"
+agent-hooks = "named points where code plugs into a loop, such as beforeToolCall"
+agent-events = "a loop reports what it does as events, and interfaces are just listeners"
+length-stop = "a reply cut off by the output limit, whose tool calls can't be trusted"
+stream-event = "a reply arrives as small typed events, ending in done or error"
+delta = "a small piece of new content in a stream, tagged with its block's index"
+failure-as-message = "a stream never throws: a failure is a final message with stopReason error"
+json = "the standard text format for structured data: json.dumps and json.loads"
+module-json = "import json gives Python's JSON functions"
+string-join-empty = "\"\".join(pieces) glues strings together"
+builtin-isinstance = "isinstance(x, list) tests whether x is a list"
+provider-formats = "providers shape the same conversation differently; Anthropic groups results in a user message"
+transcript-tools = "Pi keeps prompts and tool declarations as system messages inside the transcript"
+lambda = "lambda a: a + 1 is a small nameless function"
+or-operator = "x or y holds if either test does"
+f-string = "f\"text {value}\" puts values into text"
+builtin-str = "str(x) makes text from a value"
+builtin-ValueError = "ValueError is the exception for a bad value"
+math-module = "import math gives maths functions"
+"module-learn_llm.agents" = "the course's offline kit: messages, a scripted model and a trace"
+output-truncation = "tool output is cut to line and byte limits, whole lines only, and the model is told"
+unique-edit = "an edit names text that must appear exactly once, so a stale view fails loudly"
+fuzzy-match = "comparing after stripping invisible differences such as trailing spaces"
+raise-exception = "raise ValueError(\"message\") raises an exception yourself"
+string-tools = "text.split, text.rstrip, text.strip, text.count, text.replace, text.startswith, text.lower"
+parallel-tools = "tools prepare in order, run together, and report in the original order"
+file-mutation-queue = "writes to one file wait for each other; different files don't"
+append-only-log = "entries are only ever added at the end, so a crash can lose at most the last line"
+session-tree = "each entry records its parent, so a session is a tree"
+leaf-pointer = "the entry you're currently at; moving it is how you branch"
+active-branch = "the path from the leaf to the root, which is what the model sees"
+is-none = "x is None and x is not None test for nothing"
+list-reverse = "list.reverse() turns a list around in place"
+projection = "what the model sees is computed from the log, which stays unchanged"
+jsonl = "one JSON object per line"
+token-estimate = "about 4 characters per token, when a real count isn't available"
+math-ceil = "math.ceil(x) rounds up"
+compaction = "replacing the old part of a conversation with a summary written by the model"
+cut-point = "where a compaction may begin keeping messages: never on a tool result"
+structured-summary = "a fixed form of summary that another model can carry on from"
+retry-backoff = "waiting longer after each failed try, up to a cap"
+overflow-recovery = "context overflow compacts once and retries; it never loops"
+system-prompt-sections = "a prompt built from named sections that can change one at a time"
+loop-continue = "continue jumps to the next time round a loop"
+skill = "a folder with a SKILL.md file: instructions for one kind of task, read when needed"
+progressive-disclosure = "list a short description, and load the full thing only when it's needed"
+xml-escaping = "replacing & < > so text can't break out of its tag"
+extension = "code loaded into the harness that can add tools and listen to events"
+first-block-wins = "the first handler to block a tool call ends the chain"
+project-trust = "asking before loading code-bearing settings from a folder; it doesn't limit tools"
+mcp = "Model Context Protocol, a standard for connecting tools from outside servers"
+# Super-agent chapters
+router-and-workers = "one resident Router dispatches; isolated Workers, one per Ticket, do the work"
+attention-principle = "take as little human attention as possible, and give as much value as possible"
+trigger = "one immutable event from a Source"
+thread = "Triggers in time order, such as one pull request's discussion"
+eval = "the judgement on a batch of Triggers: gate, then the model's assessment"
+ticket = "a unit of authorized work"
+mandate = "what an accept grants, and why; it never changes"
+subscription = "a many-to-many link from a Ticket to a Thread it hears"
+idempotent-intake = "a Trigger is stored once by id, and a filtered one is still stored"
+direct-delivery = "later messages on a subscribed Thread go straight to its Worker"
+essay-vs-prototype = "what the essay proposes is not always in the prototype's code"
+strength = "explicit (an allowed person asked) or inferred (the agent noticed)"
+accept-mode = "off, observe or auto: whether inferred candidates can start work"
+admission-table = "per scope, a cell for each combination of listed and addressed"
+admission-gate = "deterministic code that admits a Trigger with a strength, or refuses it"
+assessment = "the model's structured judgement of every enabled rule"
+model-proposes-code-disposes = "code turns a model's judgement into an outcome, and may downgrade it"
+per-thread-batch = "one Eval per Thread at a time; Triggers that arrive meanwhile wait as a batch"
+eval-deadline = "counts from delivery; two requeues, then unavailable"
+mandate-revalidation = "a Mandate is checked against today's Policy before ended work resumes"
+fan-out = "a Trigger reaches the live Tickets that subscribe to its Threads"
+resume-rules = "only a person's message on an own Thread wakes an ended Ticket a person didn't stop"
+follow-up-ownership = "a person's follow-up belongs to its Ticket's Worker, not to Eval"
+hand-back = "a Worker returns a message beyond its scope, with a reason, for a fresh Eval"
+ticket-stage = "the one thing an open Ticket waits for, worked out from stored facts"
+follows-done = "a pull-request Ticket ends when the pull requests it opened close"
+explicit-states = "stored states answer 'why' questions without a model's memory"
+one-writer = "each kind of state has exactly one writer"
+transaction = "a group of changes that happen all together or not at all"
+effect-outbox = "work is stored with the decision that caused it, and done after commit"
+effect-coalescing = "one row per kind and key; a new payload replaces the old one in place"
+worker-slots = "a limit on running Workers, with one extra slot for a person's message"
+non-blocking-loop = "long commands move to the background so a Worker can still hear people"
+recovery-note = "after a restart, check before repeating any outside action"
+not-a-boundary = "wrappers and blocked commands are defaults, not security"
+prompt-order = "a fixed assembly order, with the changing Policy last"
+prompt-precedence = "facts enforced by code outrank every prompt; outside text is only data"
+inline-and-spill = "put likely-needed text in context, and cut the rest behind a pointer"
+chain-of-recall = "cards carry related ids, so a model can follow them hop by hop"
+module-re = "import re gives regular expressions"
+regex = "re.sub(r'\\s+', ' ', text) replaces every match of a pattern"
+builtin-string-slice = "text[:160] keeps the first 160 characters"
+pi-vs-super-agent = "Pi trusts the person; Super-agent protects the team's attention"
 fair-tokens = "the token model reads the same text as the word models, rare words as <unk>, scored per word"
 rms-norm = "divide each vector by its root mean square, then multiply by a learned gain"
 angle = "how far round a circle you've walked"

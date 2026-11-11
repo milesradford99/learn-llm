@@ -1,7 +1,7 @@
 # Curriculum design
 
 Tier 2, Track A. Status: decided 2026-10-24: route R3, the recommended gradient
-combination, and the same English text for every language from ch 11. Decisions live in
+combination, and the same English text for every language from ch 12. Decisions live in
 SCOPE.md; this file keeps the reasoning and the rejected options.
 
 ## Brief
@@ -51,9 +51,9 @@ These are the parts that make the promise checkable rather than a hope.
 |---|---|---|---|
 | **R1** | Course order as drafted: vision (231n) → language (224N) → scale (336) → serving | None; each part has its own datasets | Most faithful to sources; least continuity between parts |
 | **R2** | One problem from start to end: predict the next character, solved better and better (counting → linear → MLP → RNN → attention → transformer → serving) | One dataset and one leaderboard for the whole course | Strongest continuity; vision shrinks to one optional detour; ch 01–02 harder to picture |
-| **R3** (recommended) | Numbers → digits → text. Learn the machinery on things you can see (a line, then handwritten digits, then a small CNN), then switch once to text, and from then on one text dataset and one leaderboard to the end | Two through-lines, one switch at ch 11 | Keeps 231n's core and easy visuals early; one deliberate switch, announced and motivated |
+| **R3** (recommended) | Numbers → digits → text. Learn the machinery on things you can see (a line, then handwritten digits, then a small CNN), then switch once to text, and from then on one text dataset and one leaderboard to the end | Two through-lines, one switch at ch 12 | Keeps 231n's core and easy visuals early; one deliberate switch, announced and motivated |
 
-R3 adds a **leaderboard** from ch 11: every new model is scored on the same held-out text
+R3 adds a **leaderboard** from ch 12: every new model is scored on the same held-out text
 (perplexity), so each chapter visibly beats the last. For zh-CN, the text dataset could be
 Chinese, character-level (open question).
 
@@ -86,7 +86,7 @@ Headline options; the recommendation combines several.
 **Recommended:** 1 + 2 + 3 + 4 + 6 + 7, with 5 if a spike shows marimo can do it smoothly,
 and notation introduced in ch 02 (not as late as option 8) once the nudge ratio is familiar.
 
-## Sketch: chapters 01–07 under R3 and the recommended approach
+## Sketch: chapters 01–08 under R3 and the recommended approach
 
 (2026-10-25: a new chapter 04, "Keeping the books", builds the automatic backprop engine, so
 the chapters below from "Many numbers at once" on are one number higher than written.)
@@ -116,7 +116,7 @@ To show what "no gaps" means in practice, here is the step sequence.
 - **06 Neural networks.** Why a straight line can't bend; ReLU. Matrix backprop derived one
   entry at a time (option 6). The learner's ch 03 engine and the matrix version must agree.
 
-## Step plan: chapters 06–08 (written 2026-10-25)
+## Step plan: chapters 06–09 (written 2026-10-25)
 
 Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter works offline.
 
@@ -145,7 +145,7 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   scale is about √(2 / inputs). Moving averages → momentum (ch 02's crawling `b`, fixed);
   dividing by the size of recent slopes → Adam.
 
-## Step plan: chapters 09–11 (written 2026-10-31)
+## Step plan: chapters 10–12 (written 2026-10-31)
 
 - **09 Hello PyTorch.** Not a new subject: each piece is compared with the learner's own. Tensors
   and dtypes (32 against 64 bits, why last digits differ); `requires_grad` and `backward()` as
@@ -162,9 +162,9 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   Dictionaries to count, ids, cosine similarity, skip-gram pairs. Softmax over 2,000 words is too
   slow, so a yes/no question: the sigmoid is softmax over `s` and 0, and negative sampling reuses
   chapter 06's surprise. `nn.Embedding`, then nearest words and analogies, with their limits. The
-  leaderboard starts in chapter 12, once there is a language model to score.
+  leaderboard starts in chapter 13, once there is a language model to score.
 
-## Step plan: chapters 12–14 (written 2026-11-01)
+## Step plan: chapters 13–15 (written 2026-11-01)
 
 - **12 Predicting the next word.** No gradients: counting. Conditional probability from a tiny
   text, a bigram table, smoothing because −log 0 is infinite, sampling, then perplexity derived so
@@ -180,7 +180,7 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   diagonal nobody asked for. Not on the leaderboard: that's for the transformer, which next chapter
   answers the question of whether the LSTMs are needed at all.
 
-## Step plan: chapters 15–17 (written 2026-11-01)
+## Step plan: chapters 16–19 (written 2026-11-01)
 
 - **15 The Transformer.** Self-attention, the future mask, scaling by √d (variances add), multi-head
   by cutting vectors, a measured demo that attention ignores order, a position table, layer norm,
@@ -193,12 +193,39 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   here. 500 merges on 300 stories: 3 bytes per token, whole-story round trip, Chinese survives.
   Scores stay per word when later chapters retrain on tokens.
 
-## Step plan: chapters 18–20 (written 2026-11-09)
+## Step plan: agents track, chapters 40–51 (written 2026-11-01)
+
+The brief: finish able to say "I know Pi and DeepSeek's Super-agent, their source and their architecture", and
+defend it. The promise differs from the main course in one way: the reader finished chapter 19,
+so Python is assumed and only new features are taught. Everything else carries over: toolboxes
+just in time, the ledger, on-page checks, no required links, en and zh-CN.
+
+Each chapter has one rhythm: quote the real code, then rebuild the mechanism in Python, with
+checks built from the behaviour of the source (`Tool X not found`, 2,000 lines and 50 KB, warn
+at 3 and stop at 5). A scripted `FakeModel` plays the model, in `learn_llm/agents.py`. Excerpts
+can't drift unnoticed: `learn_llm/source_check.py` compares every one with a checkout.
+
+- **40–46, Pi:** depth on the loop. Chapter 40 gives the reader a working agent in 20 lines and
+  lists what's wrong with it, and each later chapter is one of those problems: steering, streams
+  and providers, tools, the session tree, compaction, then extensions and trust.
+- **47–51, Super-agent:** many loops working for a team. The Router and Workers, the gate and
+  Mandates, Subscriptions and Ticket stages, the store-first engine, then prompts and context.
+  The prototype differs from DeepSeek's essay, so every claim says which one it rests on. It's
+  taught by contrast, so each chapter names what Pi does instead.
+- **41 ends with an exam:** twelve graded questions, then seven practical tasks with real models,
+  because the course is honest that reading isn't experience. The tasks need keys and money, so
+  they stay outside the graded path.
+
+Rejected: a separate top-level folder with its own framework copy (it would fork the checks,
+ledger and i18n); numbering from 18 (it would collide with the main course's map); chapters that
+need a real API key (it breaks "no accounts" and gives different results each run).
+
+## Step plan: chapters 20–23 (written 2026-11-09)
 
 - **18 A modern transformer.** Fair tokens first (same text as the word models, scored per word).
   RMSNorm, angles and rotations taught from the circle, RoPE, SwiGLU, AdamW checked against
   PyTorch, warmup and cosine, checkpoints that resume exactly. Measured on the same text and time:
-  chapter 15's design 23.4, modern 19.3. Spelling rare words out costs about 40% more.
+  chapter 17's design 23.4, modern 19.3. Spelling rare words out costs about 40% more.
 - **19 Making it fast.** Timing, FLOPs of a product and of training (6N per token), the machine's
   speed and a run's utilisation, Adam's 16 bytes per knob. bfloat16 measured on the learner's own
   machine (about 100 times slower on the test CPU). Tiled attention with an online softmax, then
@@ -213,11 +240,11 @@ Data: a bundled 12,000-image MNIST subset (`learn_llm/data`), so every chapter w
   detour and the first gradient chapters are harder to picture.
 - Gradients: **the recommended combination** (user). Option 8 (no notation until ch 06)
   rejected: readers would meet standard notation too late to connect with other material.
-- Text from ch 11: **the same English text for every language** (user). One dataset and one
+- Text from ch 12: **the same English text for every language** (user). One dataset and one
   set of expected numbers.
 - Chapter 04 is a new chapter, "Keeping the books", for the automatic engine (user, 2026-10-25).
   Folding it into "Many numbers at once" would have taught two hard new ideas (classes and
   matrices) in one chapter.
-- Chapters 06–08 use a bundled MNIST subset (user, 2026-10-25). Normalization layers move to
+- Chapters 06–09 use a bundled MNIST subset (user, 2026-10-25). Normalization layers move to
   the Transformer chapter, where layer norm is first needed; dropout is mentioned only, since
   weight decay already shows regularization (agent-default).

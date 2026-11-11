@@ -9,23 +9,11 @@ def softmax(S):
     return E / np.sum(E, axis=1, keepdims=True)
 
 
-def relu(Z):
-    return np.maximum(Z, 0)
+def cross_entropy(P, Y):
+    return -np.mean(np.sum(Y * np.log(P), axis=1))
 
 
-def forward(X, W1, b1, W2, b2):
-    Z = X @ W1 + b1
-    H = relu(Z)
-    S = H @ W2 + b2
-    return Z, H, S
-
-
-def backward(X, Y, Z, H, S, W2):
-    G = (softmax(S) - Y) / len(X)
-    dW2 = H.T @ G
-    db2 = np.sum(G, axis=0)
-    dH = G @ W2.T
-    dZ = dH * (Z > 0)
-    dW1 = X.T @ dZ
-    db1 = np.sum(dZ, axis=0)
-    return dW1, db1, dW2, db2
+def gradient(X, Y, W, b):
+    P = softmax(X @ W + b)
+    G = (P - Y) / len(X)
+    return X.T @ G, np.sum(G, axis=0)

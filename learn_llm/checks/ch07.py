@@ -3,14 +3,11 @@ import numpy as np
 from learn_llm.checking import Case
 from learn_llm.checks.ch05 import _plain
 
-# A tiny network: 2 pictures, 3 pixels, 2 hidden units, 2 digits. One hidden value is
-# negative before the bend, so a wrong ReLU slope shows.
-X = np.array([[1.0, 0.0, 2.0], [0.5, 1.0, -1.0]])
-Y = np.array([[1.0, 0.0], [0.0, 1.0]])
-W1 = np.array([[0.5, -1.0], [1.0, 0.5], [-0.25, 0.5]])
-B1 = np.array([0.1, -0.2])
-W2 = np.array([[1.0, -0.5], [0.5, 2.0]])
-B2 = np.array([0.0, 0.3])
+# Small inputs whose answers can be worked out by hand.
+X_TINY = [[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]]
+Y_TINY = [[1, 0, 0], [0, 0, 1], [0, 1, 0]]
+W_TINY = [[0.5, -1.0, 0.0], [0.0, 1.0, -0.5]]
+B_TINY = [0.0, 0.5, 0.0]
 
 
 def _softmax(S):
@@ -18,62 +15,36 @@ def _softmax(S):
     return E / np.sum(E, axis=1, keepdims=True)
 
 
-def _forward():
-    Z = X @ W1 + B1
-    H = np.maximum(Z, 0)
-    return Z, H, H @ W2 + B2
+def _gradient(X, Y, W, b):
+    G = (_softmax(X @ W + b) - Y) / len(X)
+    return (X.T @ G).tolist(), np.sum(G, axis=0).tolist()
 
 
-def _backward():
-    Z, H, S = _forward()
-    G = (_softmax(S) - Y) / len(X)
-    dZ = (G @ W2.T) * (Z > 0)
-    return X.T @ dZ, np.sum(dZ, axis=0), H.T @ G, np.sum(G, axis=0)
+def _a(rows):
+    return np.array(rows, dtype=float)
 
 
-def _list(values):
-    return tuple(np.asarray(v).tolist() for v in values)
+def _call(f, *args):
+    return _plain(f(*[_a(a) for a in args]))
 
 
-def _count(f):
-    """How many things forward gave back (None counts as 0, a single array as 1)."""
-    out = f(X, W1, B1, W2, B2)
-    return 0 if out is None else len(out) if isinstance(out, tuple) else 1
-
-
-def _part(i):
-    """Item i of forward's (Z, H, S); anything else is shown as it is, for the hint to explain."""
-    def get(f):
-        out = f(X, W1, B1, W2, B2)
-        if not isinstance(out, tuple) or len(out) != 3:
-            return _plain(out)
-        return _plain(out[i])
-    return get
-
-
-def _grads(part):
-    """backward's slopes for one layer: (dW2, db2) or (dW1, db1); anything else shown as it is."""
-    def get(f):
-        out = f(X, Y, *_forward(), W2)
-        if not isinstance(out, tuple) or len(out) != 4:
-            return _plain(out)
-        return _plain(out[part])
-    return get
+# Two rows of three: a missing keepdims can't hide behind a square matrix.
+ROWS = [[1, 2, 3], [10, 20, 30]]
 
 
 EXERCISES = {
-    "relu": [
-        Case("ch07.relu.mixed", lambda f: _plain(f(np.array([[-2.0, 0.0, 3.0], [1.5, -0.5, 0.0]]))), [[0.0, 0.0, 3.0], [1.5, 0.0, 0.0]], tolerance=1e-12, hint="ch07.relu.hint"),
-        Case("ch07.relu.shape", lambda f: list(np.shape(f(np.zeros((4, 7))))), [4, 7], hint="ch07.relu.hint"),
+    "softmax": [
+        Case("ch07.softmax.three", lambda f: _call(f, [[2, 1, 0.1]]), _softmax(_a([[2, 1, 0.1]])).tolist(), tolerance=1e-6, hint="ch07.softmax.hint"),
+        Case("ch07.softmax.rows", lambda f: _call(f, ROWS), _softmax(_a(ROWS)).tolist(), tolerance=1e-6, hint="ch07.softmax.rows_hint"),
+        Case("ch07.softmax.huge", lambda f: _call(f, [[1000, 1000]]), [[0.5, 0.5]], tolerance=1e-9, hint="ch07.softmax.huge_hint"),
     ],
-    "forward": [
-        Case("ch07.forward.count", _count, 3, hint="ch07.forward.hint"),
-        Case("ch07.forward.z", _part(0), _forward()[0].tolist(), tolerance=1e-9, hint="ch07.forward.hint"),
-        Case("ch07.forward.h", _part(1), _forward()[1].tolist(), tolerance=1e-9, hint="ch07.forward.hint"),
-        Case("ch07.forward.s", _part(2), _forward()[2].tolist(), tolerance=1e-9, hint="ch07.forward.hint"),
+    "cross_entropy": [
+        Case("ch07.cross_entropy.half", lambda f: _call(f, [[0.5, 0.5]], [[1, 0]]), float(np.log(2)), tolerance=1e-9, hint="ch07.cross_entropy.hint"),
+        Case("ch07.cross_entropy.ten", lambda f: _call(f, [[0.1] * 10], [[0] * 9 + [1]]), float(np.log(10)), tolerance=1e-9, hint="ch07.cross_entropy.hint"),
+        Case("ch07.cross_entropy.mean", lambda f: _call(f, [[0.5, 0.5], [0.9, 0.1]], [[1, 0], [1, 0]]), float((np.log(2) - np.log(0.9)) / 2), tolerance=1e-9, hint="ch07.cross_entropy.hint"),
     ],
-    "backward": [
-        Case("ch07.backward.second", _grads(slice(2, 4)), _list(_backward()[2:]), tolerance=1e-9, hint="ch07.backward.second_hint"),
-        Case("ch07.backward.first", _grads(slice(0, 2)), _list(_backward()[:2]), tolerance=1e-9, hint="ch07.backward.first_hint"),
+    "gradient": [
+        Case("ch07.gradient.tiny", lambda f: _call(f, X_TINY, Y_TINY, W_TINY, B_TINY), tuple(_gradient(_a(X_TINY), _a(Y_TINY), _a(W_TINY), _a(B_TINY))), tolerance=1e-9, hint="ch07.gradient.hint"),
+        Case("ch07.gradient.zero", lambda f: _call(f, [[1.0, 2.0]], [[0, 1]], [[0.0, 0.0], [0.0, 0.0]], [0.0, 0.0]), ([[0.5, -0.5], [1.0, -1.0]], [0.5, -0.5]), tolerance=1e-9, hint="ch07.gradient.hint"),
     ],
 }

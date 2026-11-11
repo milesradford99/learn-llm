@@ -5,10 +5,16 @@
 Go from almost no maths or programming to building your own large language model, then
 serving it the way production systems do. Everything happens on one page in your browser.
 
-> **Status: early.** Chapters 00–20 are ready: from your first line of Python to a modern
-> transformer you build yourself, trained across several processes. Chapter 21 (Scaling laws)
-> is next.
+> **Status: early.** Chapters 00–23 are ready: from your first line of Python to a modern
+> transformer you build yourself, trained across several processes. Chapter 24 (Scaling laws)
+> is next. Chapters 06–23 are being reworked for a more even pace; number 21 is
+> reserved for a chapter being split out of 20.
 > See the [full chapter map](SCOPE.md).
+
+**New: an optional agents track.** Chapters 40–51 take you through two real open-source agents,
+[Pi](https://github.com/badlogic/pi-mono) and DeepSeek's [Super-agent](https://github.com/deepseek-ai/dsh-superagent-prototype),
+down to their source code. You read the real code on the page and rebuild each mechanism yourself.
+It needs Python up to chapter 19, and runs offline with no API key.
 
 ## Start
 
@@ -26,8 +32,8 @@ The first start installs [uv](https://docs.astral.sh/uv/), which downloads the r
 and everything the course needs into this folder (about 1 GB, mostly PyTorch). It takes a few
 minutes, once. Later starts take seconds.
 
-Chapters 09 onward use PyTorch, which runs on Linux, Windows and Macs with Apple chips on macOS
-14 or later. On an Intel Mac the course still starts, and chapters 00–08 work.
+Chapters 10 onward use PyTorch, which runs on Linux, Windows and Macs with Apple chips on macOS
+14 or later. On an Intel Mac the course still starts, and chapters 00–09 work.
 
 Your work is saved in `my-work/`, your own copy of every lesson. Updating the course never
 overwrites it. To restart a chapter from scratch, delete its file in `my-work/` and start
@@ -66,3 +72,4 @@ questions are welcome as GitHub issues.
 
 Code: [MIT](LICENSE). Lesson text: [CC BY 4.0](LICENSE-CONTENT). The bundled MNIST digits
 (from chapter 06): [CC BY-SA 3.0](learn_llm/data/MNIST-NOTICE.md), by Yann LeCun and Corinna Cortes.
+Source excerpts in chapters 40–51: [MIT, from Pi and the DeepSeek Super-agent prototype](learn_llm/data/AGENT-SOURCES.md).

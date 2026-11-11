@@ -1,51 +1,38 @@
 """Reference solutions for chapter 17. Peek only after trying!"""
 
-
-def to_bytes(text):
-    return list(text.encode("utf-8"))
+import torch
 
 
-def count_pairs(ids):
-    counts = {}
-    for pair in zip(ids, ids[1:]):
-        counts[pair] = counts.get(pair, 0) + 1
-    return counts
+def sample_word(scores, temperature):  # given in the lesson, from chapter 14
+    p = torch.softmax(scores / temperature, dim=0)
+    return torch.multinomial(p, 1).item()
 
 
-def merge(ids, pair, new_id):
-    out = []
-    i = 0
-    while i < len(ids):
-        if i < len(ids) - 1 and ids[i] == pair[0] and ids[i + 1] == pair[1]:
-            out.append(new_id)
-            i = i + 2
-        else:
-            out.append(ids[i])
-            i = i + 1
-    return out
+def embed(ids, words, positions):
+    return words(ids) + positions(torch.arange(ids.shape[1]))
 
 
-def train_bpe(ids, count):
-    merges = {}
-    for step in range(count):
-        counts = count_pairs(ids)
-        pair = max(counts, key=counts.get)
-        new_id = 256 + step
-        merges[pair] = new_id
-        ids = merge(ids, pair, new_id)
-    return merges
+def layer_norm(x):
+    mean = torch.mean(x, dim=-1, keepdim=True)
+    variance = torch.var(x, dim=-1, keepdim=True, unbiased=False)
+    return (x - mean) / torch.sqrt(variance + 1e-5)
 
 
-def encode(text, merges):
-    ids = to_bytes(text)
-    for pair, new_id in merges.items():
-        ids = merge(ids, pair, new_id)
-    return ids
+def block_step(x, norm1, attention, norm2, think):
+    x = x + attention(norm1(x))
+    x = x + think(norm2(x))
+    return x
 
 
-def decode(ids, merges):
-    table = [bytes([i]) for i in range(256)]
-    for pair, new_id in merges.items():
-        table.append(table[pair[0]] + table[pair[1]])
-    joined = b"".join([table[i] for i in ids])
-    return joined.decode("utf-8", errors="replace")
+def gpt_forward(ids, words, positions, blocks, norm, out):
+    x = embed(ids, words, positions)
+    return out(norm(blocks(x)))
+
+
+def write_ids(model, first, count, temperature, longest):
+    words = [first]
+    with torch.no_grad():
+        for step in range(count):
+            S = model(torch.tensor([words[-longest:]]))
+            words.append(sample_word(S[0, -1], temperature))
+    return words

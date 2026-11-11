@@ -25,6 +25,11 @@ places where a real beginner would get lost. A chapter isn't done while a *block
 > 3. **Wrong attempts:** for each exercise, the 3 most likely wrong answers this reader would
 >    write, and whether the page's feedback would get them unstuck.
 > 4. **Cut candidates:** anything the reader doesn't need here.
+> 5. **Dictation:** an exercise this reader could pass by copying lines the page prints,
+>    without understanding them. Say what the page should give instead (a worked example,
+>    the shapes, the formula as math).
+> 6. **Unread code:** a finished code cell of more than about 10 lines that the reader has no
+>    reason to read: nothing to write in it, nothing to predict from it.
 >
 > Quote the exact text for each finding and propose a concrete fix. Don't praise; don't
 > summarise the lesson. If you find no blockers, say so plainly.

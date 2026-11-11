@@ -1,40 +1,33 @@
 """Reference solutions for chapter 10. Peek only after trying!"""
 
-import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 
-def convolve(image, kernel):
-    h, w = image.shape
-    k = kernel.shape[0]
-    out = np.zeros((h - k + 1, w - k + 1))
-    for r in range(h - k + 1):
-        for c in range(w - k + 1):
-            patch = image[r:r + k, c:c + k]
-            out[r, c] = np.sum(patch * kernel)
-    return out
+def torch_gradient(w, b, xs, ys):
+    w = torch.tensor(w, requires_grad=True)
+    b = torch.tensor(b, requires_grad=True)
+    x = torch.tensor(xs, dtype=torch.float32)
+    y = torch.tensor(ys, dtype=torch.float32)
+    e = w * x + b - y
+    L = torch.mean(e * e)
+    L.backward()
+    return w.grad.item(), b.grad.item()
 
 
-def max_pool(M):
-    h, w = M.shape
-    out = np.zeros((h // 2, w // 2))
-    for r in range(h // 2):
-        for c in range(w // 2):
-            out[r, c] = np.max(M[2 * r:2 * r + 2, 2 * c:2 * c + 2])
-    return out
+def scores(X, W1, b1, W2, b2):
+    return torch.relu(X @ W1 + b1) @ W2 + b2
 
 
-def make_cnn():
-    return nn.Sequential(
-        nn.Conv2d(1, 8, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
-        nn.Conv2d(8, 16, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
-        nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(),
-        nn.AdaptiveMaxPool2d(1), nn.Flatten(), nn.Linear(32, 10),
-    )
+def make_model(hidden):
+    return nn.Sequential(nn.Linear(784, hidden), nn.ReLU(), nn.Linear(hidden, 10))
 
 
-def residual_block(x, conv1, conv2):
-    h = torch.relu(conv1(x))
-    h = conv2(h)
-    return torch.relu(x + h)
+def train_step(model, optimizer, X, labels):
+    optimizer.zero_grad()
+    S = model(X)
+    loss = F.cross_entropy(S, labels)
+    loss.backward()
+    optimizer.step()
+    return loss.item()
