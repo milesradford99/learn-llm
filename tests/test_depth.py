@@ -13,9 +13,9 @@ MOST_PRINTED = 0.30  # share of a chapter's solution lines its text may print wo
 MOST_IDEAS = 12  # new ideas in a chapter, not counting its ledger `toolbox` list
 
 WAITING = {
-    "printed": {"03", "04", "05", "12", "13", "14",
+    "printed": {"03", "04", "05", "13", "14",
                 "18", "19", "20", "22", "23", "40", "41"},
-    "ideas": {"00", "05", "09", "10", "11", "12", "13", "14", "18", "19", "20",
+    "ideas": {"00", "05", "09", "10", "11", "13", "14", "18", "19", "20",
               "22", "23", "40"},
 }
 CHAPTERS = sorted(load()["chapters"])

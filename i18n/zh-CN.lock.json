@@ -11,7 +11,7 @@
   "09-training-that-works.py": "sha256:e2c261de41c5068ecbce7c0cecdf3543c94e94e4019f6281f7d55b9bf919c23c",
   "10-hello-pytorch.py": "sha256:cc708df19080b71d51d1dcd80d69d6e5d3127605aaf3cddcd24d2540b791bcb9",
   "11-seeing-with-convolutions.py": "sha256:610ecd8710fd4540d68b7c41024cd6e601959eaa9cb5ae59407af7cc8e1b737d",
-  "12-words-as-vectors.py": "sha256:fff4bd7ccab65ef4c3cb434509dc50e7188afc1ff66b0e03f3035771cf3ccdb3",
+  "12-words-as-vectors.py": "sha256:bcfd4868d5107f51377840cddcfdc8a6ef7978286cd7471560a580d83f33a7dc",
   "13-predicting-the-next-word.py": "sha256:031ebe771ac006eb422b98a5321ebfe1cf1933c8d03cec842be5f214ebbb07c2",
   "14-memory-rnns.py": "sha256:b7111aaada7bb4e4f29764a6194e490eb823a2a8fbec4fd02aac5f772c197c3a",
   "15-attention.py": "sha256:4d671c3fd34370a97a4a21fcce21335130db88246912b21ee2462085eb06fd34",

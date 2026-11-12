@@ -158,8 +158,11 @@ introduces = [
     "text-dataset", "one-hot-words", "word-vector", "distributional-idea", "string-lower",
     "string-join", "dict", "dict-get", "builtin-sorted", "vocabulary", "word-id", "filtered-list",
     "vector-length", "cosine-similarity", "skip-gram", "not-equal", "negative-sampling", "sigmoid",
-    "logsigmoid", "nn-embedding", "noise-distribution", "argsort", "not-in",
-    "word-analogy", "builtin-min", "fractional-power",
+    "logsigmoid", "nn-embedding", "noise-distribution", "argsort", "builtin-min", "fractional-power",
+]
+toolbox = [
+    "string-lower", "string-join", "dict", "dict-get", "builtin-sorted", "filtered-list",
+    "vector-length", "not-equal", "logsigmoid", "argsort", "builtin-min", "fractional-power",
 ]
 uses = [
     "one-hot", "dot-product", "softmax", "surprise", "log", "unsqueeze", "broadcasting", "tensor",
@@ -172,12 +175,12 @@ introduces = [
     "language-model", "unk-and-end", "conditional-probability", "bigram", "list-from-one",
     "smoothing", "sampling", "rng-choice", "log-of-product", "perplexity", "pair-indexing",
     "numpy-full", "unigram", "hyperparameter", "trigram", "tuple-key", "dict-values", "builtin-sum",
-    "mixing-models", "leaderboard", "numpy-tolist", "builtin-round",
+    "mixing-models", "leaderboard", "numpy-tolist", "builtin-round", "not-in",
 ]
 uses = [
     "dict", "dict-get", "vocabulary", "word-id", "text-dataset", "builtin-sorted", "builtin-zip",
     "numpy-zeros", "numpy-sum", "keepdims", "axis", "surprise", "cross-entropy", "log", "exp",
-    "test-set", "overfitting", "argsort", "numpy-array", "if", "not-in", "string-join",
+    "test-set", "overfitting", "argsort", "numpy-array", "if", "string-join",
 ]
 
 [chapters.14]
@@ -553,7 +556,6 @@ nn-embedding = "nn.Embedding(2000, 32): a table of learned rows, looked up by id
 noise-distribution = "noise words are drawn with chances proportional to count^0.75"
 argsort = "np.argsort(v) gives the positions that would sort v, smallest first"
 not-in = "x not in items is True when x isn't among items"
-word-analogy = "b − a + c lands near the word that is to c as b is to a"
 builtin-min = "min(a, b) is the smaller of two numbers"
 fractional-power = "a power below 1 pulls big numbers down more than small ones: 100 ** 0.75 is about 32"
 language-model = "a model that gives the chance of each next word, given the words so far"
