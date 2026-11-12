@@ -194,6 +194,10 @@ introduces = [
     "forget-gate-bias", "reshape-minus-one", "gradient-clipping", "reduction-none",
     "numpy-concatenate", "temperature",
 ]
+toolbox = [
+    "all-of-a-dimension", "torch-stack", "torch-cat", "reshape-minus-one", "reduction-none",
+    "numpy-concatenate",
+]
 uses = [
     "word-vector", "nn-embedding", "sigmoid", "residual", "skip-connection", "vanishing-exploding",
     "kernel", "language-model", "perplexity", "leaderboard", "tensor", "optimizer", "training-loop",

@@ -13,7 +13,7 @@
   "11-seeing-with-convolutions.py": "sha256:610ecd8710fd4540d68b7c41024cd6e601959eaa9cb5ae59407af7cc8e1b737d",
   "12-words-as-vectors.py": "sha256:bcfd4868d5107f51377840cddcfdc8a6ef7978286cd7471560a580d83f33a7dc",
   "13-predicting-the-next-word.py": "sha256:3dd3052a33e5e69bb3c542efa95130355480b6af69914034c4341a7a439b7472",
-  "14-memory-rnns.py": "sha256:b7111aaada7bb4e4f29764a6194e490eb823a2a8fbec4fd02aac5f772c197c3a",
+  "14-memory-rnns.py": "sha256:60a48e3a10a231b4014102dd67b0262e51d022c947cfd5bab02b4de4a377c6d6",
   "15-attention.py": "sha256:4d671c3fd34370a97a4a21fcce21335130db88246912b21ee2462085eb06fd34",
   "16-self-attention.py": "sha256:67866f1dfd60355ee23a1676c9386dd1e80cfa59bc495379a5b703c001d51e97",
   "17-the-transformer.py": "sha256:87c84d4f8c5a60b95c8c57c042c914876bfad68dfef6b015d868afb9029d1566",
