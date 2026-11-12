@@ -245,9 +245,12 @@ uses = [
 
 [chapters.18]
 introduces = [
-    "pretraining", "fine-tuning", "freezing", "conditional-expression", "bincount", "majority-baseline",
-    "precision", "recall", "elementwise-and", "margin-of-error", "state-dict", "leakage", "benchmark",
-    "bert", "module-list",
+    "pretraining", "fine-tuning", "freezing", "conditional-expression", "bincount",
+    "majority-baseline", "precision", "recall", "elementwise-and", "margin-of-error", "state-dict",
+    "leakage", "benchmark", "bert", "module-list",
+]
+toolbox = [
+    "conditional-expression", "bincount", "elementwise-and", "state-dict",
 ]
 uses = [
     "gpt", "transformer", "block", "test-set", "accuracy", "variances-add", "numpy-sqrt",
@@ -257,9 +260,13 @@ uses = [
 
 [chapters.19]
 introduces = [
-    "byte", "utf-8", "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "token", "bpe",
-    "tie-breaking", "while-loop", "and-operator", "max-with-key", "dict-items", "byte-string",
-    "errors-replace", "vocabulary-size", "per-word-scoring",
+    "byte", "utf-8", "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "token",
+    "bpe", "tie-breaking", "while-loop", "and-operator", "else", "max-with-key",
+    "dict-items", "byte-string", "errors-replace", "vocabulary-size", "per-word-scoring",
+]
+toolbox = [
+    "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "while-loop", "and-operator",
+    "else", "max-with-key", "dict-items", "byte-string", "errors-replace",
 ]
 uses = [
     "dict", "dict-get", "builtin-zip", "list-from-one", "list-append", "builtin-range", "vocabulary",
@@ -659,6 +666,7 @@ bpe = "byte-pair encoding: merge the commonest neighbouring pair, again and agai
 tie-breaking = "when pairs are tied, take the one seen first"
 while-loop = "while test: repeats its lines as long as the test holds, moving at its own pace"
 and-operator = "a and b holds when both hold; the right side isn't looked at if the left fails"
+else = "else: lined up with an if runs its indented lines when the if test did not hold"
 max-with-key = "max(counts, key=counts.get) gives the key with the biggest count"
 dict-items = "for key, value in d.items(): goes through a dictionary's pairs"
 byte-string = "b''.join(list) joins bytes"
