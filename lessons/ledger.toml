@@ -177,6 +177,10 @@ introduces = [
     "numpy-full", "unigram", "hyperparameter", "trigram", "tuple-key", "dict-values", "builtin-sum",
     "mixing-models", "leaderboard", "numpy-tolist", "builtin-round", "not-in",
 ]
+toolbox = [
+    "list-from-one", "rng-choice", "log-of-product", "pair-indexing", "numpy-full", "tuple-key",
+    "dict-values", "builtin-sum", "numpy-tolist", "builtin-round", "not-in",
+]
 uses = [
     "dict", "dict-get", "vocabulary", "word-id", "text-dataset", "builtin-sorted", "builtin-zip",
     "numpy-zeros", "numpy-sum", "keepdims", "axis", "surprise", "cross-entropy", "log", "exp",
