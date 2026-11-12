@@ -11,19 +11,33 @@ def _calls(f):
     return len(calls)
 
 
+_CLOCKS = ("perf_counter", "time", "monotonic")
+
+
 def _seconds(f):
-    """The first call is slow (0.1 s), later ones take 0.01 s: a mean near 0.01 means the clock
-    started after the warm-up and the total was divided by the repeats."""
+    """The first call is slow (0.1 s), later ones take 0.01 s: a mean of 0.01 means the clock
+    started after the warm-up and the total was divided by the repeats.
+
+    The clock is a fake one that only the task moves, so the answer is exact on any machine
+    (real sleeps overran on busy CI runners)."""
     import time
 
     calls = []
+    now = [1000.0]
 
     def task():
-        time.sleep(0.1 if not calls else 0.01)
+        now[0] += 0.1 if not calls else 0.01
         calls.append(1)
 
-    out = f(task, 5)
-    return isinstance(out, float) and 0.0095 < out < 0.022
+    real = {name: getattr(time, name) for name in _CLOCKS}
+    for name in _CLOCKS:
+        setattr(time, name, lambda: now[0])
+    try:
+        out = f(task, 5)
+    finally:
+        for name, clock in real.items():
+            setattr(time, name, clock)
+    return isinstance(out, float) and abs(out - 0.01) < 1e-6
 
 
 def _tiled(f, tile, scale=4):
