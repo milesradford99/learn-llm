@@ -58,14 +58,29 @@ def _():
 def _():
     mo.md(r"""
     `torch.tensor(...)` makes a tensor from lists, as `np.array(...)` does. `torch.mean` is
-    `np.mean`, and `torch.sum`, `torch.exp` and `torch.log` are what you'd guess. One name differs:
-    where NumPy says `axis=1`, PyTorch says `dim=1` ("dimension"). It means the same thing.
+    `np.mean`, and `torch.sum`, `torch.exp` and `torch.log` are what you'd guess.
 
-    **A word on precision.** A computer stores each number in a fixed amount of memory, measured in
+    /// admonition | 🧰 Toolbox: old tools, new names
+    Most of PyTorch's tools are ones you know, sometimes under another name. Four names differ
+    in this chapter:
+
+    | you know | PyTorch |
+    |---|---|
+    | `axis=1` | `dim=1` ("dimension") |
+    | `relu(Z)`, chapter 08's bend | `torch.relu(Z)` |
+    | `default_rng(0)`, for random numbers that repeat | `torch.manual_seed(0)` |
+    | `rng.permutation(n)` | `torch.randperm(n)` |
+
+    One tool is new: `x.item()` turns a tensor holding a single number into a plain Python number.
+    ///
+
+    /// admonition | 🧰 Toolbox: how exact is a number?
+    A computer stores each number in a fixed amount of memory, measured in
     **bits**. NumPy normally uses 64 bits per number, which keeps about 16 digits correct.
     PyTorch normally uses 32, which keeps about 7: half the memory, and plenty for training. So
     the same sum can differ in its last digits. Here's $0.1 \times 3$ both ways. (Neither is exactly 0.3.
     That's normal: computers store numbers in binary, and 0.1 can't be stored exactly.)
+    ///
     """)
     return
 
@@ -321,10 +336,14 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The loss needs one new tool. `F.cross_entropy(S, labels)` is chapter 07's cross-entropy, with
+    The loss needs one new tool.
+
+    /// admonition | 🧰 Toolbox: cross-entropy, ready-made
+    `F.cross_entropy(S, labels)` is chapter 07's cross-entropy, with
     two conveniences. It takes the raw **scores** (it does softmax itself), and it takes the
     **labels** as whole numbers instead of one-hot rows. `F` is the usual short name for a part of
     PyTorch called `torch.nn.functional`. It's already loaded for you, as are `torch`, `nn` and `np`.
+    ///
 
     The cell below does the whole comparison on 100 pictures. The first half is your hand-written
     version. The second half puts the same numbers in tensors (`torch.tensor` on a NumPy array keeps
@@ -411,8 +430,10 @@ def _():
     Write `make_model(hidden)`, giving back chapter 08's network with `hidden` detectors, as one `nn.Sequential` of three layers:
     from 784 pixels to the detectors, the bend, and from the detectors to 10 scores.
 
-    The cell after the check asks the model for its knobs. `model.parameters()` goes through them,
-    and `p.numel()` is how many numbers one of them holds.
+    /// admonition | 🧰 Toolbox: asking a model for its knobs
+    `model.parameters()` goes through a model's knobs, one tensor at a time, and `p.numel()` is
+    how many numbers one of them holds. The cell after the check uses both to count your model's knobs.
+    ///
     """)
     return
 
@@ -537,9 +558,12 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The same knobs, to all the digits shown. (`.detach()` is needed first because PyTorch won't
-    turn a tensor it's keeping books on into a NumPy array. It gives the same numbers without the
-    book.) PyTorch's Adam uses the same 0.9, 0.999 and `1e-8` you typed.
+    The same knobs, to all the digits shown. PyTorch's Adam uses the same 0.9, 0.999 and `1e-8` you typed.
+
+    /// admonition | 🧰 Toolbox: numbers without the book
+    `t.detach()` gives the same numbers as `t`, without the book. The cell above needs it before
+    `.numpy()`, because PyTorch won't turn a tensor it's keeping books on into a NumPy array.
+    ///
 
     Three calls in that loop are the heart of every PyTorch training loop:
 
@@ -652,15 +676,15 @@ def accuracy(S, labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `accuracy` needs a small change for tensors: `.float()` turns the `True`/`False` values into 1s
-    and 0s, because `torch.mean` only averages numbers with a point.
+    /// admonition | 🧰 Toolbox: two tools for measuring
+    - `.float()` turns `True`/`False` values into 1s and 0s with a point. `accuracy` above needs it,
+      because `torch.mean` only averages numbers with a point.
+    - The indented lines under `with torch.no_grad():` run without keeping the books. Measuring
+      needs no blame, so this saves time and memory.
+    ///
 
     The cell below turns the data into 32-bit tensors, trains for 10 epochs with Adam at rate 0.002,
-    and measures on the test pictures. Two things are new:
-
-    - `torch.no_grad()`: the indented lines under `with torch.no_grad():` run without keeping the
-      books. Measuring needs no blame, so this saves time and memory.
-    - The second number is the seconds taken, as in chapter 09.
+    and measures on the test pictures. The second number is the seconds taken, as in chapter 09.
     """)
     return
 
@@ -714,9 +738,13 @@ def _():
 def _():
     mo.md(r"""
     `False` is expected (on Macs with Apple chips PyTorch has a similar option). If you ever do have
-    one, the change is small: tensors and models live on a **device**, and everything in one
-    calculation must live on the same one. `model.to("cuda")` and `X.to("cuda")` move them
-    (`cuda` is the name of the usual GPU system), and the rest of your code stays the same.
+    one, the change is small.
+
+    /// admonition | 🧰 Toolbox: moving to a GPU
+    Tensors and models live on a **device**, and everything in one calculation must live on the
+    same one. `model.to("cuda")` and `X.to("cuda")` move them (`cuda` is the name of the usual GPU
+    system), and the rest of your code stays the same.
+    ///
 
     ## What's next
 

@@ -114,7 +114,10 @@ introduces = [
     "slicing", "index-array", "argument-unpacking", "momentum", "moving-average", "adam",
     "bias-correction", "overfitting", "weight-decay", "numpy-eye", "numpy-abs",
 ]
-toolbox = ["permutation", "range-step", "slicing", "index-array"]
+toolbox = [
+    "permutation", "range-step", "slicing", "index-array", "numpy-sqrt", "numpy-eye",
+    "numpy-abs", "argument-unpacking",
+]
 uses = [
     "neural-network", "softmax", "two-layer-backprop", "accuracy", "one-hot", "random-generator",
     "random-init", "relu", "mean", "squaring", "gradient-descent", "learning-rate",
@@ -130,7 +133,11 @@ introduces = [
     "nn-sequential", "parameters", "optimizer", "detach", "training-loop", "randperm",
     "float-method", "no-grad", "gpu", "device", "pytorch",
 ]
-toolbox = ["dtype", "list-comprehension", "numpy-from-tensor", "builtin-max"]
+toolbox = [
+    "dtype", "list-comprehension", "numpy-from-tensor", "builtin-max", "bits-and-precision",
+    "dim", "item", "torch-relu", "manual-seed", "randperm", "torch-cross-entropy", "parameters",
+    "detach", "float-method", "no-grad", "device",
+]
 uses = [
     "numpy-array", "matmul-operator", "shape", "indexing", "slicing", "axis", "recording-book",
     "blame", "backpropagation", "gradient-check", "softmax", "cross-entropy", "two-layer-backprop",
@@ -145,6 +152,10 @@ introduces = [
     "convolution-output-size", "feature-map", "numpy-roll", "knob-sharing", "max-pooling",
     "floor-division", "nn-conv2d", "maps-dimension", "unsqueeze", "padding", "global-pooling",
     "residual", "skip-connection", "nn-module-subclass", "builtin-super", "resnet",
+]
+toolbox = [
+    "rng-integers", "two-way-slice", "numpy-roll", "floor-division", "nn-conv2d",
+    "maps-dimension", "unsqueeze", "nn-module-subclass", "builtin-super",
 ]
 uses = [
     "overfitting", "tensor", "dtype", "nn-linear", "nn-sequential", "optimizer", "training-loop",

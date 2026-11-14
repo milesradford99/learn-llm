@@ -1,8 +1,11 @@
 # Even depth: plan for chapters 06–20
 
-Status: done 2026-11-14 for chapters 06–23 (new numbers). Every one of them is off the
-`WAITING` list in `tests/test_depth.py`; what remains on it is outside this plan (see
-"Not covered here"). Still open: the novice-reader review of the reworked chapters, in both
+Status: done 2026-11-14 for chapters 06–23 (new numbers), with one exception. Every one of
+them is off the `WAITING` list in `tests/test_depth.py` except chapter 09, which is still over
+the ideas budget: 14 after its small tools went into Toolbox boxes. Getting it to 12 means
+moving two ideas out (for example "Learning or memorising?": overfitting and weight decay) or
+splitting it, which needs a decision. The rest of the list is outside this plan (see "Not
+covered here"). Still open: the novice-reader review of the reworked chapters, in both
 languages (`docs/design/novice-review.md`).
 
 **Up to "Chapter by chapter", numbers are the old ones**, from before the renumbering, because

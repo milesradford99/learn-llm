@@ -49,9 +49,24 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `torch.tensor(...)` 用列表造出一个张量，就像 `np.array(...)`。`torch.mean` 就是 `np.mean`，`torch.sum`、`torch.exp`、`torch.log` 也都和你猜的一样。只有一个名字不同：NumPy 写 `axis=1` 的地方，PyTorch 写 `dim=1`（dimension，维度），意思完全相同。
+    `torch.tensor(...)` 用列表造出一个张量，就像 `np.array(...)`。`torch.mean` 就是 `np.mean`，`torch.sum`、`torch.exp`、`torch.log` 也都和你猜的一样。
 
-    **关于精度。** 计算机用固定大小的内存存每个数字，内存大小用**位**（bit）来计量。NumPy 通常每个数用 64 位，能保证大约 16 位数字是准的。PyTorch 通常用 32 位，能保证大约 7 位：内存省一半，训练也完全够用。所以同一个算式，最后几位可能不一样。下面用两种方式算 $0.1 \times 3$。（两边都不正好是 0.3。这很正常：计算机用二进制存数，0.1 没法精确存下来。）
+    /// admonition | 🧰 工具箱：老工具，新名字
+    PyTorch 的工具大多是你已经认识的，只是有时换了名字。这一章里名字不同的有四个：
+
+    | 你认识的 | PyTorch |
+    |---|---|
+    | `axis=1` | `dim=1`（dimension，维度） |
+    | `relu(Z)`，第 08 章的弯折 | `torch.relu(Z)` |
+    | `default_rng(0)`，让随机数可以重现 | `torch.manual_seed(0)` |
+    | `rng.permutation(n)` | `torch.randperm(n)` |
+
+    还有一个是新的：`x.item()` 把只装着一个数的张量变成普通的 Python 数字。
+    ///
+
+    /// admonition | 🧰 工具箱：数字有多精确？
+    计算机用固定大小的内存存每个数字，内存大小用**位**（bit）来计量。NumPy 通常每个数用 64 位，能保证大约 16 位数字是准的。PyTorch 通常用 32 位，能保证大约 7 位：内存省一半，训练也完全够用。所以同一个算式，最后几位可能不一样。下面用两种方式算 $0.1 \times 3$。（两边都不正好是 0.3。这很正常：计算机用二进制存数，0.1 没法精确存下来。）
+    ///
     """)
     return
 
@@ -289,7 +304,11 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    算损失还需要一个新工具。`F.cross_entropy(S, labels)` 就是第 07 章的交叉熵，但多了两点方便：它接收原始的**分数**（softmax 由它自己做），**标签**用整数表示，不用 one-hot 行。`F` 是 PyTorch 里 `torch.nn.functional` 这一部分的通用简称。它已经替你加载好了，`torch`、`nn` 和 `np` 也一样。
+    算损失还需要一个新工具。
+
+    /// admonition | 🧰 工具箱：现成的交叉熵
+    `F.cross_entropy(S, labels)` 就是第 07 章的交叉熵，但多了两点方便：它接收原始的**分数**（softmax 由它自己做），**标签**用整数表示，不用 one-hot 行。`F` 是 PyTorch 里 `torch.nn.functional` 这一部分的通用简称。它已经替你加载好了，`torch`、`nn` 和 `np` 也一样。
+    ///
 
     下面的单元格在 100 张图片上做完整的对比。前半段是你亲手写的版本。后半段把同样的数字放进张量（对 NumPy 数组用 `torch.tensor` 会保留 64 位的 dtype，所以两边精度相同），让 PyTorch 算斜率。最后一行显示 50,890 个斜率中最大的差别。
 
@@ -359,7 +378,9 @@ def _():
 
     写出 `make_model(hidden)`，返回第 08 章的网络，有 `hidden` 个探测器。它是一个装着三层的 `nn.Sequential`：从 784 个像素到探测器，弯折，再从探测器到 10 个分数。
 
-    检查之后的单元格会向模型要它的旋钮。`model.parameters()` 把它们一个个给出来，`p.numel()` 是其中一个里面有多少个数。
+    /// admonition | 🧰 工具箱：向模型要它的旋钮
+    `model.parameters()` 把模型的旋钮一个个给出来，每次一个张量；`p.numel()` 是其中一个里面有多少个数。检查之后的单元格用这两样来数你的模型有多少个旋钮。
+    ///
     """)
     return
 
@@ -481,7 +502,11 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    旋钮完全相同，显示出来的每一位都一样。（前面要加 `.detach()`，因为 PyTorch 不肯把正在记账的张量变成 NumPy 数组。它给出同样的数字，但不带账本。）PyTorch 的 Adam 用的也是你敲过的 0.9、0.999 和 `1e-8`。
+    旋钮完全相同，显示出来的每一位都一样。PyTorch 的 Adam 用的也是你敲过的 0.9、0.999 和 `1e-8`。
+
+    /// admonition | 🧰 工具箱：不带账本的数字
+    `t.detach()` 给出和 `t` 同样的数字，但不带账本。上面的单元格在 `.numpy()` 之前要先用它，因为 PyTorch 不肯把正在记账的张量变成 NumPy 数组。
+    ///
 
     这个循环里的三个调用，是所有 PyTorch 训练循环的核心：
 
@@ -591,12 +616,12 @@ def accuracy(S, labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `accuracy` 用在张量上要小改一下：`.float()` 把 `True`/`False` 变成 1 和 0，因为 `torch.mean` 只能对带小数点的数求平均。
+    /// admonition | 🧰 工具箱：打分用的两个工具
+    - `.float()` 把 `True`/`False` 变成带小数点的 1 和 0。上面的 `accuracy` 需要它，因为 `torch.mean` 只能对带小数点的数求平均。
+    - 写在 `with torch.no_grad():` 下面、缩进的那些行运行时不记账。打分不需要责任，这样能省时间和内存。
+    ///
 
-    下面的单元格把数据变成 32 位张量，用 Adam 以学习率 0.002 训练 10 轮，然后在测试图片上打分。有两点是新的：
-
-    - `torch.no_grad()`：写在 `with torch.no_grad():` 下面、缩进的那些行运行时不记账。打分不需要责任，这样能省时间和内存。
-    - 第二个数字是用掉的秒数，和第 09 章一样。
+    下面的单元格把数据变成 32 位张量，用 Adam 以学习率 0.002 训练 10 轮，然后在测试图片上打分。第二个数字是用掉的秒数，和第 09 章一样。
     """)
     return
 
@@ -642,7 +667,11 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    显示 `False` 是正常的（在 Apple 芯片的 Mac 上，PyTorch 有类似的选项）。如果你真有 GPU，要改的地方很少：张量和模型都放在某个**设备**（device）上，一次计算涉及的所有东西必须在同一个设备上。`model.to("cuda")` 和 `X.to("cuda")` 把它们搬过去（`cuda` 是常见的 GPU 系统的名字），其余代码不用动。
+    显示 `False` 是正常的（在 Apple 芯片的 Mac 上，PyTorch 有类似的选项）。如果你真有 GPU，要改的地方很少。
+
+    /// admonition | 🧰 工具箱：搬到 GPU 上
+    张量和模型都放在某个**设备**（device）上，一次计算涉及的所有东西必须在同一个设备上。`model.to("cuda")` 和 `X.to("cuda")` 把它们搬过去（`cuda` 是常见的 GPU 系统的名字），其余代码不用动。
+    ///
 
     ## 接下来
 
