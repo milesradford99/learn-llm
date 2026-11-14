@@ -145,8 +145,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Chapter 20's run read about 2 million tokens twice with about 1.17 million knobs. The cell below works out the arithmetic, and how long it would take at your computer's best speed.
-    The cell shows two numbers: the teraFLOPs of arithmetic, and the seconds at full speed. Compare those seconds with how long chapter 20's button really took. The share of the best possible speed that a run achieves is called its **utilisation**.
+    Chapter 21's run read about 2 million tokens twice with about 1.17 million knobs. The cell below works out the arithmetic, and how long it would take at your computer's best speed.
+    The cell shows two numbers: the teraFLOPs of arithmetic, and the seconds at full speed. Compare those seconds with how long chapter 21's button really took. The share of the best possible speed that a run achieves is called its **utilisation**.
     """)
     return
 

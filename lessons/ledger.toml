@@ -325,14 +325,25 @@ uses = ["transcript-tools", "output-truncation", "strength", "fan-out", "worker-
 [chapters.20]
 introduces = [
     "fair-tokens", "rms-norm", "angle", "cos-sin", "radian", "math-pi", "rotation", "rotation-dot",
-    "rope", "ellipsis-index", "new-axis", "silu", "swiglu", "adamw", "warmup", "cosine-decay",
-    "early-return", "checkpoint", "torch-save", "param-groups", "decode-tokens", "builtin-set",
+    "rope", "ellipsis-index", "new-axis", "silu", "swiglu", "builtin-set", "nn-parameter",
 ]
+toolbox = ["math-pi", "ellipsis-index", "new-axis", "builtin-set", "nn-parameter"]
 uses = [
     "layer-norm", "block", "transformer", "gpt", "position-table", "self-attention", "sigmoid", "gate",
-    "adam", "weight-decay", "learning-rate", "state-dict", "bpe", "token", "perplexity", "leaderboard",
-    "per-word-scoring", "list-comprehension", "if", "dict", "attention-scale", "future-mask",
-    "chart-reading", "variance",
+    "bpe", "token", "perplexity", "leaderboard", "per-word-scoring", "list-comprehension", "dict",
+    "attention-scale", "future-mask", "numpy-concatenate", "surprise", "log",
+]
+
+[chapters.21]
+introduces = [
+    "adamw", "warmup", "cosine-decay", "early-return", "checkpoint", "torch-save", "param-groups",
+    "decode-tokens",
+]
+toolbox = ["early-return", "torch-save", "param-groups", "decode-tokens"]
+uses = [
+    "adam", "weight-decay", "learning-rate", "state-dict", "rms-norm", "rope", "swiglu", "cos-sin",
+    "math-pi", "token", "perplexity", "leaderboard", "per-word-scoring", "if", "dict",
+    "chart-reading", "gradient-clipping", "bias-correction", "fair-tokens", "nn-parameter",
 ]
 
 [chapters.22]
@@ -836,4 +847,5 @@ remainder = "10 % 4 is 2, the remainder of a division"
 tensor-parallel = "split a layer's matrix by columns across devices"
 scientific-literal = "7e9 means 7 × 10^9"
 builtin-set = "set(list) makes a set: word in known answers instantly"
+nn-parameter = "nn.Parameter(tensor) makes a tensor into a knob that training moves"
 module-time = "import time; time.perf_counter() is a clock in seconds"
