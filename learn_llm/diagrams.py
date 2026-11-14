@@ -135,3 +135,69 @@ def pipeline(boxes: list[tuple[str, str]], arrows: list[str], label: str):
         parts.append(f'<text x="{x}" y="{y + 17}" font-size="12" fill="{AXIS}">{escape(shape)}</text>')
     parts.append("</svg>")
     return mo.Html("".join(parts))
+
+
+def circle(angle: float, label: str):
+    """The circle of radius 1 with the point at `angle` (radians), and its cos and sin as lengths.
+
+    `label` describes the picture for screen readers, in the lesson's language.
+    """
+    import math
+
+    import marimo as mo
+
+    cx, cy, r = 170, 160, 110
+    px, py = cx + r * math.cos(angle), cy - r * math.sin(angle)
+    ax, ay = cx + 34 * math.cos(angle / 2), cy - 34 * math.sin(angle / 2)
+    arc_x, arc_y = cx + 22 * math.cos(angle), cy - 22 * math.sin(angle)
+    parts = [
+        f'<svg viewBox="0 0 340 320" width="100%" style="max-width:340px" role="img" aria-label="{escape(label)}" '
+        'xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, monospace" text-anchor="middle">',
+        f'<line x1="{cx - r - 26}" y1="{cy}" x2="{cx + r + 26}" y2="{cy}" stroke="{AXIS}"/>',
+        f'<line x1="{cx}" y1="{cy - r - 26}" x2="{cx}" y2="{cy + r + 26}" stroke="{AXIS}"/>',
+        f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{AXIS}" stroke-width="1.2"/>',
+        f'<path d="M{cx + 22},{cy} A22,22 0 0 0 {arc_x:.1f},{arc_y:.1f}" fill="none" stroke="{TEXT}"/>',
+        f'<text x="{ax:.0f}" y="{ay + 4:.0f}" font-size="13" fill="{TEXT}">θ</text>',
+        f'<line x1="{cx}" y1="{cy}" x2="{px:.1f}" y2="{py:.1f}" stroke="{TEXT}" stroke-width="1.2"/>',
+        f'<line x1="{cx}" y1="{cy}" x2="{px:.1f}" y2="{cy}" stroke="{LINE}" stroke-width="3"/>',
+        f'<line x1="{px:.1f}" y1="{cy}" x2="{px:.1f}" y2="{py:.1f}" stroke="{DOT}" stroke-width="3"/>',
+        f'<text x="{(cx + px) / 2:.0f}" y="{cy + 18}" font-size="13" fill="{TEXT}">cos θ</text>',
+        f'<text x="{px + 30:.0f}" y="{(cy + py) / 2 + 4:.0f}" font-size="13" fill="{TEXT}">sin θ</text>',
+        f'<circle cx="{px:.1f}" cy="{py:.1f}" r="5" fill="{DOT}"/>',
+        f'<text x="{px + 40:.0f}" y="{py - 10:.0f}" font-size="13" fill="{TEXT}">(cos θ, sin θ)</text>',
+        f'<circle cx="{cx + r}" cy="{cy}" r="4" fill="{TEXT}"/>',
+        f'<text x="{cx + r + 26}" y="{cy + 18}" font-size="12" fill="{AXIS}">(1, 0)</text>',
+        f'<text x="{cx + 24}" y="{cy - r - 8}" font-size="12" fill="{AXIS}">(0, 1)</text>',
+        "</svg>",
+    ]
+    return mo.Html("".join(parts))
+
+
+def ring(names: list[str], label: str):
+    """Devices in a circle, each with an arrow to the neighbour it passes to.
+
+    `label` describes the picture for screen readers, in the lesson's language.
+    """
+    import math
+
+    import marimo as mo
+
+    n, cx, cy, r, half = len(names), 190, 150, 100, 46
+    spots = [(cx + r * math.sin(2 * math.pi * i / n), cy - r * math.cos(2 * math.pi * i / n)) for i in range(n)]
+    parts = [f'<svg viewBox="0 0 380 300" width="100%" style="max-width:380px" role="img" aria-label="{escape(label)}" '
+             'xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, monospace" text-anchor="middle">',
+             f'<defs><marker id="pass" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+             f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{DOT}"/></marker></defs>']
+    for (x1, y1), (x2, y2) in zip(spots, spots[1:] + spots[:1]):
+        dx, dy = x2 - x1, y2 - y1
+        length = math.hypot(dx, dy)
+        ux, uy = dx / length, dy / length
+        gap = min(half / max(abs(ux), 1e-9), _BH / 2 / max(abs(uy), 1e-9)) + 8  # to the edge of the box
+        parts.append(f'<line x1="{x1 + ux * gap:.1f}" y1="{y1 + uy * gap:.1f}" x2="{x2 - ux * gap:.1f}" y2="{y2 - uy * gap:.1f}" '
+                     f'stroke="{DOT}" stroke-width="2" marker-end="url(#pass)"/>')
+    for (x, y), name in zip(spots, names):
+        parts.append(f'<rect x="{x - half:.1f}" y="{y - _BH / 2:.1f}" width="{2 * half}" height="{_BH}" rx="6" '
+                     f'fill="none" stroke="{AXIS}" stroke-width="1.2"/>')
+        parts.append(f'<text x="{x:.1f}" y="{y + 5:.1f}" font-size="14" fill="{TEXT}">{escape(name)}</text>')
+    parts.append("</svg>")
+    return mo.Html("".join(parts))

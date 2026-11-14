@@ -12,10 +12,12 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import stories
+    from learn_llm.diagrams import pipeline
     from learn_llm.leaderboard import record, show
+    from learn_llm.plot import chart
 
     LOCALE = "zh-CN"
     laptop_speed()
@@ -32,7 +34,22 @@ def _():
 
     ## 一个新的弯折：tanh
 
-    记忆要一遍又一遍地经过同一个步骤，所以它不能无限增长。ReLU 没有上限。对记忆，我们用一个把每个数都压进 −1 到 1 之间的弯折，它叫 tanh。重要的是它的形状：在 0 附近接近 `x` 本身，遇到大数就逐渐贴近 +1 和 −1。在 PyTorch 里写作 `torch.tanh`。下面 0.1 基本还是 0.1，而 5 被压到了将近 1：
+    记忆要一遍又一遍地经过同一个步骤，所以它不能无限增长。ReLU 没有上限。对记忆，我们用一个把每个数都压进 −1 到 1 之间的弯折，它叫 **tanh**：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    chart((-4, 4), (-1, 1), "x", "tanh(x)",
+          curve=[(x / 10, float(np.tanh(x / 10))) for x in range(-40, 41)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    重要的是它的形状：在 0 附近接近 $x$ 本身，遇到大数就逐渐贴近 +1 和 −1。在 PyTorch 里写作 `torch.tanh`。下面 0.1 基本还是 0.1，而 5 被压到了将近 1：
     """)
     return
 
@@ -48,19 +65,78 @@ def _():
     mo.md(r"""
     ## 记忆的一步
 
-    设 `x` 是当前词的向量（第 12 章的想法），`h` 是到目前为止的记忆，大小为 `m`。新的记忆把两者结合起来：
+    设 $x$ 是当前词的向量（第 12 章的想法），$h$ 是到目前为止的记忆，大小为 $m$。新的记忆把两者结合起来：
 
-    > $$\text{new } h = \tanh(x \cdot W_x + h \cdot W_h + b)$$
+    > $$\text{新的 } h = \tanh(x \cdot W_x + h \cdot W_h + b)$$
 
-    `Wx` 把词变成记忆大小的数字，`Wh` 把旧记忆带到下一步，`b` 是常见的偏置。这就是第 08 章的层，只多了一个变化：它的输入有一部分是它自己上一次的输出。“循环”的意思就是绕回来。每个词用的都是**同一组**旋钮，这和第 11 章的卷积核一样：卷积核在图片的各个位置上滑动，这一步在文本的各个位置上滑动。
+    $W_x$ 把词变成记忆大小的数字，$W_h$ 把旧记忆带到下一步，$b$ 是常见的偏置。这就是第 08 章的层，只多了一个变化：它的输入有一部分是它自己上一次的输出。“循环”的意思就是绕回来。
+
+    下面是这一步连用三次，读 `the dog ran` 的样子。记忆从全零开始，每个箭头都是同一个步骤、同一组旋钮，只是喂进去的词不同：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pipeline([('h', '全零'), ('新的 h', '读过：the'), ('新的 h', 'the dog'), ('新的 h', 'the dog ran')],
+             ['一步，x = the', '一步，x = dog', '一步，x = ran'],
+             '记忆 h 从全零开始。用词 the 走一步得到新的 h，用 dog 走同样的一步得到下一个，再用 ran 走同样的一步得到最后一个。')
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    每个词用的都是**同一组**旋钮，这和第 11 章的卷积核一样：卷积核在图片的各个位置上滑动，这一步在文本的各个位置上滑动。所以不管文本是 3 个词还是 3,000 个词，网络的旋钮一样多。
+
+    ## 动手算：记忆的两步
+
+    看最小的情况：一个词是一个数，记忆也是一个数，旋钮是 $W_x = 2$、$W_h = 1$、$b = -1$。记忆从 0 开始。第一个词是 $x = 1$，第二个词是 $x = 0$。你会用到这张表：
+
+    | $z$ | −1 | −0.24 | 0 | 0.24 | 1 | 2 |
+    |---|---|---|---|---|---|---|
+    | $\tanh(z)$ | −0.76 | −0.24 | 0 | 0.24 | 0.76 | 0.96 |
+
+    对每个词，先算出送进 tanh 的那个数，再算出新的记忆。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    step_boxes = hand.boxes(['第 1 个词：送进 tanh 的数', '第 1 个词之后的记忆', '第 2 个词：送进 tanh 的数', '第 2 个词之后的记忆'], step=0.01)
+    return (step_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(step_boxes):
+    hand.marked(step_boxes, {'第 1 个词：送进 tanh 的数': 1, '第 1 个词之后的记忆': 0.76, '第 2 个词：送进 tanh 的数': -0.24, '第 2 个词之后的记忆': -0.24}, {
+        '第 1 个词：送进 tanh 的数': r"""$x \times W_x + h \times W_h + b$，其中 $x = 1$，$h = 0$""",
+        '第 1 个词之后的记忆': r"""在表里查你的第一个答案""",
+        '第 2 个词：送进 tanh 的数': r"""同样的算式，这次 $x = 0$，$h$ 是第 1 个词之后的记忆""",
+        '第 2 个词之后的记忆': r"""在表里查你的第三个答案""",
+    }, LOCALE, tolerance=0.011)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    第二个词是 0，它什么也没带来。但记忆还是变了，而且新的值取决于第一个词：第一个词换一个，这里的数也会不同。这就是记忆在起作用。
 
     ## 练习 1：rnn_step
 
-    写 `rnn_step(x, h, Wx, Wh, b)`，一次处理一整批：`x` 的形状是 `(batch, d)`，`h` 的形状是 `(batch, m)`。
+    写 `rnn_step(x, h, Wx, Wh, b)`，也就是上面的公式，一次处理一整批文本。
 
-    ```
-    return torch.tanh(x @ Wx + h @ Wh + b)
-    ```
+    | 输入 | 形状 | 它是什么 |
+    |---|---|---|
+    | `x` | `(batch, d)` | 每段文本当前的词，一个有 `d` 个数字的向量 |
+    | `h` | `(batch, m)` | 每段文本到目前为止的记忆 |
+    | `Wx` | `(d, m)` | 旋钮 |
+    | `Wh` | `(m, m)` | 旋钮 |
+    | `b` | `(m,)` | 旋钮 |
+
+    它返回新的记忆，形状是 `(batch, m)`。你动手算的第一步就是其中一项检查：每个张量都只有一个数，`x = [[1.0]]`、`h = [[0.0]]`、`Wx = [[2.0]]`、`Wh = [[1.0]]`、`b = [-1.0]`，结果是 `[[0.76]]`。
     """)
     return
 
@@ -79,17 +155,49 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""这就是第 08 章的层，只是输入从一个变成了两个。一批数据和旋钮矩阵之间的 $\cdot$，在代码里是 `@`。""",
+        r"""只要一行：`return`，后面用 `torch.tanh` 把整个和包起来。偏置要写在 tanh 里面。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 读完整段文本
+
+    现在把上面那张图写成代码。词以 `X` 的形式送来，形状是 `(batch, length, d)`：批里每段文本，每个词一个向量。我们要取出每段文本的第 $t$ 个词，最后再把各个记忆拼回去。
+
+    /// admonition | 🧰 工具箱：拆开一个维度，拼出一个维度
+    - 索引里单独一个 `:` 表示“这一维全要”。对形状为 `(batch, length, d)` 的 `X`，`X[:, 0]` 是每段文本的第一个词，形状是 `(batch, d)`。
+    - `torch.stack(tensors, dim=1)` 沿着一个**新的**第 1 维，把一个由形状相同的张量组成的列表拼起来。三个形状为 `(batch, m)` 的张量，变成一个形状为 `(batch, 3, m)` 的张量。
+    ///
+
+    下面的单元格从一个形状为 `(2, 5, 4)` 的张量里取出两个词，再把它们叠起来，并显示两个形状。
+    """)
+    return
+
+
+@app.cell
+def _():
+    words_demo = torch.rand(2, 5, 4)
+    words_demo[:, 0].shape, torch.stack([words_demo[:, 0], words_demo[:, 4]], dim=1).shape
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## 练习 2：run_rnn
 
-    现在读完整段文本。`X` 的形状是 `(batch, length, d)`：批里每段文本，每个词一个向量。记忆从全零开始。`X[:, t]` 取出每段文本的第 `t` 个词（`:` 表示“这一维全要”），`torch.stack(list, dim=1)` 沿着新的第 1 维把一个由张量组成的列表拼起来。
+    写 `run_rnn(X, Wx, Wh, b)`。`X` 的形状是 `(batch, length, d)`，旋钮和练习 1 一样。它返回每个词之后的记忆，形状是 `(batch, length, m)`：
 
-    写 `run_rnn(X, Wx, Wh, b)`，返回每个词之后的记忆，形状是 `(batch, length, m)`：
+    1. 记忆从零开始，形状是 `(batch, m)`。这两个大小都能从输入里读出来：`X.shape[0]` 和 `Wh.shape[0]`。
+    2. 对每个位置 `t`，从第一个词到最后一个词，用一次 `rnn_step` 把第 `t` 个词和记忆变成新的记忆。把每个新的记忆都存进一个列表。
+    3. 沿第 1 维把列表叠起来。
 
-    1. 两行：`h = torch.zeros(X.shape[0], Wh.shape[0])` 和 `states = []`
-    2. `for t in range(X.shape[1]):`
-    3. 里面两行：`h = rnn_step(X[:, t], h, Wx, Wh, b)` 和 `states.append(h)`
-    4. 循环结束后，`return torch.stack(states, dim=1)`
+    还是你动手算的那个例子：一段两个词的文本，`X = [[[1.0], [0.0]]]`，旋钮不变，结果是 `[[[0.76], [-0.24]]]`。
     """)
     return
 
@@ -103,6 +211,15 @@ def run_rnn(X, Wx, Wh, b):
 @app.cell(hide_code=True)
 def _():
     check("14", "run_rnn", run_rnn, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""循环之前：用 `torch.zeros` 造出 `h`，再造一个空列表。循环是 `for t in range(X.shape[1]):`。在循环里，把 `rnn_step` 的结果存回 `h`，这样下一个词才能看到它，再把 `h` 加进列表。""",
+        r"""一共 6 行。每段文本的第 `t` 个词是 `X[:, t]`。最后一行返回对列表做 `torch.stack` 的结果，`dim=1`。""",
+    ], LOCALE)
     return
 
 
@@ -142,16 +259,44 @@ def _():
        9 7         7 1
     ```
 
-    在每个位置上，`Y` 都是 `X` 错开一位。所以一小段文本就含有很多训练样本。
+    在每个位置上，`Y` 都是 `X` 错开一位。所以一小段文本就含有很多训练样本。最后一个编号 1 只当答案：它后面什么都没有，所以当不了输入。
+
+    ## 动手算：切一段文本
+
+    把 8 个编号 `[4, 8, 3, 6, 1, 9, 2, 5]` 切成长度为 3 的片段。最后一个答案需要比输入多一个编号，那么能放下几个完整的行？`X` 的最后一个编号是什么？`Y` 的第一个和最后一个编号呢？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    window_boxes = hand.boxes(['行数', 'X 的最后一个编号', 'Y 的第一个编号', 'Y 的最后一个编号'])
+    return (window_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(window_boxes):
+    hand.marked(window_boxes, {'行数': 2, 'X 的最后一个编号': 9, 'Y 的第一个编号': 8, 'Y 的最后一个编号': 2}, {
+        '行数': r"""3 行要用 9 个编号当输入，而总共只有 8 个""",
+        'X 的最后一个编号': r"""`X` 装的是前 $2 \times 3 = 6$ 个编号""",
+        'Y 的第一个编号': r"""第一个输入是 4，它的答案是它后面的那个编号""",
+        'Y 的最后一个编号': r"""最后一个输入的答案，是它后面的那个编号""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    最后一个编号 5 完全没用上：它凑不满一行。
 
     ## 练习 3：windows
 
-    写 `windows(ids, length)`，把一个 NumPy 编号数组切成行。我们要比用到的多留一个编号，给最后一个答案：
+    写 `windows(ids, length)`。`ids` 是一个 NumPy 编号数组，`length` 是一个整数。它返回两个数组 `X, Y`，形状都是 `(n, length)`，其中 `n` 是能放下的完整行数：
 
-    1. `n = (len(ids) - 1) // length`，这是完整的行数
-    2. `X = ids[:n * length].reshape(n, length)`
-    3. `Y = ids[1:n * length + 1].reshape(n, length)`
-    4. `return X, Y`
+    > `windows(np.array([5, 2, 9, 7, 1]), 2)` 得到 `[[5, 2], [9, 7]]` 和 `[[2, 9], [7, 1]]`
+
+    `X` 是前 $n \times \text{length}$ 个编号，`Y` 是同样多个编号，只是从后一个位置开始。`//` 是整除（第 11 章），`reshape`（第 06 章）把一串数折成若干行。
     """)
     return
 
@@ -165,6 +310,15 @@ def windows(ids, length):
 @app.cell(hide_code=True)
 def _():
     check("14", "windows", windows, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""先算行数。要留出一个编号给最后一个答案，所以是 `len(ids) - 1` 个编号，用 `//` 除以 `length`。然后是 `ids` 的两个切片，各自 `reshape` 成 `(n, length)`。""",
+        r"""一共 4 行。`X` 的切片在 `n * length` 处停下。`Y` 的切片从 1 开始，比 `X` 的切片晚一个位置停下。""",
+    ], LOCALE)
     return
 
 
@@ -207,36 +361,79 @@ def _():
 
     ## LSTM：带门的记忆
 
-    问题在于，普通的那一步每次都经过 tanh *替换*记忆。**LSTM**（long short-term memory，长短期记忆）多保留一个记忆向量 `c`，叫**细胞**（cell），而且只靠**相加**来改变它。这就是第 11 章的 `x + f(x)`：相加给责任留出一条畅通的路。（LSTM 其实是更早的想法，出自 1997 年。）
+    问题在于，普通的那一步每次都经过 tanh *替换*记忆。**LSTM**（long short-term memory，长短期记忆）多保留一个记忆向量 $c$，叫**细胞**（cell），而且只靠**相加**来改变它。这就是第 11 章的 $x + f(x)$：相加给责任留出一条畅通的路。（LSTM 其实是更早的想法，出自 1997 年。）
 
-    为了控制细胞，它用了**门**（gate）。门是一个 0 到 1 之间的数字向量，用第 12 章的 sigmoid 造出来，再和别的东西逐个位置相乘：0 表示挡住，1 表示放行。一共三个门，都看当前词和之前的 `h`：
+    为了控制细胞，它用了**门**（gate）。门是一个 0 到 1 之间的数字向量，用第 12 章的 sigmoid 造出来，再和别的东西逐个位置相乘：0 表示挡住，1 表示放行。一共三个门，另外还有一个值：候选的新内容 $n$。这四样看的都是同一个东西，也就是并排放在一起的当前词和之前的 $h$，我们把它叫作 both。它们各有自己的一层旋钮：
 
-    | 门 | 回答的问题 |
-    |---|---|
-    | 遗忘门 `f` | 细胞里的每个数留下多少？ |
-    | 输入门 `i` | 新候选内容写入多少？ |
-    | 输出门 `o` | 细胞有多少显示到 `h` 里？ |
+    | 值 | 怎么造出来 | 回答的问题 |
+    |---|---|---|
+    | 遗忘门 $f$ | $\sigma(L_0(\text{both}))$ | 细胞里的每个数留下多少？ |
+    | 输入门 $i$ | $\sigma(L_1(\text{both}))$ | 候选内容写入多少？ |
+    | 输出门 $o$ | $\sigma(L_2(\text{both}))$ | 细胞有多少显示到 $h$ 里？ |
+    | 候选内容 $n$ | $\tanh(L_3(\text{both}))$ | 可以写入什么？ |
 
-    一步的计算如下，其中 `both` 是把词和旧的 `h` 并排放在一起，`n` 是候选的新内容：
+    然后用一步改变细胞和记忆，其中 $\times$ 是逐个位置相乘：
 
-    > $$c = f \times c + i \times n$$
+    > $$\text{新的 } c = f \times c + i \times n$$
 
-    > $$h = o \times \tanh(c)$$
+    > $$\text{新的 } h = o \times \tanh(\text{新的 } c)$$
 
-    关键在第一行。当 `f` 接近 1、`i` 接近 0 时，细胞原样通过，责任也有可能原样通过。“有可能”这三个字很重要，后面就会看到。
+    关键在第一行。当 $f$ 接近 1、$i$ 接近 0 时，细胞原样通过，责任也有可能原样通过。“有可能”这三个字很重要，后面就会看到。
 
+    ## 动手算：门在做什么
+
+    细胞里的一个数 $c = 0.8$，候选内容 $n = -0.5$。算出三种门的设置下新的 $c$：$f = 1, i = 0$；然后 $f = 0, i = 1$；然后 $f = 0.5, i = 0.5$。最后，不管细胞里是什么，输出门 $o = 0$ 时 $h$ 是多少？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    gate_boxes = hand.boxes(['f = 1、i = 0 时的 c', 'f = 0、i = 1 时的 c', 'f = 0.5、i = 0.5 时的 c', 'o = 0 时的 h'], step=0.01)
+    return (gate_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(gate_boxes):
+    hand.marked(gate_boxes, {'f = 1、i = 0 时的 c': 0.8, 'f = 0、i = 1 时的 c': -0.5, 'f = 0.5、i = 0.5 时的 c': 0.15, 'o = 0 时的 h': 0}, {
+        'f = 1、i = 0 时的 c': r"""$1 \times 0.8 + 0 \times (-0.5)$：全部留下，什么也不写""",
+        'f = 0、i = 1 时的 c': r"""$0 \times 0.8 + 1 \times (-0.5)$：全部忘掉，写入候选内容""",
+        'f = 0.5、i = 0.5 时的 c': r"""0.8 的一半，加上 $-0.5$ 的一半""",
+        'o = 0 时的 h': r"""在第二个公式里，$o$ 乘的是后面的全部""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    所以门可以留住细胞里的一个数，可以把它换掉，也可以把新旧混在一起；它们还能让细胞不显示在 $h$ 里，却不把它擦掉。细胞的每个位置都有自己的门数字，所以一个位置可以留着，另一个位置同时被换掉。
+
+    /// admonition | 🧰 工具箱：并排拼接，以及放在列表里的层
+    - `torch.cat([a, b], dim=1)` 沿着一个**已有的**维度把张量拼起来。形状为 `(2, 3)` 和 `(2, 4)` 的两张表并排放，成为一张形状为 `(2, 7)` 的表。（`torch.stack` 造出一个新维度，`torch.cat` 把已有的维度加长。）
+    - 层和别的值一样，也是一个值，所以可以放进列表。如果 `layers` 是一个由 `nn.Linear` 层组成的列表，`layers[0](a)` 就是用第一个层处理 `a`。
+    - `torch.sigmoid(a)` 对张量里的每个数计算 $\sigma$。
+    ///
+    """)
+    return
+
+
+@app.cell
+def _():
+    side_demo = torch.cat([torch.zeros(2, 3), torch.ones(2, 4)], dim=1)
+    layers_demo = [nn.Linear(7, 5), nn.Linear(7, 1)]
+    side_demo.shape, layers_demo[0](side_demo).shape, layers_demo[1](side_demo).shape
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 练习 4：lstm_step
 
-    写 `lstm_step(x, h, c, L)`。`L` 是四个 `nn.Linear` 层组成的列表，`[forget, input, output, new]`，每层都以 `both` 为输入。`torch.cat([a, b], dim=1)` 把两张表并排拼起来。
+    写 `lstm_step(x, h, c, L)`。`x` 的形状是 `(batch, d)`，`h` 和 `c` 的形状是 `(batch, m)`。`L` 是四个 `nn.Linear` 层组成的列表，顺序和表里一样，从 $L_0$ 到 $L_3$；每层接收 `(batch, d + m)`，给出 `(batch, m)`。它返回一对：新的 $h$ 和新的 $c$。
 
-    1. `both = torch.cat([x, h], dim=1)`
-    2. `f = torch.sigmoid(L[0](both))`
-    3. `i = torch.sigmoid(L[1](both))`
-    4. `o = torch.sigmoid(L[2](both))`
-    5. `n = torch.tanh(L[3](both))`
-    6. `c = f * c + i * n`
-    7. `h = o * torch.tanh(c)`
-    8. `return h, c`
+    both 就是把 `x` 和 `h` 并排放在一起，`x` 在前。然后照着表格和两个公式做。顺序很重要：新的 $h$ 是用*新的* $c$ 算出来的。
 
     其中一项检查会用同样的旋钮，把你的这一步和 PyTorch 自己的 LSTM 作比较。
     """)
@@ -252,6 +449,15 @@ def lstm_step(x, h, c, L):
 @app.cell(hide_code=True)
 def _():
     check("14", "lstm_step", lstm_step, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""一共八行：both 一行，表格的每一行各一行，两个公式各一行，再加 `return`。三个门用 `torch.sigmoid`，候选内容用 `torch.tanh`。`*` 是逐个位置相乘。""",
+        r"""前两行是 `both = torch.cat([x, h], dim=1)` 和 `f = torch.sigmoid(L[0](both))`。先把新的细胞存回 `c`，再去算 `h`；返回时按 `h, c` 的顺序。""",
+    ], LOCALE)
     return
 
 
@@ -302,7 +508,49 @@ def _():
 
     ## 训练语言模型
 
-    下面把整个模型写成一个层：词的编号进来，一张向量表把它们变成数字（第 12 章的 `nn.Embedding`），`nn.LSTM` 读它们，`nn.Linear` 在每个位置为词表里的每个词打分。`memory=None` 让我们可以传入之前调用得到的记忆，什么也不传就从头开始；后面的 `write` 会用到。数据是第 13 章的：同样的词表，同样的编号。下面的单元格要几秒钟。
+    整个模型的计划是这样的。词的编号进来。一张向量表把它们变成数字（第 12 章的 `nn.Embedding`），`nn.LSTM` 读它们，`nn.Linear` 在每个位置为词表里的每个词打分：
+
+    | 步骤 | 结果 | 形状 |
+    |---|---|---|
+    | 编号 | | `(batch, length)` |
+    | `table` 查出每个编号 | 每个词一个向量 | `(batch, length, d)` |
+    | `lstm` 从 `memory` 出发读它们 | 每个词之后的记忆，以及最后的记忆 | `(batch, length, m)`，以及记忆 |
+    | `out` 给词表里的每个词打分 | 每个位置上的分数 | `(batch, length, vocab)` |
+
+    调用一个 `nn.LSTM` 要给两个输入：向量，以及出发时的记忆。它返回一对：每个词之后的记忆，和最后的记忆（它本身又是一对，$h$ 和 $c$，我们只管原样传下去）。如果出发时的记忆是 `None`，也就是 Python 里表示“什么都没有”的词，它就从零开始。
+
+    ## 练习 5：reader_forward
+
+    照着表格写 `reader_forward(ids, memory, table, lstm, out)`。`table`、`lstm` 和 `out` 是那三个层，`memory` 要么是 `None`，要么是之前某次调用得到的最后的记忆。它返回一对：分数，和最后的记忆。
+    """)
+    return
+
+
+@app.function
+def reader_forward(ids, memory, table, lstm, out):
+    # ← 把下面的 todo() 换成你的代码
+    todo()
+
+
+@app.cell(hide_code=True)
+def _():
+    check("14", "reader_forward", reader_forward, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""三次调用，每一次都用上一次的结果：`table`、`lstm`、`out`。中间那个返回的是一对，所以要给两半各起一个名字，像 `a, b = ...` 这样。""",
+        r"""一共 2 行。第一行是 `states, memory = lstm(table(ids), memory)`。第二行返回分数和记忆。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    下面把模型写成一个 PyTorch 模块。它装着那三个层，它的 `forward` 就是你的函数。`forward` 第一行里的 `memory=None` 是一个**默认值**（default）：调用的人可以不给这个输入，这时它就是 `None`。后面的 `write` 会把上一次调用得到的记忆传进去。数据是第 13 章的：同样的词表，同样的编号。载入数据的那个单元格要几秒钟。
     """)
     return
 
@@ -317,8 +565,7 @@ def _():
             self.out = nn.Linear(m, vocab_size)
 
         def forward(self, ids, memory=None):
-            states, memory = self.lstm(self.table(ids), memory)
-            return self.out(states), memory
+            return reader_forward(ids, memory, self.table, self.lstm, self.out)
     return (Reader,)
 
 
@@ -356,13 +603,19 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `train_reader` 是第 10 章的循环，多了两处小改动。
+    `train_reader` 是第 10 章的循环，多了两处改动：摊平和裁剪。`score_reader` 用第 13 章的 `perplexity` 在测试故事上打分。
 
-    **摊平。** `F.cross_entropy` 要的是一张分数表和一个答案向量，而我们每段文本有一张表。`S.reshape(-1, size)` 把它们首尾相接。（`-1` 的意思是“能放下的那个数”。）
+    /// admonition | 🧰 工具箱：三个小工具
+    - 在 `reshape` 里，有一个大小可以写成 `-1`，意思是“能放下的那个数”：一个有 24 个数的张量，`reshape` 成 `(-1, 4)` 就有 6 行，`reshape` 成 `(-1)` 就成了一个长向量。
+    - `F.cross_entropy(S, answers, reduction="none")` 给出每个样本各自的意外程度，而不是它们的均值。
+    - `np.concatenate(arrays)` 把一个由 NumPy 数组组成的列表首尾相接，拼成一个数组。
+    ///
 
-    **裁剪。** 长链上的责任也可能爆炸，一个巨大的斜率就会把旋钮甩得老远。`nn.utils.clip_grad_norm_(knobs, 1.0)` 把所有斜率看成一个长向量，量出它的长度；如果超过 1，就把它们一起缩小，使这个长度刚好等于 1。这叫**裁剪**（clipping）。方向不变，只限制大小。
+    **摊平。** `F.cross_entropy` 要的是一张分数表和一个答案向量，而我们每段文本有一张表。`S.reshape(-1, size)` 把它们首尾相接，每个词一行。
 
-    `score_reader` 用第 13 章的 `perplexity` 在测试故事上打分。`reduction="none"` 让 `F.cross_entropy` 给出每个词的意外程度，而不是均值；负号把意外程度变回 `perplexity` 要的对数概率。`S, _memory = ...` 留下分数，忽略记忆。
+    **裁剪。** 长链上的责任也可能爆炸，一个巨大的斜率就会把旋钮甩得老远。`nn.utils.clip_grad_norm_(knobs, 1.0)` 把所有斜率看成一个长向量，量出它的长度；如果超过 1，就把它们一起缩小，使这个长度刚好等于 1。方向不变，只限制大小。这叫**梯度裁剪**（gradient clipping）。
+
+    在 `score_reader` 里，负号把意外程度变回 `perplexity` 要的对数概率。`S, _memory = ...` 留下分数，忽略记忆。
     """)
     return
 
@@ -404,7 +657,35 @@ def score_reader(model, X, Y):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    按下按钮，会用全部 190 万个词训练两遍，记忆大小是 128。这是这门课里第一次真正花时间的训练：在笔记本上大约 2 到 5 分钟。完成之前，需要它的结果的单元格会显示 `Ancestor stopped`，这是正常的。如果重新运行训练单元格，要再按一次按钮。（`np.concatenate` 把一个由数组组成的列表拼成一个。）单元格会显示最后的训练损失和测试困惑度。我们用 32 个词的片段训练，用 64 个词的较长片段打分。
+    ## 动手算：送进损失的形状
+
+    读一读 `train_reader` 里计算 `loss` 的那一行。我们训练时每批 64 段文本，每段 32 个词，词表有 2,002 项，所以 `S` 的形状是 `(64, 32, 2002)`。`S.reshape(-1, size)` 之后，分数表有多少行、多少列？`Y[batch].reshape(-1)` 里有多少个答案？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    shape_boxes = hand.boxes(['分数表的行数', '分数表的列数', '答案的个数'])
+    return (shape_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(shape_boxes):
+    hand.marked(shape_boxes, {'分数表的行数': 2048, '分数表的列数': 2002, '答案的个数': 2048}, {
+        '分数表的行数': r"""每个词一行：64 段文本，每段 32 个词""",
+        '分数表的列数': r"""`size` 是每个词的分数个数，词表里每一项一个""",
+        '答案的个数': r"""每一行分数对应一个答案""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    所以训练的每一步，都是同时回答 2,048 个“下一个词是什么”的问题，每个问题的打分方式和第 10 章的一个数字一样。
+
+    按下按钮，会用全部 190 万个词训练两遍，记忆大小是 128。这是这门课里第一次真正花时间的训练：在笔记本上大约 2 到 5 分钟。完成之前，需要它的结果的单元格会显示 `Ancestor stopped`，这是正常的。如果重新运行训练单元格，要再按一次按钮。单元格会显示最后的训练损失和测试困惑度。我们用 32 个词的片段训练，用 64 个词的较长片段打分。
     """)
     return
 
@@ -455,12 +736,41 @@ def _():
     - 小于 1 时，分数的差距拉大，本来就可能的词更可能了：文本更稳妥，也更平淡；
     - 大于 1 时，差距缩小，概率变平：文本更狂野。
 
-    ## 练习 5：sample_word
+    ## 动手算：拧一拧这个旋钮
 
-    写 `sample_word(scores, temperature)`。`scores` 是一个向量，每个词一个分数。`torch.multinomial(p, 1)` 按 `p` 里的概率抽 1 个编号，`.item()` 把它变成普通数字。
+    两个词的分数是 $[1, 0]$。第 12 章说过，只有两个分数时，softmax 给第一个的份额是 $\sigma$（两个分数的差）。这里有三个值：$\sigma(0.5) = 0.62$，$\sigma(1) = 0.73$，$\sigma(2) = 0.88$。温度为 1 时，第一个词的份额是多少？温度为 0.5 时呢？温度为 2 时呢？
+    """)
+    return
 
-    1. `p = torch.softmax(scores / temperature, dim=0)`
-    2. `return torch.multinomial(p, 1).item()`
+
+@app.cell(hide_code=True)
+def _():
+    heat_boxes = hand.boxes(['温度为 1 时的份额', '温度为 0.5 时的份额', '温度为 2 时的份额'], step=0.01)
+    return (heat_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(heat_boxes):
+    hand.marked(heat_boxes, {'温度为 1 时的份额': 0.73, '温度为 0.5 时的份额': 0.88, '温度为 2 时的份额': 0.62}, {
+        '温度为 1 时的份额': r"""分数还是 $[1, 0]$，所以差是 1""",
+        '温度为 0.5 时的份额': r"""除以 0.5，分数翻倍：$[2, 0]$""",
+        '温度为 2 时的份额': r"""除以 2，分数减半：$[0.5, 0]$""",
+    }, LOCALE, tolerance=0.006)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 练习 6：sample_word
+
+    写 `sample_word(scores, temperature)`。`scores` 是一个张量，每个词一个分数，形状是 `(vocab,)`；`temperature` 是一个大于 0 的数。它返回一个编号，是普通的 Python 数字：先把分数除以温度，再做 softmax 得到概率，按这些概率抽出来。
+
+    /// admonition | 🧰 工具箱：现成的 softmax
+    `torch.softmax(a, dim=0)` 就是第 07 章的 softmax，用在张量上：它把一个分数向量变成加起来等于 1 的概率。`dim=0` 说明沿哪一维做，而向量只有这一维。`torch.softmax(torch.tensor([2.0, 1.0, 0.0]), dim=0)` 大约是 `[0.67, 0.24, 0.09]`。
+    ///
+
+    其余的工具你都认识：`torch.multinomial(p, 1)` 按 `p` 里的概率抽 1 个编号（第 12 章），`.item()` 把只有一个数的张量变成普通数字（第 10 章）。分数是 `[1.0, 0.0]`、温度是 0.1 时，几乎每次调用都应该得到 0。
     """)
     return
 
@@ -490,6 +800,15 @@ def _():
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""分两步：先算概率，再抽取。要在 softmax 之前除以温度，不是之后。""",
+        r"""一共 2 行。第一行是 `p = torch.softmax(scores / temperature, dim=0)`。第二行从 `p` 里抽 1 个编号，末尾加 `.item()`。""",
+    ], LOCALE)
+    return
+
+
 @app.cell
 def _(index, model, vocab):
     torch.manual_seed(1)
@@ -511,10 +830,10 @@ def _():
     ## 你现在会做的事
 
     - 解释循环的一步怎样在每个词上重复使用同一组旋钮
-    - 写出 RNN 的一步并让它读完文本，再和 `nn.RNN` 核对
+    - 亲手算出 RNN 的一步，把它写成代码并让它读完文本，再和 `nn.RNN` 核对
     - 把文本变成输入和下一个词的答案
     - 测量责任怎样随时间衰减
-    - 解释 LSTM 的细胞和门怎样保护记忆和责任
+    - 解释 LSTM 的细胞和门怎样保护记忆和责任，并照着公式写出它的一步
     - 用裁剪限制爆炸的斜率
     - 训练语言模型，把它放上排行榜，并用温度生成文本
 

@@ -114,7 +114,10 @@ introduces = [
     "slicing", "index-array", "argument-unpacking", "momentum", "moving-average", "adam",
     "bias-correction", "overfitting", "weight-decay", "numpy-eye", "numpy-abs",
 ]
-toolbox = ["permutation", "range-step", "slicing", "index-array"]
+toolbox = [
+    "permutation", "range-step", "slicing", "index-array", "numpy-sqrt", "numpy-eye",
+    "numpy-abs", "argument-unpacking",
+]
 uses = [
     "neural-network", "softmax", "two-layer-backprop", "accuracy", "one-hot", "random-generator",
     "random-init", "relu", "mean", "squaring", "gradient-descent", "learning-rate",
@@ -130,7 +133,11 @@ introduces = [
     "nn-sequential", "parameters", "optimizer", "detach", "training-loop", "randperm",
     "float-method", "no-grad", "gpu", "device", "pytorch",
 ]
-toolbox = ["dtype", "list-comprehension", "numpy-from-tensor", "builtin-max"]
+toolbox = [
+    "dtype", "list-comprehension", "numpy-from-tensor", "builtin-max", "bits-and-precision",
+    "dim", "item", "torch-relu", "manual-seed", "randperm", "torch-cross-entropy", "parameters",
+    "detach", "float-method", "no-grad", "device",
+]
 uses = [
     "numpy-array", "matmul-operator", "shape", "indexing", "slicing", "axis", "recording-book",
     "blame", "backpropagation", "gradient-check", "softmax", "cross-entropy", "two-layer-backprop",
@@ -146,6 +153,10 @@ introduces = [
     "floor-division", "nn-conv2d", "maps-dimension", "unsqueeze", "padding", "global-pooling",
     "residual", "skip-connection", "nn-module-subclass", "builtin-super", "resnet",
 ]
+toolbox = [
+    "rng-integers", "two-way-slice", "numpy-roll", "floor-division", "nn-conv2d",
+    "maps-dimension", "unsqueeze", "nn-module-subclass", "builtin-super",
+]
 uses = [
     "overfitting", "tensor", "dtype", "nn-linear", "nn-sequential", "optimizer", "training-loop",
     "no-grad", "dot-product", "elementwise", "chain-rule", "derivative-rules", "vanishing-exploding",
@@ -158,8 +169,11 @@ introduces = [
     "text-dataset", "one-hot-words", "word-vector", "distributional-idea", "string-lower",
     "string-join", "dict", "dict-get", "builtin-sorted", "vocabulary", "word-id", "filtered-list",
     "vector-length", "cosine-similarity", "skip-gram", "not-equal", "negative-sampling", "sigmoid",
-    "logsigmoid", "nn-embedding", "noise-distribution", "argsort", "not-in",
-    "word-analogy", "builtin-min", "fractional-power",
+    "logsigmoid", "nn-embedding", "noise-distribution", "argsort", "builtin-min", "fractional-power",
+]
+toolbox = [
+    "string-lower", "string-join", "dict", "dict-get", "builtin-sorted", "filtered-list",
+    "vector-length", "not-equal", "logsigmoid", "argsort", "builtin-min", "fractional-power",
 ]
 uses = [
     "one-hot", "dot-product", "softmax", "surprise", "log", "unsqueeze", "broadcasting", "tensor",
@@ -172,12 +186,16 @@ introduces = [
     "language-model", "unk-and-end", "conditional-probability", "bigram", "list-from-one",
     "smoothing", "sampling", "rng-choice", "log-of-product", "perplexity", "pair-indexing",
     "numpy-full", "unigram", "hyperparameter", "trigram", "tuple-key", "dict-values", "builtin-sum",
-    "mixing-models", "leaderboard", "numpy-tolist", "builtin-round",
+    "mixing-models", "leaderboard", "numpy-tolist", "builtin-round", "not-in",
+]
+toolbox = [
+    "list-from-one", "rng-choice", "log-of-product", "pair-indexing", "numpy-full", "tuple-key",
+    "dict-values", "builtin-sum", "numpy-tolist", "builtin-round", "not-in",
 ]
 uses = [
     "dict", "dict-get", "vocabulary", "word-id", "text-dataset", "builtin-sorted", "builtin-zip",
     "numpy-zeros", "numpy-sum", "keepdims", "axis", "surprise", "cross-entropy", "log", "exp",
-    "test-set", "overfitting", "argsort", "numpy-array", "if", "not-in", "string-join",
+    "test-set", "overfitting", "argsort", "numpy-array", "if", "string-join",
 ]
 
 [chapters.14]
@@ -186,6 +204,10 @@ introduces = [
     "next-word-targets", "windows", "blame-through-time", "lstm", "lstm-cell", "gate", "torch-cat",
     "forget-gate-bias", "reshape-minus-one", "gradient-clipping", "reduction-none",
     "numpy-concatenate", "temperature",
+]
+toolbox = [
+    "all-of-a-dimension", "torch-stack", "torch-cat", "reshape-minus-one", "reduction-none",
+    "numpy-concatenate",
 ]
 uses = [
     "word-vector", "nn-embedding", "sigmoid", "residual", "skip-connection", "vanishing-exploding",
@@ -234,9 +256,12 @@ uses = [
 
 [chapters.18]
 introduces = [
-    "pretraining", "fine-tuning", "freezing", "conditional-expression", "bincount", "majority-baseline",
-    "precision", "recall", "elementwise-and", "margin-of-error", "state-dict", "leakage", "benchmark",
-    "bert", "module-list",
+    "pretraining", "fine-tuning", "freezing", "conditional-expression", "bincount",
+    "majority-baseline", "precision", "recall", "elementwise-and", "margin-of-error", "state-dict",
+    "leakage", "benchmark", "bert", "module-list",
+]
+toolbox = [
+    "conditional-expression", "bincount", "elementwise-and", "state-dict",
 ]
 uses = [
     "gpt", "transformer", "block", "test-set", "accuracy", "variances-add", "numpy-sqrt",
@@ -246,9 +271,13 @@ uses = [
 
 [chapters.19]
 introduces = [
-    "byte", "utf-8", "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "token", "bpe",
-    "tie-breaking", "while-loop", "and-operator", "max-with-key", "dict-items", "byte-string",
-    "errors-replace", "vocabulary-size", "per-word-scoring",
+    "byte", "utf-8", "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "token",
+    "bpe", "tie-breaking", "while-loop", "and-operator", "else", "max-with-key",
+    "dict-items", "byte-string", "errors-replace", "vocabulary-size", "per-word-scoring",
+]
+toolbox = [
+    "string-encode", "byte-decode", "builtin-list", "builtin-bytes", "while-loop", "and-operator",
+    "else", "max-with-key", "dict-items", "byte-string", "errors-replace",
 ]
 uses = [
     "dict", "dict-get", "builtin-zip", "list-from-one", "list-append", "builtin-range", "vocabulary",
@@ -307,21 +336,35 @@ uses = ["transcript-tools", "output-truncation", "strength", "fan-out", "worker-
 [chapters.20]
 introduces = [
     "fair-tokens", "rms-norm", "angle", "cos-sin", "radian", "math-pi", "rotation", "rotation-dot",
-    "rope", "ellipsis-index", "new-axis", "silu", "swiglu", "adamw", "warmup", "cosine-decay",
-    "early-return", "checkpoint", "torch-save", "param-groups", "decode-tokens", "builtin-set",
+    "rope", "ellipsis-index", "new-axis", "silu", "swiglu", "builtin-set", "nn-parameter",
 ]
+toolbox = ["math-pi", "ellipsis-index", "new-axis", "builtin-set", "nn-parameter"]
 uses = [
     "layer-norm", "block", "transformer", "gpt", "position-table", "self-attention", "sigmoid", "gate",
-    "adam", "weight-decay", "learning-rate", "state-dict", "bpe", "token", "perplexity", "leaderboard",
-    "per-word-scoring", "list-comprehension", "if", "dict", "attention-scale", "future-mask",
-    "chart-reading", "variance",
+    "bpe", "token", "perplexity", "leaderboard", "per-word-scoring", "list-comprehension", "dict",
+    "attention-scale", "future-mask", "numpy-concatenate", "surprise", "log",
+]
+
+[chapters.21]
+introduces = [
+    "adamw", "warmup", "cosine-decay", "early-return", "checkpoint", "torch-save", "param-groups",
+    "decode-tokens",
+]
+toolbox = ["early-return", "torch-save", "param-groups", "decode-tokens"]
+uses = [
+    "adam", "weight-decay", "learning-rate", "state-dict", "rms-norm", "rope", "swiglu", "cos-sin",
+    "math-pi", "token", "perplexity", "leaderboard", "per-word-scoring", "if", "dict",
+    "chart-reading", "gradient-clipping", "bias-correction", "fair-tokens", "nn-parameter",
 ]
 
 [chapters.22]
 introduces = [
     "module-time", "time-a-function", "flops", "machine-speed", "training-flops", "utilisation",
-    "training-memory", "activations", "float-formats", "finfo", "mixed-precision", "memory-bound",
-    "cache", "online-softmax", "tiled-attention", "fused-attention", "profiler",
+    "training-memory", "float-formats", "finfo", "mixed-precision", "cache", "tiled-attention",
+    "fused-attention", "profiler", "scientific-literal",
+]
+toolbox = [
+    "module-time", "finfo", "scientific-literal",
 ]
 uses = [
     "matmul-operator", "dot-product", "bits-and-precision", "dtype", "adam", "softmax-shift", "exp",
@@ -333,7 +376,10 @@ uses = [
 introduces = [
     "process", "data-parallel", "mean-of-equal-means", "gradient-accumulation", "builtin-slice",
     "all-reduce", "ring-all-reduce", "spawned-process", "sharding", "zero-stages", "remainder",
-    "tensor-parallel", "scientific-literal",
+    "tensor-parallel",
+]
+toolbox = [
+    "builtin-slice", "remainder",
 ]
 uses = [
     "mini-batch", "mean", "derivative-rules", "grads-accumulate", "torch-stack", "training-memory",
@@ -553,7 +599,6 @@ nn-embedding = "nn.Embedding(2000, 32): a table of learned rows, looked up by id
 noise-distribution = "noise words are drawn with chances proportional to count^0.75"
 argsort = "np.argsort(v) gives the positions that would sort v, smallest first"
 not-in = "x not in items is True when x isn't among items"
-word-analogy = "b − a + c lands near the word that is to c as b is to a"
 builtin-min = "min(a, b) is the smaller of two numbers"
 fractional-power = "a power below 1 pulls big numbers down more than small ones: 100 ** 0.75 is about 32"
 language-model = "a model that gives the chance of each next word, given the words so far"
@@ -649,6 +694,7 @@ bpe = "byte-pair encoding: merge the commonest neighbouring pair, again and agai
 tie-breaking = "when pairs are tied, take the one seen first"
 while-loop = "while test: repeats its lines as long as the test holds, moving at its own pace"
 and-operator = "a and b holds when both hold; the right side isn't looked at if the left fails"
+else = "else: lined up with an if runs its indented lines when the if test did not hold"
 max-with-key = "max(counts, key=counts.get) gives the key with the biggest count"
 dict-items = "for key, value in d.items(): goes through a dictionary's pairs"
 byte-string = "b''.join(list) joins bytes"
@@ -793,15 +839,12 @@ flops = "floating-point operations; A @ B for (n, k) and (k, m) costs about 2nkm
 machine-speed = "FLOPs per second, measured by timing a big matrix product"
 training-flops = "training costs about 6 × knobs × tokens FLOPs"
 utilisation = "the share of the machine's best speed that a run achieves"
-training-memory = "with Adam at 32 bits: 16 bytes per knob, for knob, slope and two averages"
-activations = "values the forward pass keeps for the backward pass; they grow with batch and window"
+training-memory = "with Adam at 32 bits: 16 bytes per knob, for knob, slope and two averages; plus the activations, the values the forward pass keeps for the backward pass"
 float-formats = "float32 about 7 digits; float16 about 3, up to 65,504; bfloat16 fewer digits, float32's range"
 finfo = "torch.finfo(dtype).max and .eps describe a number format"
 mixed-precision = "products in 16 bits, knobs and sums in 32"
-memory-bound = "when fetching numbers, not arithmetic, limits the speed"
-cache = "the small fast memory next to the processor"
-online-softmax = "a running maximum and total, fixed up by e^(old − new) when the maximum grows"
-tiled-attention = "attention over keys in tiles with an online softmax, never building the whole table"
+cache = "the small fast memory next to the processor; when fetching numbers, not arithmetic, limits the speed, staying in it is what counts"
+tiled-attention = "attention over keys in tiles, never building the whole table: a running maximum and total, fixed up by e^(old − new) when the maximum grows"
 fused-attention = "F.scaled_dot_product_attention: attention as one fast operation"
 profiler = "torch.profiler times every operation inside a run"
 process = "a separate running program, with memory of its own"
@@ -818,4 +861,5 @@ remainder = "10 % 4 is 2, the remainder of a division"
 tensor-parallel = "split a layer's matrix by columns across devices"
 scientific-literal = "7e9 means 7 × 10^9"
 builtin-set = "set(list) makes a set: word in known answers instantly"
+nn-parameter = "nn.Parameter(tensor) makes a tensor into a knob that training moves"
 module-time = "import time; time.perf_counter() is a clock in seconds"

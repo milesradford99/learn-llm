@@ -14,24 +14,16 @@ def rotate(a, b, angle):
     return a * np.cos(angle) - b * np.sin(angle), a * np.sin(angle) + b * np.cos(angle)
 
 
+def rope_one(x, position, speeds):
+    half = len(x) // 2
+    a, b = rotate(x[:half], x[half:], position * speeds)
+    return np.concatenate([a, b])
+
+
 def swiglu(x, W1, W2, W3):
     return W2(F.silu(W1(x)) * W3(x))
 
 
-def adamw_step(w, m, v, grad, t, rate, decay):
-    m = 0.9 * m + 0.1 * grad
-    v = 0.999 * v + 0.001 * grad * grad
-    m_hat = m / (1 - 0.9 ** t)
-    v_hat = v / (1 - 0.999 ** t)
-    return w - rate * (m_hat / (np.sqrt(v_hat) + 1e-8) + decay * w), m, v
-
-
-def learning_rate(step, total, warmup, peak):
-    if step < warmup:
-        return peak * step / warmup
-    progress = (step - warmup) / (total - warmup)
-    return peak * (0.1 + 0.9 * 0.5 * (1 + np.cos(np.pi * progress)))
-
-
-def checkpoint(model, optimizer, step):
-    return {"model": model.state_dict(), "optimizer": optimizer.state_dict(), "step": step}
+def modern_block_step(x, gain1, look, gain2, W1, W2, W3):
+    x = x + look(rms_norm(x, gain1))
+    return x + swiglu(rms_norm(x, gain2), W1, W2, W3)
