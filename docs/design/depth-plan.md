@@ -1,10 +1,13 @@
 # Even depth: plan for chapters 06–20
 
-Status: approved 2026-11-09. The renumbering and the tooling are done; chapters are reworked
-in the order at the end. Progress is the `WAITING` list in `tests/test_depth.py`.
+Status: done 2026-11-14 for chapters 06–23 (new numbers). Every one of them is off the
+`WAITING` list in `tests/test_depth.py`; what remains on it is outside this plan (see
+"Not covered here"). Still open: the novice-reader review of the reworked chapters, in both
+languages (`docs/design/novice-review.md`).
 
-**Numbers in this document are the old ones**, from before the renumbering, because the
-measurements were taken then. The table under "Splits and numbering" maps old to new.
+**Up to "Chapter by chapter", numbers are the old ones**, from before the renumbering, because
+the measurements were taken then. The table under "Splits and numbering" maps old to new.
+The chapter-by-chapter section uses the new numbers.
 
 ## The problem, measured
 
@@ -64,27 +67,28 @@ lesson files in both locales, `learn_llm/checks/chNN.py`, `solutions/chNN.py`, l
 `docs/design/reviews/`, `AGENT-SOURCES.md`, the lock file. `make test` must pass with no
 content edits.
 
-Chapter numbers below are the **current** ones.
 
 ## Chapter by chapter
 
+Chapter numbers in this section are the **new** ones (renumbered here on 2026-11-14, when the work was finished).
+
 Each entry lists: what to add, what to do with each exercise, and what to do with given code.
 
-### 06 · Recognizing digits → two chapters
+### 06 and 07 · Recognizing digits → two chapters
 
-**06a (scores, guess, accuracy).** Sections up to "Why accuracy can't be the loss".
+**06 (scores, guess, accuracy).** Sections up to "Why accuracy can't be the loss".
 - Add: a hand exercise on a 3-picture, 3-class score table: pick each guess, count the share right.
 - Add exercise `guess(S)` (argmax along rows); it's used but never written by the learner now.
 - `accuracy`: from spec.
 - Toolbox boxes: indexing and `reshape`; `axis`.
 
-**06b (a loss for choices).** From "$e^s$" to the end.
+**07 (a loss for choices).** From "$e^s$" to the end.
 - Add: hand table for softmax of scores `[2, 1, 0]`, with the three $e^s$ values given.
 - Add: hand table for one picture's slope, $P - Y$, before "All pictures, all knobs".
 - `softmax`, `cross_entropy`: from spec. `gradient`: formula in math, code by the learner.
 - Keep the two derivation sections (307 and 349 words) as they are: this is the right depth.
 
-### 07 · Neural networks
+### 08 · Neural networks
 - Add: a picture of the network with the shape on every arrow.
 - Add: hand exercise on a 2-2-2 network with whole numbers: forward values, then blames.
   "Slopes through two layers" is 528 words with no table or numbers to follow.
@@ -92,7 +96,7 @@ Each entry lists: what to add, what to do with each exercise, and what to do wit
 - `backward` (8 of 8 lines printed): give the four formulas in math and the shape each result
   must have. The nudge check that follows is already the safety net.
 
-### 08 · Training that works
+### 09 · Training that works
 Don't split; four topics, but each is small once the Python is boxed.
 - Toolbox boxes: slices and `range(start, stop, step)`; shuffling with a permutation.
 - Add: predict exercise for the depth table (does the spread grow, shrink or hold?).
@@ -100,7 +104,7 @@ Don't split; four topics, but each is small once the Python is boxed.
 - `variance`, `batches`: from spec. `momentum_step`, `adam_step`: math given, code by the learner.
 - "Learning or memorising?" is 61 words and has no exercise: add a read-the-two-curves question.
 
-### 09 · Hello PyTorch
+### 10 · Hello PyTorch
 The comparison with the learner's own engine works well; keep the structure. 28 ideas, but most
 are new names for known things.
 - `torch_gradient`: remove the 6 printed lines; the engine-to-PyTorch table is the hint.
@@ -109,13 +113,13 @@ are new names for known things.
 - `scores`, `make_model`: from spec.
 - Put dtype and "8 bits, 32 bits" in a Toolbox box.
 
-### 10 · Seeing with convolutions
+### 11 · Seeing with convolutions
 - Add: hand exercise sliding a 2×2 kernel over a 3×3 picture (four numbers).
 - Add: predict the output size for two cases before the formula is stated.
 - `convolve`, `max_pool`: loop header given, body by the learner. `residual_block`: from spec.
 - `make_cnn` already works this way (1 of 6 lines printed): use it as the pattern.
 
-### 11 · Words as vectors
+### 12 · Words as vectors
 26 ideas; about ten are Python tools.
 - Toolbox boxes: dictionaries and `.get`; `sorted` with a key.
 - Add: cosine similarity by hand for two pairs of 2-number vectors.
@@ -126,14 +130,14 @@ are new names for known things.
 - `count_words`, `similarity`, `pair_loss`: from spec.
 - Word analogies: shorten, or move to go-deeper.
 
-### 12 · Predicting the next word
+### 13 · Predicting the next word
 No table or picture in the chapter.
 - Add: a bigram count table for a three-sentence toy text, filled in by hand, then smoothed.
 - Add: perplexity by hand for three probabilities.
 - All five exercises are 1–4 lines: from spec.
 - Toolbox boxes: tuples as dictionary keys; `rng.choice`.
 
-### 13 · Memory: RNNs
+### 14 · Memory: RNNs
 - Add: a picture of the RNN unrolled over three words.
 - Add: one RNN step by hand with a one-number memory.
 - Add: a gate table by hand (`f = 1, i = 0` leaves the cell alone; `f = 0, i = 1` replaces it).
@@ -142,7 +146,7 @@ No table or picture in the chapter.
 - `Reader` (given): the learner writes its `forward`.
 - `train_reader` (13 lines, given): add a predict question on the shape that reaches the loss.
 
-### 14 · Attention
+### 15 · Attention
 - "Where to look" explains the core idea in 206 words with no numbers. Add a worked example:
   one query, three keys of two numbers each, dot products, shares, blend. Then the same by hand
   with different numbers.
@@ -153,10 +157,10 @@ No table or picture in the chapter.
 - `with_attention` (2 lines, given): the learner writes it.
 - `Translator` and `translate` (26 lines, given): add a shape walk-through and a predict question.
 
-### 15 · The Transformer → two chapters
+### 16 and 17 · The Transformer → two chapters
 
-**15a (self-attention).**
-- Query, key, value get 89 words now. Rework chapter 14's three-word example with three
+**16 (self-attention).**
+- Query, key, value get 89 words now. Rework chapter 15's three-word example with three
   separate small matrices, so the learner sees why one vector needs three roles.
 - Mask: mark the blocked cells of a 4×4 table by hand. Toolbox box for `triu` and
   `masked_fill`. `future_mask` from spec.
@@ -167,16 +171,16 @@ No table or picture in the chapter.
 - `SelfAttention`: `__init__` given, the learner writes `forward`.
 - Ends with "Attention can't count".
 
-**15b (the GPT).**
+**17 (the GPT).**
 - Positions: a tiny demo that the order test now gives different answers.
 - Layer norm: normalise one 4-number vector by hand. `layer_norm` from spec.
 - Block: a picture with the two `x + f(x)` roads. `block_step` from spec.
 - `TinyGPT`: `__init__` given, the learner writes `forward`.
 - Add: count the knobs by hand for a small configuration, then compare with the cell.
-- `write`: the learner adapts chapter 13's loop (the one change is `words[-32:]`).
-- `train_gpt` and `score_gpt` are chapter 13's: one "From earlier chapters" cell.
+- `write`: the learner adapts chapter 14's loop (the one change is `words[-32:]`).
+- `train_gpt` and `score_gpt` are chapter 14's: one "From earlier chapters" cell.
 
-### 16 · Pretrain, fine-tune, evaluate
+### 18 · Pretrain, fine-tune, evaluate
 Opens with about 100 lines of given code before the second exercise.
 - Collapse the re-pasted model into one "From earlier chapters" cell.
 - Precision and recall: a table of ten guesses and labels, counted by hand, then the function.
@@ -187,17 +191,17 @@ Opens with about 100 lines of given code before the second exercise.
 - `blank_out`, `majority_share`, `margin`, `freeze`: from spec.
 - BERT (120 words, explained not trained): keep short, with one picture of "both ways".
 
-### 17 · Tokenization
+### 19 · Tokenization
 Right length; only the exercises are wrong.
 - Add: run two merges by hand on a 12-letter string, entering the pair and the new string.
 - Toolbox box for `while`, on a different example (the lesson teaches it inside the exercise).
 - `to_bytes`, `count_pairs`, `train_bpe`, `encode`, `decode`: from spec. `count_pairs` reuses
-  chapter 11's counting; say so and nothing more.
+  chapter 12's counting; say so and nothing more.
 - `merge`: give the worked example and the "jump two" idea; code by the learner.
 
-### 18 · A modern transformer → two chapters
+### 20 and 21 · A modern transformer → two chapters
 
-**18a (the architecture).** Fair tokens, RMSNorm, rotations and RoPE, SwiGLU.
+**20 (the architecture).** Fair tokens, RMSNorm, rotations and RoPE, SwiGLU.
 - Add: a circle picture for angle, cos and sin; none exists.
 - Add: rotate `(1, 0)` and `(0, 1)` by a quarter turn by hand.
 - `rope` (6 lines, given) is the point of the section: the learner writes it for one vector,
@@ -205,13 +209,13 @@ Right length; only the exercises are wrong.
 - `rms_norm`, `rotate`, `swiglu`: from spec.
 - `ModernBlock`: the learner writes `forward`. Ends with a shape and knob-count check, no long run.
 
-**18b (training it properly).** AdamW, warm-up and cosine decay, checkpoints, the leaderboard run.
-- AdamW: one step by hand next to chapter 08's Adam, to see the single difference.
+**21 (training it properly).** AdamW, warm-up and cosine decay, checkpoints, the leaderboard run.
+- AdamW: one step by hand next to chapter 09's Adam, to see the single difference.
 - `learning_rate`: the chart is shown first; the learner writes the function to match it.
 - `adamw_step`, `checkpoint`: from spec.
 - Add: stop a run, load the checkpoint, check the loss continues where it left off.
 
-### 19 · Making it fast
+### 22 · Making it fast
 Four of five exercises are one printed formula (`return 16 * knobs`).
 - Replace each with an estimate for the learner's own model: FLOPs for one step, seconds
   predicted from their measured machine speed, bytes for Adam. Number boxes first, then the function.
@@ -222,7 +226,7 @@ Four of five exercises are one printed formula (`return 16 * knobs`).
 - Mixed precision (105 words, demo only): add a predict question on `float16` overflow.
 - Profiling (50 words): add a question on reading a profiler table.
 
-### 20 · Many devices
+### 23 · Many devices
 - Add: a ring picture, and a hand trace of all-reduce on three devices.
 - `shard`: 10 knobs on 4 devices by hand, then the function from spec.
 - `bytes_per_device`: fill the four-stage table by hand for one size, then the function.
@@ -243,16 +247,19 @@ Four of five exercises are one printed formula (`return 16 * knobs`).
 
 ## Order of work
 
+In old numbers, as planned:
+
 1. Tooling and the helper; renumbering commit.
 2. Pilot: 14 and 15 (three chapters after the split). Review gate, then adjust these rules.
 3. 06, 07 (where dictation starts), then 13, 17, 18.
 4. 08–12, 16, 19, 20.
 5. zh-CN for each chapter after its `en` passes the gate; code is shared, so only prose and stamps.
 
-Each `en` chapter is its own commit with its checks, solution and ledger entry.
+What happened: the order followed steps 2 to 4 only loosely, `en` and zh-CN went into the
+same commits, and the review gate of step 2 has not been run yet.
 
 ## Not covered here
 
 - Chapters 00–05: chapter 00 teaches 20 ideas in 1,435 words and is worth a separate look.
-- The agents track: once 06–20 ask for real code, the jump into chapter 30 mostly disappears.
+- The agents track (chapters 40–51 now): once 06–23 ask for real code, the jump into chapter 40 mostly disappears.
   Whether five chapters on one prototype is the right proportion is a scope question.

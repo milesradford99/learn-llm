@@ -146,7 +146,7 @@ def _():
     mo.md(r"""
     Does it work? Here are two texts of three made-up word ids, `4 7 1` and `7 4 1`: the same words, with the first two swapped. The last word is the same
     in both, and it sees all three words in both. The cell runs a fresh attention layer on each text and compares what the last word gets: first with word vectors alone, then with your `embed`.
-    It shows the biggest difference in each case.
+    It shows the biggest difference in each case. (It uses your `embed`, so it shows an error until Exercise 1 passes. That's normal, and the same goes for later cells that use your functions.)
     """)
     return
 
