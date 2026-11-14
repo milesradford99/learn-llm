@@ -48,6 +48,12 @@ def _tiled(f, tile, scale=4):
     return bool(torch.max(torch.abs(out - reference)) < 1e-5) if isinstance(out, torch.Tensor) else _plain(out)
 
 
+def _hand_tiles(f):
+    """The page's hand trace: scores [0, 1, 2, 0], values [10, 20, 30, 40], tiles of 2."""
+    out = f(torch.tensor([1.0]), torch.tensor([[0.0], [1.0], [2.0], [0.0]]), torch.tensor([[10.0], [20.0], [30.0], [40.0]]), 2)
+    return round(out[0].item(), 4) if isinstance(out, torch.Tensor) else _plain(out)
+
+
 EXERCISES = {
     "time_it": [
         Case("ch22.time_it.calls", _calls, 5, hint="ch22.time_it.hint"),
@@ -58,12 +64,19 @@ EXERCISES = {
         Case("ch22.matmul_flops.square", lambda f: f(1024, 1024, 1024), 2 * 1024 ** 3, hint="ch22.matmul_flops.hint"),
     ],
     "training_flops": [
+        Case("ch22.training_flops.hand", lambda f: f(1000, 10), 60000, hint="ch22.training_flops.hint"),
         Case("ch22.training_flops.page", lambda f: f(7e9, 1e12), 4.2e22, tolerance=1e10, hint="ch22.training_flops.hint"),
     ],
+    "run_seconds": [
+        Case("ch22.run_seconds.page", lambda f: f(30e12, 100e9, 0.5), 600.0, tolerance=1e-6, hint="ch22.run_seconds.hint"),
+        Case("ch22.run_seconds.full", lambda f: f(30e12, 100e9, 1.0), 300.0, tolerance=1e-6, hint="ch22.run_seconds.hint"),
+    ],
     "adam_bytes": [
+        Case("ch22.adam_bytes.hand", lambda f: f(1000000), 16000000, hint="ch22.adam_bytes.hint"),
         Case("ch22.adam_bytes.page", lambda f: f(7e9), 1.12e11, tolerance=1e-3, hint="ch22.adam_bytes.hint"),
     ],
     "tiled_attention": [
+        Case("ch22.tiled_attention.hand", lambda f: _hand_tiles(f), 26.93, tolerance=0.01, hint="ch22.tiled_attention.hint"),
         Case("ch22.tiled_attention.one", lambda f: _tiled(f, 10), True, hint="ch22.tiled_attention.hint"),
         Case("ch22.tiled_attention.tiles", lambda f: _tiled(f, 3), True, hint="ch22.tiled_attention.hint"),
         Case("ch22.tiled_attention.single", lambda f: _tiled(f, 1), True, hint="ch22.tiled_attention.hint"),

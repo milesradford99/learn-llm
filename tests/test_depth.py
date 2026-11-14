@@ -14,9 +14,9 @@ MOST_IDEAS = 12  # new ideas in a chapter, not counting its ledger `toolbox` lis
 
 WAITING = {
     "printed": {"03", "04", "05",
-                "22", "23", "40", "41"},
+                "23", "40", "41"},
     "ideas": {"00", "05", "09", "10", "11",
-              "22", "23", "40"},
+              "23", "40"},
 }
 CHAPTERS = sorted(load()["chapters"])
 

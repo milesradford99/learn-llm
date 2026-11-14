@@ -349,8 +349,11 @@ uses = [
 [chapters.22]
 introduces = [
     "module-time", "time-a-function", "flops", "machine-speed", "training-flops", "utilisation",
-    "training-memory", "activations", "float-formats", "finfo", "mixed-precision", "memory-bound",
-    "cache", "online-softmax", "tiled-attention", "fused-attention", "profiler",
+    "training-memory", "float-formats", "finfo", "mixed-precision", "cache", "tiled-attention",
+    "fused-attention", "profiler",
+]
+toolbox = [
+    "module-time", "finfo",
 ]
 uses = [
     "matmul-operator", "dot-product", "bits-and-precision", "dtype", "adam", "softmax-shift", "exp",
@@ -822,15 +825,12 @@ flops = "floating-point operations; A @ B for (n, k) and (k, m) costs about 2nkm
 machine-speed = "FLOPs per second, measured by timing a big matrix product"
 training-flops = "training costs about 6 × knobs × tokens FLOPs"
 utilisation = "the share of the machine's best speed that a run achieves"
-training-memory = "with Adam at 32 bits: 16 bytes per knob, for knob, slope and two averages"
-activations = "values the forward pass keeps for the backward pass; they grow with batch and window"
+training-memory = "with Adam at 32 bits: 16 bytes per knob, for knob, slope and two averages; plus the activations, the values the forward pass keeps for the backward pass"
 float-formats = "float32 about 7 digits; float16 about 3, up to 65,504; bfloat16 fewer digits, float32's range"
 finfo = "torch.finfo(dtype).max and .eps describe a number format"
 mixed-precision = "products in 16 bits, knobs and sums in 32"
-memory-bound = "when fetching numbers, not arithmetic, limits the speed"
-cache = "the small fast memory next to the processor"
-online-softmax = "a running maximum and total, fixed up by e^(old − new) when the maximum grows"
-tiled-attention = "attention over keys in tiles with an online softmax, never building the whole table"
+cache = "the small fast memory next to the processor; when fetching numbers, not arithmetic, limits the speed, staying in it is what counts"
+tiled-attention = "attention over keys in tiles, never building the whole table: a running maximum and total, fixed up by e^(old − new) when the maximum grows"
 fused-attention = "F.scaled_dot_product_attention: attention as one fast operation"
 profiler = "torch.profiler times every operation inside a run"
 process = "a separate running program, with memory of its own"

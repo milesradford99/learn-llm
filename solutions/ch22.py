@@ -22,6 +22,10 @@ def training_flops(knobs, tokens):
     return 6 * knobs * tokens
 
 
+def run_seconds(flops, speed, utilisation):
+    return flops / (speed * utilisation)
+
+
 def adam_bytes(knobs):
     return 16 * knobs
 
