@@ -258,7 +258,11 @@ def _():
     ## Exercise 4: run_seconds
 
     Write `run_seconds(flops, speed, utilisation)`, the formula above. `flops` is the arithmetic of a run, `speed` the computer's best speed in FLOPs per second, and `utilisation` a share between 0 and 1.
-    `run_seconds(30e12, 100e9, 0.5)` gives `600.0`. (`30e12` is $30 \times 10^{12}$: the `e` moves the point, as in chapter 09.)
+    `run_seconds(30e12, 100e9, 0.5)` gives `600.0`.
+
+    /// admonition | 🧰 Toolbox: big numbers, written short
+    `30e12` means $30 \times 10^{12}$: the number after the `e` says how many places to move the point to the right. So `7e9` is 7 billion. A minus sign moves the point left, as in chapter 09's `1e-8`.
+    ///
 
     Chapter 21's run read about 2 million tokens twice with about 1.17 million knobs. The cell after the check works out its arithmetic in teraFLOPs (a teraFLOP is $10^{12}$), and how many seconds it would take at your computer's best speed.
     """)

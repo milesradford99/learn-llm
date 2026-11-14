@@ -171,3 +171,33 @@ def circle(angle: float, label: str):
         "</svg>",
     ]
     return mo.Html("".join(parts))
+
+
+def ring(names: list[str], label: str):
+    """Devices in a circle, each with an arrow to the neighbour it passes to.
+
+    `label` describes the picture for screen readers, in the lesson's language.
+    """
+    import math
+
+    import marimo as mo
+
+    n, cx, cy, r, half = len(names), 190, 150, 100, 46
+    spots = [(cx + r * math.sin(2 * math.pi * i / n), cy - r * math.cos(2 * math.pi * i / n)) for i in range(n)]
+    parts = [f'<svg viewBox="0 0 380 300" width="100%" style="max-width:380px" role="img" aria-label="{escape(label)}" '
+             'xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, monospace" text-anchor="middle">',
+             f'<defs><marker id="pass" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+             f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{DOT}"/></marker></defs>']
+    for (x1, y1), (x2, y2) in zip(spots, spots[1:] + spots[:1]):
+        dx, dy = x2 - x1, y2 - y1
+        length = math.hypot(dx, dy)
+        ux, uy = dx / length, dy / length
+        gap = min(half / max(abs(ux), 1e-9), _BH / 2 / max(abs(uy), 1e-9)) + 8  # to the edge of the box
+        parts.append(f'<line x1="{x1 + ux * gap:.1f}" y1="{y1 + uy * gap:.1f}" x2="{x2 - ux * gap:.1f}" y2="{y2 - uy * gap:.1f}" '
+                     f'stroke="{DOT}" stroke-width="2" marker-end="url(#pass)"/>')
+    for (x, y), name in zip(spots, names):
+        parts.append(f'<rect x="{x - half:.1f}" y="{y - _BH / 2:.1f}" width="{2 * half}" height="{_BH}" rx="6" '
+                     f'fill="none" stroke="{AXIS}" stroke-width="1.2"/>')
+        parts.append(f'<text x="{x:.1f}" y="{y + 5:.1f}" font-size="14" fill="{TEXT}">{escape(name)}</text>')
+    parts.append("</svg>")
+    return mo.Html("".join(parts))

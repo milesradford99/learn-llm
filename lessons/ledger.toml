@@ -350,10 +350,10 @@ uses = [
 introduces = [
     "module-time", "time-a-function", "flops", "machine-speed", "training-flops", "utilisation",
     "training-memory", "float-formats", "finfo", "mixed-precision", "cache", "tiled-attention",
-    "fused-attention", "profiler",
+    "fused-attention", "profiler", "scientific-literal",
 ]
 toolbox = [
-    "module-time", "finfo",
+    "module-time", "finfo", "scientific-literal",
 ]
 uses = [
     "matmul-operator", "dot-product", "bits-and-precision", "dtype", "adam", "softmax-shift", "exp",
@@ -365,7 +365,10 @@ uses = [
 introduces = [
     "process", "data-parallel", "mean-of-equal-means", "gradient-accumulation", "builtin-slice",
     "all-reduce", "ring-all-reduce", "spawned-process", "sharding", "zero-stages", "remainder",
-    "tensor-parallel", "scientific-literal",
+    "tensor-parallel",
+]
+toolbox = [
+    "builtin-slice", "remainder",
 ]
 uses = [
     "mini-batch", "mean", "derivative-rules", "grads-accumulate", "torch-stack", "training-memory",

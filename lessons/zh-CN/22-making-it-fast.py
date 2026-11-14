@@ -246,7 +246,11 @@ def _():
     mo.md(r"""
     ## 练习 4：run_seconds
 
-    写 `run_seconds(flops, speed, utilisation)`，也就是上面的公式。`flops` 是一次训练的算术量，`speed` 是电脑的最佳速度（每秒多少个 FLOP），`utilisation` 是 0 到 1 之间的一个比例。`run_seconds(30e12, 100e9, 0.5)` 得到 `600.0`。（`30e12` 就是 $30 \times 10^{12}$：`e` 的作用是移动小数点，和第 09 章一样。）
+    写 `run_seconds(flops, speed, utilisation)`，也就是上面的公式。`flops` 是一次训练的算术量，`speed` 是电脑的最佳速度（每秒多少个 FLOP），`utilisation` 是 0 到 1 之间的一个比例。`run_seconds(30e12, 100e9, 0.5)` 得到 `600.0`。
+
+    /// admonition | 🧰 工具箱：大数的简写
+    `30e12` 的意思是 $30 \times 10^{12}$：`e` 后面的数字说明小数点往右移多少位。所以 `7e9` 就是 70 亿。带负号就是往左移，比如第 09 章的 `1e-8`。
+    ///
 
     第 21 章的训练用大约 117 万个旋钮，把大约 200 万个词元读了两遍。检查之后的单元格算出它的算术量，单位是 teraFLOP（一个 teraFLOP 是 $10^{12}$ 个 FLOP），以及按你电脑的最佳速度要多少秒。
     """)

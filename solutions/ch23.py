@@ -43,3 +43,11 @@ def bytes_per_device(knobs, devices, stage):
     if stage >= 3:
         weights = weights / devices
     return weights + slopes + adam
+
+
+def split_product(X, W, devices):
+    pieces = []
+    for rank in range(devices):
+        start, stop = shard(W.shape[1], devices, rank)
+        pieces.append(X @ W[:, start:stop])
+    return torch.cat(pieces, dim=1)
