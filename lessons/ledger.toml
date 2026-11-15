@@ -294,8 +294,8 @@ introduces = ["monorepo", "read-typescript", "steering", "follow-up", "list-pop"
 uses = ["agent", "tool-call", "tool-result", "stop-reason", "try-except", "while-loop"]
 
 [chapters.42]
-introduces = ["stream-event", "delta", "failure-as-message", "json", "module-json", "string-join-empty", "builtin-isinstance", "provider-formats", "transcript-tools"]
-uses = ["tool-call", "tool-result", "dict-get", "dict", "list-comprehension", "or-operator", "attribute"]
+introduces = ["stream-event", "delta", "failure-as-message", "json", "string-join-empty", "builtin-isinstance", "provider-formats", "transcript-tools"]
+uses = ["module-json", "tool-call", "tool-result", "dict-get", "dict", "list-comprehension", "or-operator", "attribute"]
 
 [chapters.43]
 introduces = ["output-truncation", "unique-edit", "fuzzy-match", "string-tools", "parallel-tools", "file-mutation-queue"]
@@ -437,6 +437,27 @@ uses = [
     "training-loop", "optimizer", "adamw", "no-grad", "manual-seed", "randperm", "float-method",
     "item", "conditional-expression", "reshape-minus-one", "index-array", "slicing", "tuple",
     "gradient-descent", "builtin-round", "builtin-len", "token", "if",
+]
+
+[chapters.27]
+introduces = [
+    "serving", "weight-file", "file-header", "byte-order", "bytes-as-dtype", "knob-names",
+    "tied-embeddings", "grouped-query-attention", "chat-template", "stop-token",
+    "top-k", "int-from-bytes", "file-reading", "json-loads", "repeat-interleave", "torch-topk",
+    "module-learn_llm.qwen", "builtin-bytearray", "builtin-open", "module-json",
+]
+toolbox = [
+    "int-from-bytes", "file-reading", "json-loads", "repeat-interleave", "torch-topk",
+    "module-learn_llm.qwen", "builtin-bytearray", "builtin-open", "module-json",
+]
+uses = [
+    "checkpoint", "torch-save", "builtin-bytes", "dict", "dtype", "bits-and-precision",
+    "float-formats", "mixed-precision", "float-method", "reshape", "rms-norm", "rope", "swiglu",
+    "self-attention", "multi-head", "future-mask", "nn-linear", "transpose", "no-grad",
+    "bpe", "token", "greedy-decoding", "temperature", "sampling", "softmax", "argmax", "item", "early-return",
+    "function-as-value", "index-array", "rng-choice", "manual-seed", "module-time",
+    "return-pair", "tuple", "not-equal", "and-operator", "list-comprehension", "builtin-sum",
+    "builtin-len", "builtin-range", "position-table", "block", "transformer",
 ]
 
 [concepts]
@@ -960,3 +981,22 @@ grpo = "draw a group of answers per prompt and train on each one's advantage wit
 exploration = "a model is only rewarded for what it tries; a group that is all alike teaches nothing"
 builtin-int = "int('07') is 7: text made of digits as a whole number"
 string-index = "'7+2='[0] is '7': a string is indexed like a list"
+serving = "running a finished model for the people who use it, quickly and cheaply"
+weight-file = "a published model's knobs in a file: a length, a header listing every tensor, then the raw numbers"
+file-header = "JSON text giving each tensor's name, dtype, shape and where its bytes are in the data part"
+byte-order = "little-endian: the first byte is the smallest place, and each place is worth 256 times the one before"
+bytes-as-dtype = "bytes mean nothing without a dtype: the same 4 bytes are four small numbers or one float32"
+knob-names = "a tensor's name says where it sits: model.layers.0.self_attn.q_proj.weight"
+tied-embeddings = "one table turns tokens into vectors on the way in and vectors into scores on the way out"
+grouped-query-attention = "GQA: several query heads share one key and value head"
+chat-template = "the fixed pattern of special tokens a chat model saw around each speaker's turn"
+stop-token = "the token a model writes when its answer is finished; the loop watches for it"
+top-k = "keep only the k likeliest tokens and scale their chances to add up to 1"
+int-from-bytes = "int.from_bytes(data, 'little') reads bytes as one whole number"
+file-reading = "with open(path, 'rb') as f: f.read(n) gives the next n bytes, f.seek(p) jumps to byte p"
+json-loads = "json.loads(text) turns JSON text into dictionaries and lists"
+repeat-interleave = "torch.repeat_interleave(x, 2, dim=1) repeats each item along a dimension"
+torch-topk = "torch.topk(x, k) gives the k largest values and their positions"
+"module-learn_llm.qwen" = "TYPES maps a weight file's dtype names to PyTorch's"
+builtin-bytearray = "bytearray(data) is a copy of bytes that may be changed, which torch.frombuffer wants"
+builtin-open = "open(path, 'rb') opens a file for reading bytes"
