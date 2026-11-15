@@ -423,6 +423,22 @@ uses = [
     "builtin-round", "builtin-range", "list-append", "if", "word-id", "text-dataset",
 ]
 
+[chapters.26]
+introduces = [
+    "alignment", "log-probability", "supervised-fine-tuning", "preference-pair", "reference-model",
+    "dpo", "verifiable-reward", "expected-reward", "policy-gradient", "advantage", "grpo",
+    "exploration", "builtin-int", "string-index",
+]
+toolbox = ["builtin-int", "string-index"]
+uses = [
+    "pretraining", "fine-tuning", "log", "log-of-product", "log-slope", "surprise", "cross-entropy",
+    "torch-cross-entropy", "reduction-none", "all-of-a-dimension", "sigmoid", "logsigmoid",
+    "sampling", "typical-size", "variance", "numpy-sqrt", "keepdims", "broadcasting", "mean",
+    "training-loop", "optimizer", "adamw", "no-grad", "manual-seed", "randperm", "float-method",
+    "item", "conditional-expression", "reshape-minus-one", "index-array", "slicing", "tuple",
+    "gradient-descent", "builtin-round", "builtin-len", "token", "if",
+]
+
 [concepts]
 gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
@@ -930,3 +946,17 @@ set-operations = "a & b holds the items in both sets, a | b the items in at leas
 builtin-tuple = "tuple(a_list) is a fixed copy of a list, which can go in a set"
 tolist = "array.tolist() turns a NumPy array into plain lists"
 "module-learn_llm.rawdata" = "seeded_hash(seed, item): one of many hash functions, picked by seed"
+alignment = "a second, short phase of training that turns a model that continues text into one that does what we want"
+log-probability = "log p of an answer: the sum of its tokens' log chances; minus the surprise"
+supervised-fine-tuning = "SFT: train on prompts with their right answers, counting only the answer's tokens"
+preference-pair = "a prompt, two answers and a verdict on which is better"
+reference-model = "a frozen copy of the model from before the training, to measure how far answers have moved"
+dpo = "loss = −log σ(β × margin), where the margin is the better answer's gain over the reference minus the worse one's"
+verifiable-reward = "a reward a program can compute by checking the answer"
+expected-reward = "each answer's reward weighted by its chance: the reward the model gets on average"
+policy-gradient = "the slope of the expected reward is the average of r × slope of log p over drawn answers"
+advantage = "a reward minus its group's mean, divided by the group's spread"
+grpo = "draw a group of answers per prompt and train on each one's advantage within its group"
+exploration = "a model is only rewarded for what it tries; a group that is all alike teaches nothing"
+builtin-int = "int('07') is 7: text made of digits as a whole number"
+string-index = "'7+2='[0] is '7': a string is indexed like a list"
