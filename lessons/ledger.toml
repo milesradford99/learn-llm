@@ -387,6 +387,22 @@ uses = [
     "floor-division", "manual-seed",
 ]
 
+[chapters.24]
+introduces = [
+    "scaling-law", "power-law", "log-of-power", "log-log-plot", "least-squares-line", "loss-floor",
+    "compute-budget", "joint-law", "compute-optimal", "tokens-per-knob", "law-limits",
+    "numpy-log-array", "numpy-argmin",
+]
+toolbox = ["numpy-log-array", "numpy-argmin"]
+uses = [
+    "log", "exp", "log-of-product", "line", "mse", "gradient-descent", "mean", "numpy-mean",
+    "numpy-sum", "elementwise", "return-pair", "training-flops", "flops", "scientific-literal",
+    "adamw", "warmup", "cosine-decay", "token", "surprise", "perplexity", "function-as-value",
+    "argmax", "list-comprehension", "adam", "optimizer", "training-loop", "requires-grad",
+    "new-axis", "broadcasting", "argument-unpacking", "two-way-slice", "chart-reading",
+    "numpy-zeros", "item", "rms-norm", "rope", "swiglu",
+]
+
 [concepts]
 gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
@@ -863,3 +879,16 @@ scientific-literal = "7e9 means 7 × 10^9"
 builtin-set = "set(list) makes a set: word in known answers instantly"
 nn-parameter = "nn.Parameter(tensor) makes a tensor into a knob that training moves"
 module-time = "import time; time.perf_counter() is a clock in seconds"
+scaling-law = "a rule, measured on small runs, for how the loss falls as knobs, text or compute grow"
+power-law = "y = a × x^k: every doubling of x multiplies y by 2^k, wherever you start"
+log-of-power = "log(x^k) = k × log x"
+log-log-plot = "with log x across and log y up, a power law is a straight line of slope k and intercept log a"
+least-squares-line = "slope = sum of (x − x̄)(y − ȳ) over sum of (x − x̄)²; intercept = ȳ − slope × x̄"
+loss-floor = "the loss a perfect model would still have: text is partly unpredictable"
+compute-budget = "FLOPs you may spend: it fixes knobs × tokens, and you choose the split"
+joint-law = "loss = E + a / N^α + b / D^β: a floor, a too-small-model part and a too-little-text part"
+compute-optimal = "the model size with the lowest predicted loss for a given budget"
+tokens-per-knob = "large models were measured to do best at roughly 20 tokens of text per knob"
+law-limits = "a law's numbers belong to its setup, and it is only trusted near the range it was measured on"
+numpy-log-array = "np.log and np.exp work on every number of an array"
+numpy-argmin = "np.argmin(v) is the position of the smallest number"
