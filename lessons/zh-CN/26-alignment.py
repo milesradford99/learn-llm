@@ -58,7 +58,7 @@ def _():
 def _():
     mo.md(r"""
     `prompts` 存着全部 100 个提示，用词元 id 表示，从 `0+0=` 到 `9+9=`，`to_text` 把其中几个显示成文本。`best_answers` 给出模型对每个提示最可能的回答：不管是什么提示，回答都一样。
-    `share_right` 是它答对的提示占 100 个提示的比例：0.01，也就是恰好某个提示的答案碰巧是它最喜欢的那个。这就是这一章要提高的数。
+    `share_right` 是它答对的提示占 100 个提示的比例：0.01，也就是只有一个提示的答案碰巧是它最喜欢的那个回答。这就是这一章要提高的数。
 
     ## 一个完整回答的概率
 
@@ -99,7 +99,7 @@ def _():
     mo.md(r"""
     而 $\log 0.2$ 的确是 $-1.61$。
 
-    函数 `answer_scores(model, prompts, answers)` 负责这些管道活儿：它把每个提示连同它的回答喂给模型，给出模型在两个回答位置上产生的分数，形状是（回答数, 2, 12）。
+    函数 `answer_scores(model, prompts, answers)` 负责这些杂活：它把每个提示连同它的回答喂给模型，给出模型在两个回答位置上产生的分数，形状是（回答数, 2, 12）。
     对第 `i` 个回答，`scores[i, 0]` 是第一个数字的 12 个分数，`scores[i, 1]` 是读过第一个数字之后算出的第二个数字的 12 个分数。
 
     ## 练习 1：answer_logprob
@@ -116,7 +116,7 @@ def _():
 
 @app.function
 def answer_logprob(scores, answers):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -239,7 +239,7 @@ def _():
 
 @app.function
 def dpo_loss(better, worse, ref_better, ref_worse, beta):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -305,8 +305,8 @@ def _(base, dpo_button, prompts):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    大约 1,500 个偏好对，答对的比例约为 0.4，从 0.01 涨了上来。没有人告诉过模型哪怕一个正确回答。它是从“这个没那么错”里学到的，跨越全部 100 个提示。
-    它没能走得更远，是因为偏好对来自预训练模型自己的回答，而对许多提示来说，正确回答从来没出现在里面。比较只能教会我们那些有人想到去比较的回答。
+    大约 1,500 个偏好对，答对的比例约为 0.4，从 0.01 涨了上来。没有人告诉过模型哪怕一个正确回答。它是从“这个没那么错”里学到的，而且是在全部 100 个提示上。
+    它没能走得更远，是因为偏好对来自预训练模型自己的回答，而对许多提示来说，正确回答从来没出现在里面。比较只能教会模型那些有人想到拿来比较的回答。
 
     ## 办法 3：打分
 
@@ -331,7 +331,7 @@ def _():
 
 @app.function
 def reward(prompt, answer):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -357,7 +357,7 @@ def _():
 
     难处在这里。检查器是一个程序，不是带斜率的公式：没办法穿过 `reward` 往回走。而且模型的回答是按它的概率*随机抽出来*的，这也没有斜率。梯度下降能抓住什么？
 
-    概率。假设对某一个提示，模型能给出回答 $1, 2, 3, \ldots$，概率分别是 $p_1, p_2, p_3, \ldots$，它们能得到的奖励是 $r_1, r_2, r_3, \ldots$ 它**平均**得到的奖励，就是每个奖励按它的概率加权，叫**期望奖励**（expected reward）：
+    概率。假设对某一个提示，模型能给出回答 $1, 2, 3, \ldots$，概率分别是 $p_1, p_2, p_3, \ldots$，它们能得到的奖励是 $r_1, r_2, r_3, \ldots$。它**平均**得到的奖励，就是每个奖励按它的概率加权，叫**期望奖励**（expected reward）：
 
     > $$\text{期望奖励} = p_1 \times r_1 + p_2 \times r_2 + p_3 \times r_3 + \ldots$$
 
@@ -400,7 +400,7 @@ def _():
 
     > $$\text{损失} = -r \times \log p(\text{抽出的回答}) \text{ 的均值}$$
 
-    奖励当作普通的数。加负号，是因为我们是往山下走，而想要的是奖励变高。这个结果就是**策略梯度**（policy gradient）。用话来读这个损失：
+    奖励当作普通的数。加负号，是因为我们是往山下走，而想要的是奖励变高。这个结果就是**策略梯度**（policy gradient）。用大白话读这个损失：
     让你尝试过的回答变得更可能，每个按它的奖励成比例地增加。
 
     ## 比什么好，比什么差？
@@ -456,7 +456,7 @@ def _():
 
 @app.function
 def advantages(rewards):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -489,7 +489,7 @@ def _():
 
 @app.function
 def policy_loss(logprobs, advantage):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -559,7 +559,7 @@ def _(loop_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    超过五十万次被检查的尝试，而我们没给过一个回答。这就是这个办法的交换：它不需要老师，但需要大量的练习。
+    超过五十万次被检查的尝试，而我们没给过一个回答。这就是这个办法的代价：它不需要老师，但需要大量的练习。
     """)
     return
 
@@ -631,7 +631,7 @@ def _():
 
     ## 接下来
 
-    训练到这里就完整了：分词器、现代 transformer、规范的训练运行、预算、干净的数据，还有对齐。第四部分讲模型生命的另一半：**部署**（serving）。
+    训练到这里就完整了：分词器、现代 transformer、像样的训练、预算、干净的数据，还有对齐。第四部分讲模型生命的另一半：**部署服务**（serving）。
     **第 27 章**把一个真实的、已发布的模型的权重，载入你自己写的代码里。
 
     ## 你现在会做的事
@@ -647,7 +647,7 @@ def _():
     ---
 
     <!-- go-deeper -->
-    **深入了解（选读）：** DPO 出自 Rafailov et al.，*Direct Preference Optimization*（2023）。策略梯度可以追溯到 Williams 的 *REINFORCE*（1992）。GRPO，即 *group relative policy optimization*，由 Shao et al. 在 *DeepSeekMath*（2024）中提出；
+    **深入了解（选读）：** DPO 出自 Rafailov 等，*Direct Preference Optimization*（2023）。策略梯度可以追溯到 Williams 的 *REINFORCE*（1992）。GRPO，即 *group relative policy optimization*，由 Shao 等在 *DeepSeekMath*（2024）中提出；
     完整的方法还会限制每一步能把模型改动多远，我们略去了这一点。通过一个单独的奖励模型，用人类的比较来训练，叫 *RLHF*。
     """)
     return

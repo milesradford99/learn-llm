@@ -75,7 +75,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
-    chart((0, 64), (0, 70), "x", "y", curve=[(x, 64 / np.sqrt(x)) for x in np.linspace(0.85, 64, 200)], dots=[(1, 64), (4, 32), (16, 16), (64, 8)])
+    chart((0, 68), (0, 70), "x", "y", curve=[(x, 64 / np.sqrt(x)) for x in np.linspace(0.85, 64, 200)], dots=[(1, 64), (4, 32), (16, 16), (64, 8)])
     return
 
 

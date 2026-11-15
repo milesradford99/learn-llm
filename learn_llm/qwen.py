@@ -5,6 +5,7 @@ checked by SHA-256 after download. Nothing here runs the model: the lesson does 
 learner's own reader and the pieces they wrote in chapter 20.
 """
 
+import contextlib
 import hashlib
 import json
 import os
@@ -54,10 +55,19 @@ def missing(folder: Path = FOLDER) -> list[str]:
     return [name for name, (size, _) in FILES.items() if not (folder / name).exists() or (folder / name).stat().st_size != size]
 
 
+def _bar(name: str, size: int):
+    """A progress bar on the lesson's page, counting megabytes. Outside a notebook, nothing."""
+    import marimo as mo
+
+    if not mo.running_in_notebook():
+        return contextlib.nullcontext()
+    return mo.status.progress_bar(total=max(size >> 20, 1), title=name, subtitle="MB", show_rate=False, show_eta=False, remove_on_exit=True)
+
+
 def fetch(folder: Path = FOLDER, report=None) -> Path:
     """Download the model's files into `folder` (1.5 GB the first time), continuing a download
-    that was cut off, and check each file against its SHA-256. `report(name, done, size)` is
-    called as bytes arrive."""
+    that was cut off, and check each file against its SHA-256. The page shows a progress bar,
+    and `report(name, done, size)` is called as bytes arrive."""
     folder.mkdir(parents=True, exist_ok=True)
     for name in missing(folder):
         size, sha = FILES[name]
@@ -65,11 +75,16 @@ def fetch(folder: Path = FOLDER, report=None) -> Path:
         have = part.stat().st_size if part.exists() else 0
         if have < size:
             request = urllib.request.Request(BASE + name, headers={"Range": f"bytes={have}-"})
-            with urllib.request.urlopen(request, timeout=60) as response, open(part, "ab" if response.status == 206 else "wb") as out:
-                done = have if response.status == 206 else 0
+            with urllib.request.urlopen(request, timeout=60) as response, open(part, "ab" if response.status == 206 else "wb") as out, _bar(name, size) as bar:
+                done = shown = have if response.status == 206 else 0
+                if bar and done >> 20:
+                    bar.update(increment=done >> 20)
                 while chunk := response.read(1 << 20):
                     out.write(chunk)
                     done += len(chunk)
+                    if bar and (done >> 20) > (shown >> 20):
+                        bar.update(increment=(done >> 20) - (shown >> 20))
+                        shown = done
                     if report:
                         report(name, done, size)
         if _sha256(part) != sha:

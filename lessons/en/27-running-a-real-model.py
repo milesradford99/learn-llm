@@ -252,7 +252,7 @@ def _():
     ## Get the model
 
     Now the real file. The button downloads three files of Qwen3-0.6B from the laboratory's page into `my-work/.models/`: the weights (1.5 GB), the tokenizer's merges and a small file of settings. It needs the internet this once,
-    and takes a few minutes or much longer, depending on your connection. The page can't do anything else meanwhile. If the download is cut off, press again: it continues where it stopped. Each file is checked when it arrives.
+    and takes a few minutes or much longer, depending on your connection. A bar under the cell counts the megabytes as they arrive, and the page can't do anything else meanwhile. If the download is cut off, press again: it continues where it stopped. Each file is checked when it arrives.
 
     Running the model needs about 4 GB of free memory. If you can't download or run it, your three functions above are still checked, and the rest of the chapter can be read.
     """)
@@ -428,7 +428,7 @@ def _():
 
     ## The whole model, in your code
 
-    **From earlier chapters.** The folded cells below hold chapter 20's `rms_norm`, `rope` and `attend`. `rope` now takes the base of its speeds as an input, because Qwen uses 1,000,000 where we used 10,000, which suits longer texts.
+    **From earlier chapters.** The folded cells below hold chapter 20's `rms_norm`, `rope` and `attend`. `rope` now takes the base of its speeds as an input, because Qwen uses 1,000,000, which suits longer texts, where we used 10,000.
 
     Then comes one block and the whole model. `layer_knobs(knobs, i)` picks block `i`'s eleven tensors out of `knobs` and gives them short names. Where your earlier models called an `nn.Linear`, this code multiplies by the matrix itself: `y @ L["q"].T`, which is all an `nn.Linear` without a bias does (chapter 10).
     """)
@@ -726,7 +726,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
-    pipeline([("weight file", "1.5 GB"), ("knobs", "596 million"), ("scores", "151,936"), ("token", "1"), ("answer", "text")], ["your reader", "your blocks", "greedy or top-k", "repeat"], "From a file on disk to an answer, with the code you wrote")
+    pipeline([("weight file", "1.5 GB"), ("knobs", "596 million"), ("scores", "151,936"), ("token", "1"), ("answer", "text")], ["your reader", "your blocks", "greedy, top-k", "repeat"], "From a file on disk to an answer, with the code you wrote")
     return
 
 

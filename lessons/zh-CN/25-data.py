@@ -131,7 +131,7 @@ def _():
 
 @app.function
 def normalise(text):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -164,7 +164,7 @@ def _():
 
 @app.function
 def fingerprint(text):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -202,7 +202,7 @@ def _():
 
 @app.function
 def drop_copies(texts):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -291,7 +291,7 @@ def _():
 
 @app.function
 def shingles(words, n):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -324,7 +324,7 @@ def _():
 
 @app.function
 def jaccard(a, b):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -415,7 +415,7 @@ def _():
 
 @app.function
 def minhash(shingle_set, seeds):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -448,7 +448,7 @@ def _():
 
 @app.function
 def agreement(sig_a, sig_b):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -494,7 +494,7 @@ def _(kept, kind_of, signatures):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    一张表，每篇文本占一行，每行 32 个数。我们在一对已知的文本上检验这个估计：`near_i` 是一篇近似重复的位置，`original_i` 是它所由来的那篇故事的位置。
+    一张表，每篇文本占一行，每行 32 个数。我们在一对已知的文本上检验这个估计：`near_i` 是一篇近似重复的位置，`original_i` 是它改自的那篇故事的位置。
     单元格显示它们真实的 Jaccard 相似度（用完整的集合算出），以及由两个签名得到的估计（`.tolist()` 把表的一行变回普通列表）：
     """)
     return
@@ -510,7 +510,7 @@ def _(near_i, original_i, signatures, word_lists):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    大约是 0.75 和 0.91。这个估计很粗糙：32 个数只能以 $\frac{1}{32}$ 为一步来一致，而每一个都由运气决定，所以差 0.1 很平常。它不需要精确。
+    大约是 0.75 和 0.91。这个估计很粗糙：32 个数的一致比例只能是 $\frac{1}{32}$ 的整数倍，而每个位置一致不一致都由运气决定，所以差 0.1 很平常。它不需要精确。
     两篇毫不相关的故事，相似度在 0.01 以下，再怎么走运，也不会把 0.01 错认成 0.75。
 
     下一个单元格按顺序走过这些文本，只有当一篇文本的签名和之前留下的每一篇都在不到一半的位置上一致时，才留下它。带 `np.mean` 的那一行就是你的 `agreement`，由 NumPy 一次对所有留下的签名做完：
@@ -580,7 +580,7 @@ def _():
 
 @app.function
 def known_share(words, known):
-    # ← replace todo() below with your code
+    # ← 把下面的 todo() 换成你的代码
     todo()
 
 
@@ -690,7 +690,7 @@ def _():
     mo.md(r"""
     这堆文本只剩一半大小，而且全是故事。
 
-    ## 这有影响吗？
+    ## 这真的有用吗？
 
     老实的检验办法是两种都训练一遍。按钮会把第 24 章的小模型训练两次，每个词元用 64 个数，读 150,000 个词元：一次用原始文本堆，一次用你清理后的。
     两次的计算量相同。两次都在同样的测试故事上打分。大约要 20 秒。
