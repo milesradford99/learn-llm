@@ -403,6 +403,26 @@ uses = [
     "numpy-zeros", "item", "rms-norm", "rope", "swiglu",
 ]
 
+[chapters.25]
+introduces = [
+    "raw-data", "hash-function", "collision", "normalisation", "fingerprint", "shingle",
+    "jaccard", "minhash", "signature", "feature", "quality-classifier",
+    "string-split", "module-zlib", "set-add", "set-operations", "builtin-tuple", "tolist",
+    "module-learn_llm.rawdata",
+]
+toolbox = [
+    "string-split", "module-zlib", "set-add", "set-operations", "builtin-tuple", "tolist",
+    "module-learn_llm.rawdata",
+]
+uses = [
+    "builtin-set", "string-lower", "string-join", "string-encode", "not-in", "slicing",
+    "list-comprehension", "builtin-min", "builtin-sum", "builtin-zip", "builtin-len", "tuple",
+    "dict", "dict-get", "classification", "nn-linear", "optimizer", "training-loop", "adam",
+    "torch-cross-entropy", "precision", "recall", "elementwise-and", "argmax", "scaling-law",
+    "power-law", "perplexity", "manual-seed", "item", "index-array", "numpy-mean", "axis",
+    "builtin-round", "builtin-range", "list-append", "if", "word-id", "text-dataset",
+]
+
 [concepts]
 gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
@@ -892,3 +912,21 @@ tokens-per-knob = "large models were measured to do best at roughly 20 tokens of
 law-limits = "a law's numbers belong to its setup, and it is only trusted near the range it was measured on"
 numpy-log-array = "np.log and np.exp work on every number of an array"
 numpy-argmin = "np.argmin(v) is the position of the smallest number"
+raw-data = "text as collected: full of copies, near-copies, templates and junk"
+hash-function = "a fixed recipe turning any text into a number; the same text always gives the same number"
+collision = "two different texts with the same hash; rare when the hash has billions of possible values"
+normalisation = "putting text into one standard form (lower case, single spaces) before comparing or hashing"
+fingerprint = "the hash of a normalised text: equal fingerprints mark exact copies in one pass"
+shingle = "every run of n words in a row; a text becomes the set of its shingles"
+jaccard = "items in both sets divided by items in at least one: 1 for identical sets, 0 for nothing shared"
+minhash = "keep each set's smallest hash: two sets' minimums are equal with a chance equal to their Jaccard similarity"
+signature = "a set's minimums under many hash functions; the share of equal positions estimates the similarity"
+feature = "a measurement that describes an example, like the share of common words in a text"
+quality-classifier = "a classifier trained on a few labelled texts to separate good text from junk"
+string-split = "text.split() cuts a text at runs of spaces and line breaks into a list of words"
+module-zlib = "import zlib; zlib.crc32(data) hashes bytes to a whole number below about 4 billion"
+set-add = "seen = set() is an empty set; seen.add(x) puts x in it"
+set-operations = "a & b holds the items in both sets, a | b the items in at least one"
+builtin-tuple = "tuple(a_list) is a fixed copy of a list, which can go in a set"
+tolist = "array.tolist() turns a NumPy array into plain lists"
+"module-learn_llm.rawdata" = "seeded_hash(seed, item): one of many hash functions, picked by seed"
