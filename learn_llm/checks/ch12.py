@@ -27,6 +27,11 @@ def _no_noise(f):
     return _plain_t(f(u, torch.tensor([[1.0, 2.0]]), torch.tensor([[[3.0, 4.0]]])))
 
 
+def _hand(f):
+    """The lesson's hand exercise: scores 2 and -1, so surprises 0.127 and 0.313."""
+    return _plain_t(f(torch.tensor([[1.0, 2.0]]), torch.tensor([[2.0, 0.0]]), torch.tensor([[[1.0, -1.0]]])))
+
+
 def _lengths(f):
     out = f([1, 2, 3, 4, 5, 6], 2)
     return [len(part) for part in out] if isinstance(out, tuple) else _plain(out)
@@ -38,6 +43,7 @@ EXERCISES = {
         Case("ch12.count_words.empty", lambda f: f([]), {}, hint="ch12.count_words.hint"),
     ],
     "similarity": [
+        Case("ch12.similarity.swapped", lambda f: _plain(f(np.array([3.0, 4.0]), np.array([4.0, 3.0]))), 0.96, tolerance=1e-9, hint="ch12.similarity.hint"),
         Case("ch12.similarity.same", lambda f: _plain(f(np.array([3.0, 4.0]), np.array([6.0, 8.0]))), 1.0, tolerance=1e-9, hint="ch12.similarity.hint"),
         Case("ch12.similarity.right", lambda f: _plain(f(np.array([1.0, 0.0]), np.array([0.0, 5.0]))), 0.0, tolerance=1e-9, hint="ch12.similarity.hint"),
         Case("ch12.similarity.opposite", lambda f: _plain(f(np.array([1.0, 2.0]), np.array([-2.0, -4.0]))), -1.0, tolerance=1e-9, hint="ch12.similarity.hint"),
@@ -49,6 +55,7 @@ EXERCISES = {
         Case("ch12.skipgram_pairs.one", lambda f: f([7], 2), ([], []), hint="ch12.skipgram_pairs.hint"),
     ],
     "pair_loss": [
+        Case("ch12.pair_loss.hand", _hand, float(np.log1p(np.exp(-2.0)) + np.log1p(np.exp(-1.0))), tolerance=1e-4, hint="ch12.pair_loss.hint"),
         Case("ch12.pair_loss.batch", lambda f: _plain_t(f(*_batch())), _reference_loss(), tolerance=1e-4, hint="ch12.pair_loss.hint"),
         Case("ch12.pair_loss.zero", _no_noise, 2 * float(np.log(2)), tolerance=1e-4, hint="ch12.pair_loss.hint"),
     ],

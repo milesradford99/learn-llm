@@ -206,3 +206,44 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | tile (of attention) | 分块 | 22 |
 | chunk (in a ring) | 段 | 23 |
 | ZeRO stage | 级 | 23 |
+| scaling law | 缩放定律 | 24 |
+| power law | 幂律 | 24 |
+| log-log plot | 双对数图 | 24 |
+| least-squares fit | 最小二乘拟合 | 24 |
+| floor (of the loss) | 下限 | 24 |
+| compute budget | 计算预算 | 24 |
+| compute-optimal | 计算最优 | 24 |
+| raw pile | 原始文本堆 | 25 |
+| exact copy / near-copy | 完全相同的副本 / 近似重复 | 25 |
+| junk / gibberish / spam | 垃圾文本 / 乱码 / 垃圾广告 | 25 |
+| hash function / collision | 哈希函数 / 碰撞 | 25 |
+| normalise (a text) | 规范化 | 25 |
+| fingerprint | 指纹 | 25 |
+| shingle | 片段 | 25 |
+| Jaccard similarity | Jaccard 相似度 | 25 |
+| signature (MinHash) | 签名 | 25 |
+| feature | 特征 | 25 |
+| quality classifier | 质量分类器 | 25 |
+| alignment | 对齐 | 26 |
+| prompt | 提示 | 26 |
+| demonstration | 示范 | 26 |
+| supervised fine-tuning (SFT) | 监督微调（SFT） | 26 |
+| preference pair | 偏好对 | 26 |
+| reference model | 参考模型 | 26 |
+| gain (of an answer) / margin | 增益 / 差距 | 26 |
+| direct preference optimization (DPO) | 直接偏好优化（DPO） | 26 |
+| judge / checker | 评判者 / 检查器 | 26 |
+| reward / verifiable reward / expected reward | 奖励 / 可验证的奖励 / 期望奖励 | 26 |
+| reinforcement learning | 强化学习 | 26 |
+| policy gradient | 策略梯度 | 26 |
+| group / advantage / spread | 组 / 优势 / 分散程度 | 26 |
+| exploration | 探索 | 26 |
+| serving | 部署服务 | 27 |
+| weights / weight file | 权重 / 权重文件 | 27 |
+| header (of a file) | 文件头 | 27 |
+| little-endian | 小端序 | 27 |
+| tied embeddings | 共用词向量表 | 27 |
+| grouped-query attention (GQA) | 分组查询注意力（GQA） | 27 |
+| stop token | 停止词元 | 27 |
+| chat template | 对话模板 | 27 |
+| greedy choice | 贪心选择 | 27 |

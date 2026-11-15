@@ -12,9 +12,10 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import digits
+    from learn_llm.diagrams import ring
     from learn_llm.parallel import digit_model, train_in_processes, train_one_process
 
     LOCALE = "zh-CN"
@@ -43,13 +44,42 @@ def _():
 
     这就是**数据并行**（data parallelism）。唯一需要的通信是：每次反向计算之后，每台设备都必须得到所有斜率的平均值。
 
+    ## 动手算：两半和整批
+
+    一批 4 个样本，损失分别是 2、4、6 和 12。设备 A 拿前两个，设备 B 拿后两个。每台设备那一半的平均损失是多少？这两个均值的平均又是多少？整批的平均损失呢？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mean_boxes = hand.boxes(['A 的均值', 'B 的均值', '两个均值的平均', '整批的均值'])
+    return (mean_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(mean_boxes):
+    hand.marked(mean_boxes, {'A 的均值': 3, 'B 的均值': 9, '两个均值的平均': 6, '整批的均值': 6}, {
+        'A 的均值': r"""$(2 + 4) / 2$""",
+        'B 的均值': r"""$(6 + 12) / 2$""",
+        '两个均值的平均': r"""把前两个答案加起来，再除以 2""",
+        '整批的均值': r"""$(2 + 4 + 6 + 12) / 4$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    数字相同，因为两半一样大。假如 A 拿三个样本、B 只拿一个，两个均值的平均就是 8，而不是 6：落单的那个样本被多算了三倍的分量。
+
     ## 练习 1：average_slopes
 
-    写 `average_slopes(slopes)`。`slopes` 是一个列表，每台设备一项，每一项又是一个张量列表，每个旋钮一个。返回一个张量列表：每个旋钮在各设备上的均值。`torch.stack(..., dim=0)`（第 14 章）把各设备的张量叠起来，`torch.mean(..., dim=0)` 对它们取平均。
+    写 `average_slopes(slopes)`。`slopes` 是一个列表，每台设备一项；每一项又是一个张量列表，每个旋钮一个：`slopes[0][1]` 是设备 0 上旋钮 1 的斜率。各台设备的旋钮都一样，所以里层的列表一样长，对应的张量形状也相同。它返回一个张量列表：每个旋钮在各台设备上的均值。
 
-    1. `averaged = []`
-    2. `for k in range(len(slopes[0])):`，里面写 `averaged.append(torch.mean(torch.stack([device[k] for device in slopes], dim=0), dim=0))`
-    3. 循环结束后，`return averaged`
+    2 台设备、2 个旋钮时，把 `[[[1, 2], [[0]]], [[3, 6], [[4]]]]` 当作张量，得到 `[[2, 4], [[2]]]`。
+
+    工具你都有：`torch.stack(tensors, dim=0)`（第 14 章）沿着一个新的第 0 维把形状相同的张量叠起来，`torch.mean(..., dim=0)` 沿这一维取平均。
     """)
     return
 
@@ -68,8 +98,17 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""循环要走的是旋钮，不是设备：`for k in range(len(slopes[0])):`。对旋钮 `k`，把每台设备的张量收进一个列表，把列表叠起来，再取平均。把结果加进一个列表，最后返回它。""",
+        r"""一共 4 行。每台设备的旋钮 `k` 组成的列表是 `[device[k] for device in slopes]`。`torch.stack` 和 `torch.mean` 都要写 `dim=0`。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
-    我们在一个进程里，用第 10 章的数字网络检查这个关键事实。一份副本算出 128 张图片一批的斜率。然后 4 台“设备”各取其中 32 张，我们把它们的斜率取平均。单元格显示两者的最大差别。
+    我们在一个进程里，用第 10 章的数字网络检查这个关键事实。一份副本算出 128 张图片一批的斜率。然后 4 台“设备”各取其中 32 张，我们把它们的斜率取平均。单元格显示两者的最大差别。（它需要练习 1，通过之前会显示错误。这是正常的，后面用到你的函数的单元格也一样。）
     """)
     return
 
@@ -99,17 +138,19 @@ def _():
 
     ## 梯度累积：在一台设备上用同样的技巧
 
-    同样的事实也能帮助一台装不下大批量的设备：把四份一份接一份地运行，让斜率在 `.grad` 里累加（PyTorch 会累加，还记得第 10 章那个坑吗），然后在走一步之前除以 4。这叫**梯度累积**（gradient accumulation），它让任何设备都能用任何批大小，代价是时间。
+    同样的事实也能帮助一台装不下大批量的设备：把四份一份接一份地运行，让斜率在 `.grad` 里累加。PyTorch 在那里会自己累加，还记得第 10 章那个坑吗：这一次，那个坑正是我们想要的。还剩一件事：把四个“四分之一批的均值”加起来，结果大了四倍。所以每一份的损失在做反向计算*之前*先除以 4，这样累积起来的，就是四份均值的平均所对应的斜率。这叫**梯度累积**（gradient accumulation），它让任何设备都能用任何批大小，代价是时间。
+
+    /// admonition | 🧰 工具箱：有名字的切片
+    `slice(a, b)` 是一个当作值保存起来的切片：有了 `part = slice(2, 5)`，`X[part]` 就是 `X[2:5]`。要从两个数组里取同一段时（比如图片和它们的标签），它很方便。
+    ///
 
     ## 练习 2：accumulated_slopes
 
-    写 `accumulated_slopes(model, X, Y, pieces)`。把这批数据切成 `pieces` 等份，对每份的损失除以 `pieces` 之后做反向计算，让 `.grad` 把它们加起来。返回斜率的副本。
+    写 `accumulated_slopes(model, X, Y, pieces)`。`model` 是一个 PyTorch 模型，`X` 是一批输入，`Y` 是它们的标签，`pieces` 能整除批大小。它返回整批的 `F.cross_entropy` 损失对应的斜率，形式是一个列表，里面是每个旋钮 `.grad` 的副本；但模型每次只处理其中一份，从不处理更多：
 
-    1. 两行：`model.zero_grad()` 和 `size = len(X) // pieces`
-    2. `for i in range(pieces):`，里面两行：`part = slice(i * size, (i + 1) * size)`，然后 `(F.cross_entropy(model(X[part]), Y[part]) / pieces).backward()`
-    3. 循环结束后：`return [p.grad.clone() for p in model.parameters()]`
-
-    （`slice(a, b)` 是存在一个名字里的切片：`X[slice(a, b)]` 就是 `X[a:b]`。）
+    1. 用 `model.zero_grad()` 把模型的斜率清空一次。
+    2. 依次对每一份：取出 `X` 和 `Y` 里属于这一份的行，算出它的损失，把损失除以 `pieces`，再做反向计算。
+    3. 返回 `[p.grad.clone() for p in model.parameters()]`：`.clone()` 造出一份副本，之后的步骤改不到它。
     """)
     return
 
@@ -123,6 +164,15 @@ def accumulated_slopes(model, X, Y, pieces):
 @app.cell(hide_code=True)
 def _():
     check("23", "accumulated_slopes", accumulated_slopes, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""一份的大小是 `len(X) // pieces`。第 `i` 份从 `i * size` 开始，到 `(i + 1) * size` 之前结束：把这个切片存进一个名字，`X` 和 `Y` 都用它来取。""",
+        r"""一共 6 行。在循环里，损失要先用括号括起来，再 `.backward()`：`(F.cross_entropy(model(X[part]), Y[part]) / pieces).backward()`。如果检查的结果差了 `pieces` 倍，就是漏了除法。如果 `zero_grad` 写在循环里面，就只有最后一份算数。""",
+    ], LOCALE)
     return
 
 
@@ -143,21 +193,68 @@ def _():
 
     在真实的设备上，“把斜率取平均”意味着在设备之间发送数字。标准的操作叫**全归约**（all-reduce）：每台设备一开始有自己的张量，最后每台设备都得到所有张量的和（或均值）。
 
-    最直接的办法是大家都把所有东西发给一台设备，但那台设备就成了瓶颈。常用的办法是**环**（ring）。把设备想象成围成一圈，每台都把自己的斜率切成和设备数一样多的段，共 $n$ 段。在第一圈里，所有设备同时把一段传给邻居，每台传的是不同的段，并把收到的加到自己那份对应的段上。经过 $n - 1$ 次传递后，每台设备都有了某一段的完整总和。在第二圈的 $n - 1$ 次传递里，这些完成的段转一圈，让每台设备都拿到全部。
+    最直接的办法是大家都把所有东西发给一台设备，但那台设备就成了瓶颈。常用的办法是**环**（ring）。把设备想象成围成一圈，每台只传给自己的邻居：
+    """)
+    return
 
-    算一算代价。每次传递，一台设备发送一段，占斜率的 $1/n$。一共 $2(n-1)$ 次传递，所以每台设备发送
+
+@app.cell(hide_code=True)
+def _():
+    ring(['设备 A', '设备 B', '设备 C'], '三台设备围成一圈。A 传给 B，B 传给 C，C 传给 A。')
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    每台设备都把自己的斜率切成和设备数一样多的段，共 $n$ 段。所有设备同时传递，每台传一段，各传各的不同的段，并把收到的加到自己那份对应的段上。这样传 $n - 1$ 次是第一圈，之后每台设备都有了某一段的完整总和。在第二圈的 $n - 1$ 次传递里，这些完成的段转一圈，让每台设备都拿到全部。
+
+    下面是 3 台设备的第一圈。它们的斜率各有 3 个数，每段一个数。A 一开始是 $[1, 2, 3]$，B 是 $[10, 20, 30]$，C 是 $[100, 200, 300]$：
+
+    | 第几次传递 | A 传给 B | B 传给 C | C 传给 A |
+    |---|---|---|---|
+    | 1 | 它的第 0 段，也就是 1 | 它的第 1 段，也就是 20 | 它的第 2 段，也就是 300 |
+    | 2 | 它刚刚加好的第 2 段 | 它刚刚加好的第 0 段 | 它刚刚加好的第 1 段 |
+
+    ## 动手算：环上的一圈
+
+    跟着表格走。第 1 次传递之后，B 的第 0 段是多少？第 2 次传递之后，C 的第 0 段、A 的第 1 段、B 的第 2 段各是多少？接下来的第二圈还要传 2 次，每台设备每次把一个已经完成的段往下传。四次传递加起来，每台设备一共发送了多少个数？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    ring_boxes = hand.boxes(['第 1 次传递后 B 的第 0 段', '第 2 次传递后 C 的第 0 段', '第 2 次传递后 A 的第 1 段', '第 2 次传递后 B 的第 2 段', '每台设备发送的数的个数'])
+    return (ring_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(ring_boxes):
+    hand.marked(ring_boxes, {'第 1 次传递后 B 的第 0 段': 11, '第 2 次传递后 C 的第 0 段': 111, '第 2 次传递后 A 的第 1 段': 222, '第 2 次传递后 B 的第 2 段': 333, '每台设备发送的数的个数': 4}, {
+        '第 1 次传递后 B 的第 0 段': r"""B 自己的第 0 段是 10，A 传给它 1""",
+        '第 2 次传递后 C 的第 0 段': r"""C 自己的第 0 段是 100，B 把刚算出的 11 传给它""",
+        '第 2 次传递后 A 的第 1 段': r"""第 1 次传递后，C 的第 1 段是 $200 + 20$。第 2 次传递时 C 把它传给 A，而 A 自己的第 1 段是 2。""",
+        '第 2 次传递后 B 的第 2 段': r"""第 1 次传递后，A 的第 2 段是 $3 + 300$。第 2 次传递时 A 把它传给 B，而 B 自己的第 2 段是 30。""",
+        '每台设备发送的数的个数': r"""4 次传递，每次传一段，每段一个数""",
+    }, LOCALE, per_row=2)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    第一圈之后，完整的总和 111、222 和 333 都有了，各在一台设备上。第二圈把它们传给大家。为了在 3 台设备之间分享 3 个数的斜率，每台设备发送了 4 个数。
+
+    再算一算一般情况下的代价。每次传递，一台设备发送一段，占斜率的 $1/n$。一共 $2(n-1)$ 次传递，所以每台设备发送
 
     > $$\text{发送的字节数} = 2 \times \frac{n - 1}{n} \times \text{斜率的大小}$$
 
-    不管有多少台设备，这都不到斜率大小的两倍。增加设备并不会让每台的通信量增长，这就是环能很好地扩展的原因。
+    对动手算的那个例子，这是 $2 \times \tfrac{2}{3} \times 3 = 4$，和你数的一样。不管有多少台设备，它都不到斜率大小的两倍。增加设备并不会让每台的通信量增长，这就是环能很好地扩展的原因。
 
     ## 练习 3：ring_bytes
 
-    写 `ring_bytes(size, devices)`：在大小为 `size` 字节的环形全归约中，每台设备发送多少字节：
-
-    ```
-    return 2 * (devices - 1) / devices * size
-    ```
+    写 `ring_bytes(size, devices)`，也就是这个公式：斜率占 `size` 个字节时，在环形全归约中每台设备发送多少字节。`ring_bytes(3, 3)` 得到 `4.0`，`ring_bytes(1000, 4)` 得到 `1500.0`。
     """)
     return
 
@@ -171,6 +268,15 @@ def ring_bytes(size, devices):
 @app.cell(hide_code=True)
 def _():
     check("23", "ring_bytes", ring_bytes, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""只要一行。那个分数是设备数减一，除以设备数。""",
+        r"""`devices - 1` 外面要加括号，否则 Python 只会拿 1 去除。""",
+    ], LOCALE)
     return
 
 
@@ -222,14 +328,48 @@ def _():
 
     但看看每份副本是怎么处理 Adam 的平均值的：每台设备每一步都更新*全部*旋钮，而且一模一样。这浪费了内存。**分片**（sharding）把优化器的平均值分给各台设备：设备 0 只保存前四分之一旋钮的平均值并只更新它们，设备 1 负责第二个四分之一，依此类推。走完一步之后，各设备交换更新过的部分，让所有副本重新完整。同样的思路也可以给斜率分片，甚至给旋钮本身分片。这几个级别叫 **ZeRO** 第 1、2、3 级。
 
+    每台设备需要知道哪些旋钮归自己管。设备从 0 开始编号，一台设备的编号叫它的 **rank**。旋钮不能平分时，前面的设备各多拿一个。
+
+    /// admonition | 🧰 工具箱：剩下多少
+    `a % b` 是 `a` 除以 `b` 的**余数**（remainder），和 `//` 是一对：`10 // 4` 是 2，`10 % 4` 也是 2，因为 $10 = 4 \times 2 + 2$。`12 % 4` 是 0。
+    ///
+
+    ## 动手算：10 个旋钮，4 台设备
+
+    把编号 0 到 9 的 10 个旋钮按顺序分给 4 台设备。每台设备分到几个？再看设备 2：它的第一个旋钮是哪个？它的终点，也就是第一个不再归它管的旋钮（和切片一样），是哪个？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    shard_boxes = hand.boxes(['设备 0 分到', '设备 1 分到', '设备 2 分到', '设备 3 分到', '设备 2 的起点', '设备 2 的终点'])
+    return (shard_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(shard_boxes):
+    hand.marked(shard_boxes, {'设备 0 分到': 3, '设备 1 分到': 3, '设备 2 分到': 2, '设备 3 分到': 2, '设备 2 的起点': 6, '设备 2 的终点': 8}, {
+        '设备 0 分到': r"""每台都分到 `10 // 4` 个，还剩下 `10 % 4` 个：前面的设备各多拿一个""",
+        '设备 1 分到': r"""它是前两台设备之一，所以也多拿一个""",
+        '设备 2 分到': r"""多出来的两个已经分完了，所以只有 `10 // 4` 个""",
+        '设备 3 分到': r"""和设备 2 一样""",
+        '设备 2 的起点': r"""排在它前面的设备 0 和设备 1 各拿了 3 个""",
+        '设备 2 的终点': r"""它的起点加上它分到的个数""",
+    }, LOCALE, per_row=4)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 练习 4：shard
 
-    每台设备需要知道哪些旋钮归自己管。写 `shard(count, devices, rank)`，返回设备 `rank` 在 `count` 个旋钮（从 0 编号）中所分到部分的起点和终点。`stop` 是第一个不归你管的旋钮，和切片一样。当 `count` 不能整除时，前面的设备各多拿一个。`%` 给出除法的余数：`10 % 4` 是 2。
+    写 `shard(count, devices, rank)`。它返回一对数：在从 0 编号的 `count` 个旋钮里，设备 `rank` 那一份的起点和终点。
 
-    1. 两行：`size = count // devices` 和 `extra = count % devices`
-    2. `start = rank * size + min(rank, extra)`
-    3. `stop = start + size + (1 if rank < extra else 0)`
-    4. `return start, stop`
+    > `shard(10, 4, 2)` 得到 `(6, 8)`，`shard(10, 4, 0)` 得到 `(0, 3)`
+
+    每台设备分到 `count // devices` 个旋钮，前 `count % devices` 台设备各多一个。一台设备的起点，就是排在它前面的设备拿走的全部：它们各自基本的那一份，再加上其中每台多拿的那一个。`min(a, b)`（第 12 章）和 `a if test else b`（第 18 章）在这里用得上。
     """)
     return
 
@@ -248,18 +388,61 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""先给两个数起名字：`size = count // devices` 和 `extra = count % devices`。排在设备 `rank` 前面的有 `rank` 台设备。其中有几台多拿了一个？`rank` 很小时是全部，但绝不会超过 `extra`：这就是 `min(rank, extra)`。""",
+        r"""一共 5 行。起点是 `rank * size + min(rank, extra)`。终点是起点加上 `size`；如果这台设备属于前 `extra` 台，也就是 `rank < extra` 成立，就再加 1。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 分片能省多少？
+
+    用 32 位数时，一个旋钮自身占 4 字节，它的斜率占 4 字节，Adam 的两个平均值占 8 字节。被分片的东西，每台设备只要付自己那一份，也就是总量除以设备数：
+
+    | 级 | 旋钮 | 斜率 | Adam 的平均值 |
+    |---|---|---|---|
+    | 0，普通的数据并行 | 完整 | 完整 | 完整 |
+    | 1 | 完整 | 完整 | 分片 |
+    | 2 | 完整 | 分片 | 分片 |
+    | 3 | 分片 | 分片 | 分片 |
+
+    ## 动手算：四个级别
+
+    取 1,000 个旋钮、4 台设备。完整存放时，旋钮占 4,000 字节，斜率占 4,000 字节，平均值占 8,000 字节。在每个级别，一台设备需要多少字节？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    stage_boxes = hand.boxes(['第 0 级', '第 1 级', '第 2 级', '第 3 级'])
+    return (stage_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(stage_boxes):
+    hand.marked(stage_boxes, {'第 0 级': 16000, '第 1 级': 10000, '第 2 级': 7000, '第 3 级': 4000}, {
+        '第 0 级': r"""$4000 + 4000 + 8000$""",
+        '第 1 级': r"""平均值缩小到 $8000 / 4$""",
+        '第 2 级': r"""斜率也缩小到 $4000 / 4$""",
+        '第 3 级': r"""三样都除以 4""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## 练习 5：bytes_per_device
 
-    分片能省多少？用 32 位数时，一个旋钮自身占 4 字节，它的斜率占 4 字节，Adam 的两个平均值占 8 字节。写 `bytes_per_device(knobs, devices, stage)`。第 0 级是普通的数据并行，第 1 级给 Adam 的平均值分片，第 2 级再加上斜率，第 3 级再加上旋钮。
+    写 `bytes_per_device(knobs, devices, stage)`：一个有 `knobs` 个旋钮的模型分给 `devices` 台设备，在表里的第 0、1、2 或 3 级，一台设备需要多少字节。你手算的答案就是检查：`bytes_per_device(1000, 4, 2)` 得到 `7000.0`。
 
-    1. 三行：`weights = 4 * knobs`、`slopes = 4 * knobs` 和 `adam = 8 * knobs`
-    2. `if stage >= 1:`，里面写 `adam = adam / devices`
-    3. `if stage >= 2:`，里面写 `slopes = slopes / devices`
-    4. `if stage >= 3:`，里面写 `weights = weights / devices`
-    5. `return weights + slopes + adam`
+    注意，每一级都包含前一级分片的所有东西，再多分一样。`a >= b` 的意思是“a 至少是 b”。
 
-    （每个 `if` 都和其他的对齐，而不是放在前一个里面。）
+    检查之后的表格用你的函数算 70 亿个旋钮、8 台设备的情况；70 亿写成 `7e9`，和第 22 章一样。
     """)
     return
 
@@ -278,6 +461,15 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""先把三样东西完整的大小存进三个名字。然后是三个各自独立的 `if`，表格的每一列对应一个，每个都把一样东西除以 `devices`。最后把三者加起来。""",
+        r"""这几个 `if` 彼此对齐，不是一个套一个；它们的条件分别是 `stage >= 1`、`stage >= 2` 和 `stage >= 3`。在第 3 级，三个条件都成立，所以三样东西都被除。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     table = ["| 级 | 每台设备的 GB 数，70 亿个旋钮、8 台设备 |", "|---|---|"]
     for stage in range(4):
         table.append(f"| {stage} | {bytes_per_device(7e9, 8, stage) / 1e9:.0f} |")
@@ -288,14 +480,43 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    每台设备从 112 GB 降到 14 GB（第 2 级其实是 38.5，这里四舍五入了），只是因为不再把同样的东西存八遍。（这张表用的是 `bytes_per_device(7e9, 8, stage)`，其中 `7e9` 表示 $7 \times 10^9$。）激活值，也就是为反向计算保留的值，还要另外算，它们随批大小增长，而不是随旋钮数增长。
+    每台设备从 112 GB 降到 14 GB（第 2 级其实是 38.5，这里四舍五入了），只是因为不再把同样的东西存八遍。激活值，也就是为反向计算保留的值，还要另外算，它们随批大小增长，而不是随旋钮数增长。
 
     分片不是免费的。在第 3 级，每一步在某一层运行之前，都要从其他设备收集这一层的旋钮。这是用更多的通信换取内存。
 
     ## 把一层分开
 
-    对最大的模型，连一层的矩阵都要分开。回想一下，`X @ W` 结果的每一列都只由 `W` 的一列算出。所以把 `W` 按列分开：设备 0 拿左半边，算出结果的左半边；设备 1 拿右半边；再把两半拼起来。这叫**张量并行**（tensor parallelism）。下面的单元格在随机矩阵上检查这个想法：
+    对最大的模型，连一层的矩阵都要分开。回想一下，`X @ W` 结果的每一列都只由 `W` 的一列算出。所以把 `W` 按列分开：有两台设备时，设备 0 拿左半边，算出结果的左半边；设备 1 拿右半边；再把两半并排拼起来。这叫**张量并行**（tensor parallelism）。
+
+    ## 练习 6：split_product
+
+    写 `split_product(X, W, devices)`。`X` 的形状是 `(n, k)`，`W` 的形状是 `(k, m)`。它返回 `X @ W`，形状是 `(n, m)`，但要分成 `devices` 块来算：每台设备用 `X` 乘以 `W` 里归它管的那几列，再把各块按顺序拼起来。
+
+    哪几列归哪台设备，由你的 `shard` 说了算：要分的一共有 `W.shape[1]` 列。`W[:, start:stop]` 取出若干列（第 14 章的 `:` 表示所有的行），`torch.cat(pieces, dim=1)`（第 14 章）把一个由表组成的列表并排拼起来。
+
+    检查之后的单元格在随机矩阵上，把分给 3 台设备算出的结果和普通的矩阵乘法作比较。
     """)
+    return
+
+
+@app.function
+def split_product(X, W, devices):
+    # ← 把下面的 todo() 换成你的代码
+    todo()
+
+
+@app.cell(hide_code=True)
+def _():
+    check("23", "split_product", split_product, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""先是一个空列表，然后对各个 rank 做循环：`for rank in range(devices):`。每一轮用 `shard` 问出这台设备的起点和终点，做乘法，再把这一块加进列表。循环结束后，把各块拼起来。""",
+        r"""一共 6 行。`shard` 返回一对数，所以要给两半各起一个名字：`start, stop = shard(W.shape[1], devices, rank)`。这一块是 `X @ W[:, start:stop]`。""",
+    ], LOCALE)
     return
 
 
@@ -303,17 +524,15 @@ def _():
 def _():
     torch.manual_seed(0)
     X_demo = torch.rand(5, 8)
-    W_demo = torch.rand(8, 6)
-    left = X_demo @ W_demo[:, :3]
-    right = X_demo @ W_demo[:, 3:]
-    torch.max(torch.abs(torch.cat([left, right], dim=1) - X_demo @ W_demo)).item()
+    W_demo = torch.rand(8, 7)
+    torch.max(torch.abs(split_product(X_demo, W_demo, 3) - X_demo @ W_demo)).item()
     return
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    大约 $10^{-7}$：同样的数，以不同的顺序相加，所以只有最后几位不同。真实的系统会把这些办法组合起来：在多组机器之间用数据并行，在组内用分片，在一台机器内的各块 GPU 之间用张量并行，因为那里的连接最快。怎样搭配这些办法，是训练工程的一大块内容。
+    是零，或者类似 $10^{-7}$ 的数：同样的数，相加的顺序可能不同，所以最多只有最后几位不一样。真实的系统会把这些办法组合起来：在多组机器之间用数据并行，在组内用分片，在一台机器内的各块 GPU 之间用张量并行，因为那里的连接最快。怎样搭配这些办法，是训练工程的一大块内容。
 
     ## 接下来
 
@@ -322,16 +541,16 @@ def _():
     ## 你现在会做的事
 
     - 解释为什么把等大分片的斜率取平均，就得到整批的斜率
-    - 用梯度累积在一台设备上达到任意批大小
-    - 解释全归约，并算出环形全归约的字节数
+    - 用梯度累积在一台设备上达到任何批大小
+    - 解释全归约，亲手走一遍环，并数出它的字节数
     - 在几个真实的进程上训练，并检查结果和单进程一致
-    - 算出每一级分片下每台设备所需的内存
-    - 把一次矩阵乘法分到多台设备上
+    - 把旋钮分给各台设备，并算出每个分片级别下每台设备的内存
+    - 把一次矩阵乘法分到几台设备上
 
     ---
 
     <!-- go-deeper -->
-    **深入了解（选读）：** PyTorch 的 `DistributedDataParallel` 做的就是我们这些进程做的事，并让通信和反向计算同时进行。ZeRO 出自 Rajbhandari 等（2019），*FSDP* 是 PyTorch 版的第 3 级。张量并行见 *Megatron-LM* 论文；而把模型的各层分成几组、放到不同设备上，叫*流水线并行*（pipeline parallelism）。
+    **深入了解（选读）：** PyTorch 的 `DistributedDataParallel` 做的就是我们这些进程做的事，并让通信和反向计算同时进行。ZeRO 出自 Rajbhandari 等（2019），*FSDP* 是 PyTorch 版本的第 3 级。张量并行见 *Megatron-LM* 论文；把模型的各层分组放到不同设备上，叫*流水线并行*（pipeline parallelism）。
     """)
     return
 

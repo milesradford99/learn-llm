@@ -23,6 +23,15 @@ def _accumulate(f, pieces):
     return max(torch.max(torch.abs(a - b)).item() for a, b in zip(whole, out)) < 1e-6
 
 
+def _split(f, devices):
+    torch.manual_seed(9)
+    X, W = torch.rand(3, 4), torch.rand(4, 5)
+    out = f(X, W, devices)
+    if not isinstance(out, torch.Tensor):
+        return _plain(out)
+    return list(out.shape), bool(torch.max(torch.abs(out - X @ W)) < 1e-5)
+
+
 EXERCISES = {
     "average_slopes": [
         Case("ch23.average_slopes.two", _average, [[2.0, 4.0], [[2.0]]], tolerance=1e-9, hint="ch23.average_slopes.hint"),
@@ -32,14 +41,21 @@ EXERCISES = {
         Case("ch23.accumulated_slopes.three", lambda f: _accumulate(f, 3), True, hint="ch23.accumulated_slopes.hint"),
     ],
     "ring_bytes": [
+        Case("ch23.ring_bytes.hand", lambda f: f(3, 3), 4.0, tolerance=1e-9, hint="ch23.ring_bytes.hint"),
         Case("ch23.ring_bytes.four", lambda f: f(1000, 4), 1500.0, tolerance=1e-9, hint="ch23.ring_bytes.hint"),
         Case("ch23.ring_bytes.one", lambda f: f(1000, 1), 0.0, tolerance=1e-9, hint="ch23.ring_bytes.hint"),
     ],
     "shard": [
+        Case("ch23.shard.page", lambda f: f(10, 4, 2), (6, 8), hint="ch23.shard.hint"),
         Case("ch23.shard.even", lambda f: [f(12, 4, r) for r in range(4)], [(0, 3), (3, 6), (6, 9), (9, 12)], hint="ch23.shard.hint"),
         Case("ch23.shard.uneven", lambda f: [f(10, 4, r) for r in range(4)], [(0, 3), (3, 6), (6, 8), (8, 10)], hint="ch23.shard.hint"),
     ],
     "bytes_per_device": [
         Case("ch23.bytes_per_device.stages", lambda f: [f(1000, 4, s) for s in range(4)], [16000, 10000, 7000, 4000], tolerance=1e-9, hint="ch23.bytes_per_device.hint"),
+    ],
+    "split_product": [
+        Case("ch23.split_product.two", lambda f: _split(f, 2), ([3, 5], True), hint="ch23.split_product.hint"),
+        Case("ch23.split_product.three", lambda f: _split(f, 3), ([3, 5], True), hint="ch23.split_product.hint"),
+        Case("ch23.split_product.one", lambda f: _split(f, 1), ([3, 5], True), hint="ch23.split_product.hint"),
     ],
 }

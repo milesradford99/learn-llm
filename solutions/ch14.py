@@ -34,6 +34,11 @@ def lstm_step(x, h, c, L):
     return h, c
 
 
+def reader_forward(ids, memory, table, lstm, out):
+    states, memory = lstm(table(ids), memory)
+    return out(states), memory
+
+
 def sample_word(scores, temperature):
     p = torch.softmax(scores / temperature, dim=0)
     return torch.multinomial(p, 1).item()

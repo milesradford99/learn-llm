@@ -99,10 +99,13 @@ def shift_digits(images, size, seed):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Two new tools. `rng.integers(0, n)` gives a random whole number from 0 up to, but not
-    including, $n$. And a slice works in two directions at once: `canvas[i, r:r + 28, c:c + 28]` is
-    the $28 \times 28$ square of picture $i$ whose top-left corner is at row $r$, column $c$, and storing into
-    it pastes the digit there.
+    /// admonition | 🧰 Toolbox: a random whole number, and a square slice
+    - `rng.integers(0, n)` gives a random whole number from 0 up to, but not including, $n$.
+    - A slice works in two directions at once: `M[1:3, 0:2]` is the $2 \times 2$ square of `M` in rows
+      1 and 2, columns 0 and 1. In the cell above, `canvas[i, r:r + 28, c:c + 28]` is the
+      $28 \times 28$ square of picture $i$ whose top-left corner is at row $r$, column $c$, and storing
+      into it pastes the digit there.
+    ///
     """)
     return
 
@@ -289,8 +292,12 @@ def _():
     The output of a convolution is itself a kind of picture, a map of where the shape was found.
     That's why it's called a **feature map**. Two properties make this the right tool.
 
-    **It moves with the picture.** Move the digit 3 columns to the right (`np.roll` shifts an array,
-    and `axis=1` means along the columns), and the map just moves 3 columns too. The largest
+    /// admonition | 🧰 Toolbox: shifting an array
+    `np.roll(a, 1)` moves every item one place along, and the last one comes round to the front:
+    `np.roll(np.array([1, 2, 3]), 1)` is `[3, 1, 2]`. For a matrix, `axis=1` shifts along the columns.
+    ///
+
+    **It moves with the picture.** Move the digit 3 columns to the right with `np.roll`, and the map just moves 3 columns too. The largest
     difference between "move, then convolve" and "convolve, then move" is exactly 0:
     """)
     return
@@ -364,9 +371,13 @@ def _(pool_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    /// admonition | 🧰 Toolbox: division that drops the rest
+    `//` is division that drops what's after the point: `7 // 2` is 3, and `8 // 2` is 4.
+    ///
+
     ## Exercise 2: max_pool
 
-    Write `max_pool(M)` for a matrix `M`. The output has half the rows and half the columns. `//` is division that drops what's after the point (`7 // 2` is 3), so with an odd number of rows, the last one gets left out.
+    Write `max_pool(M)` for a matrix `M`. The output has half the rows and half the columns, counted with `//`, so with an odd number of rows, the last one gets left out.
 
     Use the frame of `convolve`: zeros of the right shape, two loops over the output's positions, one number stored at each. The square for output position `r`, `c` starts at row $2 \times r$ and column $2 \times c$ of `M`, and is 2 rows high and 2 columns wide. `np.max` gives its largest number.
 
@@ -402,13 +413,15 @@ def _():
     ## Letting the network choose its kernels
 
     We picked our edge detector by hand. A network learns its kernels instead: the 9 numbers are just
-    knobs, trained by the same backward pass and Adam as always. In PyTorch that's
-    `nn.Conv2d(1, 1, 3)`, read as "1 map in, 1 map out, kernel size 3". Pictures must arrive with a shape of four numbers:
+    knobs, trained by the same backward pass and Adam as always.
 
-    > (pictures, maps, height, width)
-
-    The extra number is how many maps each picture has. A grey digit has one map. `X.unsqueeze(1)`
-    inserts a new dimension of size 1 at position 1, so `(10000, 40, 40)` becomes `(10000, 1, 40, 40)`.
+    /// admonition | 🧰 Toolbox: convolution, ready-made
+    In PyTorch, a convolution with a kernel of knobs is the layer `nn.Conv2d(1, 1, 3)`, read as
+    "1 map in, 1 map out, kernel size 3". Pictures must arrive with a shape of four numbers:
+    **(pictures, maps, height, width)**. The extra number is how many maps each picture has. A grey
+    digit has one map. `X.unsqueeze(1)` inserts a new dimension of size 1 at position 1, so
+    `(10000, 40, 40)` becomes `(10000, 1, 40, 40)`.
+    ///
 
     To be sure PyTorch does what you just wrote, let's load your kernel into its layer and
     compare. (`.data` is the plain numbers inside a tensor, without the books.)
@@ -705,12 +718,15 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    /// admonition | 🧰 Toolbox: a layer of your own
     - `class Block(nn.Module):` means "a `Block` is a kind of `nn.Module`", PyTorch's kind of layer. It
       inherits everything a layer can do. That's why PyTorch can find the knobs of a `Block`.
     - `super().__init__()` runs `nn.Module`'s own setup first. It's always the first line.
     - `forward` is the calculation. Calling `block(x)` runs `block.forward(x)`, which explains
       how `layer(X)` worked in chapter 10.
-    - `step` is a function kept in a slot (chapter 02: functions are values), so the same class can
+    ///
+
+    In this `Block`, `step` is a function kept in a slot (chapter 02: functions are values), so the same class can
       run your `residual_block`, or `plain_block`, which does the same work without the `x +`.
 
     `deep_model(blocks, step)` stacks that many blocks, two convolutions each. To compare fairly,

@@ -12,9 +12,10 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import stories
+    from learn_llm.plot import chart
 
     LOCALE = "zh-CN"
     laptop_speed()
@@ -51,6 +52,11 @@ def _():
     ## 从文本到单词
 
     先把文本切成单词。下面这个辅助函数把所有字母变成小写，保留连续的字母和撇号，其余的都丢掉。（`re` 是 Python 的文本模式工具，不用专门学；`[a-z']+` 的意思就是“一个或多个字母或撇号”。）
+
+    /// admonition | 🧰 工具箱：两个处理文本的工具
+    - `text.lower()` 给出把大写字母全部变成小写的文本：`"The Dog".lower()` 是 `"the dog"`。
+    - `" ".join(items)` 把字符串列表粘成一个字符串，中间加空格：`" ".join(["a", "b", "c"])` 是 `"a b c"`。
+    ///
     """)
     return
 
@@ -70,15 +76,20 @@ def _(train_stories):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    （`" ".join(list)` 把字符串列表粘成一个字符串，中间加空格。6,000 篇故事大约有 965,000 个词，对这一章足够了。用 12,000 篇只不过多花一倍时间。）
+    6,000 篇故事大约有 965,000 个词，对这一章足够了。用 12,000 篇只不过多花一倍时间。
 
     ## 用字典计数
 
-    我们需要知道每个词出现了多少次。Python 为此准备了**字典**（dictionary）：它存的是一对对的**键**（key）和**值**（value），能一下子找到某个键。列表按位置查找，字典按键查找。
+    我们需要知道每个词出现了多少次。列表做不到：列表按位置查找，而我们想按词查找。Python 为此准备了**字典**（dictionary）：它存的是一对对的**键**（key）和**值**（value），能一下子找到某个键。
 
-    - `{}` 造出一个空字典；`counts["dog"] = 3` 把 3 存在键 `"dog"` 下面。
-    - `counts["dog"]` 把它读出来。
-    - `counts.get("dog", 0)` 也是读取，但键还不存在时给出 0，而不是报错停下。
+    /// admonition | 🧰 工具箱：字典
+    - `{}` 造出一个空字典。`pets["dog"] = 3` 把 3 存在键 `"dog"` 下面，原来存在那里的东西会被换掉。
+    - `pets["dog"]` 把它读出来。读一个从没存过的键，会报错停下。
+    - `pets.get("fish", 0)` 也是读取，但键不存在时给出第二个值，这里是 0。
+    - `for name in pets:` 按键第一次存入的先后顺序，逐个访问所有的键。
+    ///
+
+    下面的单元格先存入 3 只狗，再两次各加 2 只猫。第一次加的时候还没有 `"cat"` 这个键，所以 `.get` 给出 0，猫的数量就从 0 开始加。
     """)
     return
 
@@ -87,9 +98,10 @@ def _():
 def _():
     pets = {}
     pets["dog"] = 3
-    pets["cat"] = pets.get("cat", 0) + 1
+    pets["cat"] = pets.get("cat", 0) + 2
+    pets["cat"] = pets.get("cat", 0) + 2
     pets, pets["dog"], pets.get("fish", 0)
-    return
+    return (pets,)
 
 
 @app.cell(hide_code=True)
@@ -97,11 +109,11 @@ def _():
     mo.md(r"""
     ## 练习 1：count_words
 
-    写 `count_words(words)`，返回一个字典，从每个词映射到它出现的次数：
+    写 `count_words(words)`。它接收一个单词列表，返回一个字典，从每个不同的词映射到它出现的次数：
 
-    1. `counts = {}`
-    2. `for word in words:`，里面写 `counts[word] = counts.get(word, 0) + 1`
-    3. 循环结束后，`return counts`
+    > `count_words(["the", "dog", "the"])` 得到 `{"the": 2, "dog": 1}`
+
+    从一个空字典开始，把单词一个一个看过去。每看到一个词，就把它自己的次数加 1。想一想：一个词第一次出现时，它的次数是多少？
     """)
     return
 
@@ -120,12 +132,44 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
-    mo.md(r"""
-    现在我们留下最常见的 2,000 个词作为**词表**（vocabulary），并给每个词一个数字，也就是它的**编号**（id）：它在列表里的位置。
+    hand.stuck([
+        r"""分三部分：造一个空字典，对 `words` 做循环，循环结束后返回字典。工具箱单元格里的猫，演示了怎样给一个可能还不存在的次数加数。""",
+        r"""一共 4 行。第一行是 `counts = {}`。循环里面只有一行：把 `.get` 查到的数加 1，存到键 `word` 下面。""",
+    ], LOCALE)
+    return
 
-    - `sorted(counts, key=counts.get, reverse=True)` 列出所有键，按次数从大到小排序。
-    - `index` 是反过来的字典：从词到编号。
-    - `ids` 是用编号表示的全部文本。造列表的表达式末尾的 `if word in index` 跳过词表以外的词。
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 词表
+
+    现在我们留下最常见的 2,000 个词作为**词表**（vocabulary），并给每个词一个数字，也就是它的**编号**（id）：它在列表里的位置。这还需要两个工具。
+
+    /// admonition | 🧰 工具箱：排序和筛选
+    - `sorted(pets)` 把所有键按字母顺序排成一个列表。`sorted(pets, key=pets.get)` 则按 `pets.get` 对每个键给出的结果来排，也就是按存的值从小到大排。加上 `reverse=True`，最大的排在最前面。
+    - `[name for name in names if name in pets]` 和第 05 章一样造出一个列表，但只留下通过 `if` 后面那个测试的项。字典里有这个键时，`name in pets` 为真。
+    ///
+    """)
+    return
+
+
+@app.cell
+def _(pets):
+    sorted(pets, key=pets.get, reverse=True), [name for name in ["dog", "owl", "cat"] if name in pets]
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    下一个单元格用到你写的 `count_words`，所以练习 1 通过之前它会显示错误。这是正常的，后面凡是用到它的单元格也一样。它造出三样东西：
+
+    - `vocab`：最常见的 2,000 个词，最常见的排最前；
+    - `index`：反过来的字典，从词到编号；
+    - `ids`：用编号表示的全部文本，词表以外的词被跳过。
+
+    它显示不同的词的个数、`vocab` 的前 8 个词，以及 `ids` 的长度。
     """)
     return
 
@@ -149,19 +193,53 @@ def _():
 
     ## 两个向量有多像？
 
-    第 05 章的点积是逐个位置相乘再相加。两个向量方向一致时，点积就大。但它也会随长度增长，而衡量相似只关心方向。所以我们除以两个向量的长度。用 $\cdot$ 表示点积（代码里是 `@`），向量的**长度**是 $\sqrt{a \cdot a}$，也就是各项平方和的平方根。这个度量叫**余弦相似度**（cosine similarity）：
+    第 05 章的点积是逐个位置相乘再相加。两个向量方向一致时，点积就大。但它也会随长度增长，而衡量相似只关心方向。所以我们除以两个向量的长度。
+
+    /// admonition | 🧰 工具箱：向量的长度
+    用 $\cdot$ 表示点积（代码里是 `@`），向量 $a$ 的**长度**是 $\sqrt{a \cdot a}$，也就是各项平方和的平方根。对 $[3, 4]$ 来说是 $\sqrt{9 + 16} = 5$：在图上，这就是从 $(0, 0)$ 到点 $(3, 4)$ 的那支箭头的长度。
+    ///
+
+    这个度量叫**余弦相似度**（cosine similarity）：
 
     > $$\operatorname{similarity}(a, b) = \frac{a \cdot b}{a \text{ 的长度} \times b \text{ 的长度}}$$
 
-    方向相同时是 1，互相垂直（毫无共同点）时是 0，方向相反时是 −1。取 `a = [3, 4]`，`b = [6, 8]`，点积是 $3 \times 6 + 4 \times 8 = 50$。长度是 $\sqrt{9 + 16} = 5$ 和 $\sqrt{36 + 64} = 10$。所以相似度是 $50 / (5 \times 10) = 1$：$b$ 是 $a$ 拉长一倍，方向相同。
+    方向相同时是 1，互相垂直（毫无共同点）时是 0，方向相反时是 −1。取 $a = [3, 4]$，$b = [6, 8]$，点积是 $3 \times 6 + 4 \times 8 = 50$。长度是 $\sqrt{9 + 16} = 5$ 和 $\sqrt{36 + 64} = 10$。所以相似度是 $50 / (5 \times 10) = 1$：$b$ 是 $a$ 拉长一倍，方向相同。
+
+    ## 动手算：两个相似度
+
+    先看 $a = [3, 4]$ 和 $b = [4, 3]$：同样两个数，换了位置。算出点积、两个长度和相似度。然后算 $c = [0, 2]$ 和 $d = [3, 4]$ 的相似度。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cosine_boxes = hand.boxes(['a · b', 'a 的长度', 'b 的长度', 'a 和 b 的相似度', 'c 和 d 的相似度'], step=0.01)
+    return (cosine_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(cosine_boxes):
+    hand.marked(cosine_boxes, {'a · b': 24, 'a 的长度': 5, 'b 的长度': 5, 'a 和 b 的相似度': 0.96, 'c 和 d 的相似度': 0.8}, {
+        'a · b': r"""$3 \times 4 + 4 \times 3$""",
+        'a 的长度': r"""$\sqrt{3 \times 3 + 4 \times 4}$""",
+        'b 的长度': r"""两个数换了位置，平方和不变""",
+        'a 和 b 的相似度': r"""点积除以两个长度的乘积""",
+        'c 和 d 的相似度': r"""点积是 $0 \times 3 + 2 \times 4$，长度是 2 和 5""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    换了位置的两个数，指的方向很接近，但不相同：是 0.96，不是 1。
 
     ## 练习 2：similarity
 
-    写 `similarity(a, b)`，输入是两个 NumPy 向量：
+    写 `similarity(a, b)`，输入是两个大小相同的 NumPy 向量。它按上面的公式返回一个数。`np.sqrt` 是平方根（第 09 章）。
 
-    1. `length_a = np.sqrt(a @ a)`
-    2. `length_b = np.sqrt(b @ b)`
-    3. `return (a @ b) / (length_a * length_b)`
+    > `similarity(np.array([3.0, 4.0]), np.array([4.0, 3.0]))` 得到 `0.96`
     """)
     return
 
@@ -180,6 +258,15 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""你需要三个数，每个都用一次 `@` 算出：$a \cdot b$、$a \cdot a$ 和 $b \cdot b$。后两个再经过 `np.sqrt`，就成了长度。""",
+        r"""可以写成 3 行：两个长度各一行，然后是 `return`。第一行是 `length_a = np.sqrt(a @ a)`。两个长度相乘的部分要加括号，否则 Python 会先除以第一个，再乘以第二个。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## 任务：猜邻居
 
@@ -192,18 +279,47 @@ def _():
     | `ran` | `dog`、`fast` | (ran, dog)、(ran, fast) |
     | `fast` | `ran` | (fast, ran) |
 
-    从中心词预测上下文词，这个任务叫 **skip-gram**。
+    两头的词上下文词少一些，因为窗口伸到了文本外面。从中心词预测上下文词，这个任务叫 **skip-gram**。
+
+    ## 动手算：数一数词对
+
+    取一段 5 个词的文本，`window = 2`，也就是每个中心词往左最多看 2 个位置，往右最多看 2 个位置。第一个词有几个上下文词？中间那个词呢？整段文本一共给出多少个词对？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pair_boxes = hand.boxes(['第一个词的上下文词', '中间那个词的上下文词', '词对总数'])
+    return (pair_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(pair_boxes):
+    hand.marked(pair_boxes, {'第一个词的上下文词': 2, '中间那个词的上下文词': 4, '词对总数': 14}, {
+        '第一个词的上下文词': r"""它左边什么都没有，所以只算右边的词""",
+        '中间那个词的上下文词': r"""它两边各有 2 个词""",
+        '词对总数': r"""五个词分别有 2、3、4、3、2 个上下文词""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    /// admonition | 🧰 工具箱：别走出列表
+    - `max(a, b)` 取两个数里较大的，`min(a, b)` 取较小的。它们能拦住一个位置，不让它走出一个有 10 项的列表：`max(0, 1 - 3)` 是 0，不是 −2；`min(10, 8 + 3)` 是 10，不是 11。
+    - `range(start, stop)` 从 `start` 数到 `stop` 的前一个：`range(2, 5)` 给出 2、3、4。想把位置 5 也包括进来，就写 `range(2, 5 + 1)`。
+    - `a != b` 表示“a 不等于 b”，是 `==` 的反面。
+    ///
 
     ## 练习 3：skipgram_pairs
 
-    写 `skipgram_pairs(ids, window)`，返回两个长度相同的列表：中心词和上下文词。对每个位置 `i`，邻居从 `i - window` 到 `i + window`，但必须留在列表范围内，也不能是 `i` 自己。`max(a, b)` 取较大的数，`min(a, b)` 取较小的数，正好用来处理边界。`!=` 表示“不等于”。`range` 在最后一个数之前就停下，所以要 `+ 1` 才能走到 `i + window`。
+    写 `skipgram_pairs(ids, window)`。`ids` 是一个编号列表，`window` 是一个整数。它返回两个长度相同的列表：中心词和上下文词。两个列表里位置 $p$ 上的两项合起来就是一个词对。中心词按文本顺序排列，每个中心词的上下文词从左到右排列。把上面表格里的四个词记作编号 0 到 3：
 
-    1. 两行：`centres = []` 和 `contexts = []`
-    2. `for i in range(len(ids)):`
-    3. 里面写：`for j in range(max(0, i - window), min(len(ids), i + window + 1)):`
-    4. 再里面：`if j != i:`
-    5. 再里面两行：`centres.append(ids[i])` 和 `contexts.append(ids[j])`
-    6. 循环结束后，`return centres, contexts`
+    > `skipgram_pairs([0, 1, 2, 3], 1)` 得到 `([0, 1, 1, 2, 2, 3], [1, 0, 2, 1, 3, 2])`
+
+    对位置 $i$ 上的中心词，上下文词在从 $i - \text{window}$ 到 $i + \text{window}$ 之间、落在列表之内的那些位置上，$i$ 自己除外。
     """)
     return
 
@@ -222,6 +338,15 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""先造两个空列表，再写两层循环，一层套一层：`i` 走遍每个位置，`j` 走遍 `i` 附近的位置。在两层循环里面，用一个 `if` 排除等于 `i` 的 `j`，再用两行 `append` 给两个列表各加一项。""",
+        r"""一共 8 行。里层循环是一个 `range`：起点是 `i - window`，用 `max` 保证不小于 0；终点是 `i + window + 1`，用 `min` 保证不超过 `len(ids)`。加进列表的是 `ids[i]` 和 `ids[j]`，是编号，不是位置。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## 真的还是编的？换个便宜的问题
 
@@ -229,26 +354,112 @@ def _():
 
     最直接的模型是第 07 章那一套：给全部 2,000 个词打分，再做 softmax。但这意味着每一对都要算 2,000 个点积，而词对有几百万个。我们改问一个便宜得多的问题：*这一对是真的吗？* 对每个真实的词对，再随机抽几个**噪声词**（noise word），训练网络把真的上下文词和假的区分开。这叫**负采样**（negative sampling）。
 
+    ## 从一个分数得到概率
+
     回答是或否，需要从一个分数 $s$ 得到一个概率。对两个分数做 softmax：“真”的分数是 $s$，“假”的分数是 0。（为什么是 0？第 07 章的平移说明，softmax 只关心分数之间的差，所以其中一个不妨取 0。）任何数的 0 次方都是 1，所以 $e^0 = 1$，“真”的份额是
 
     > $$\sigma(s) = \frac{e^s}{e^s + e^0} = \frac{e^s}{e^s + 1}$$
 
-    这叫 **sigmoid**。$s$ 很大时它接近 1，$s = 0$ 时正好是 0.5，$s$ 很负时接近 0。还有一个好用的事实：“假”的份额是 $1 - \sigma(s)$，它等于 $\sigma(-s)$。（验证一下：$\sigma(-s) = e^{-s} / (e^{-s} + 1)$。分子分母同乘 $e^s$，注意 $e^{-s} \times e^s = e^0 = 1$，得到 $1 / (1 + e^s)$，正好等于 $1 - e^s / (e^s + 1)$。）
+    这叫 **sigmoid**，用希腊字母 $\sigma$（读作 sigma）表示。下面是分数从 −6 到 6 时它的样子：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    chart((-6, 6), (0, 1), "分数 s", "σ(s)",
+          curve=[(x / 10, float(1 / (1 + np.exp(-x / 10)))) for x in range(-60, 61)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    $s$ 很大时它接近 1，$s = 0$ 时正好是 0.5，$s$ 很负时接近 0。这条曲线还有一种对称：“假”的份额是 $1 - \sigma(s)$，它等于 $\sigma(-s)$。在图上，$\sigma(2)$ 比 1 低多少，$\sigma(-2)$ 就比 0 高多少。（验证一下：$\sigma(-s) = e^{-s} / (e^{-s} + 1)$。分子分母同乘 $e^s$，注意 $e^{-s} \times e^s = e^0 = 1$，得到 $1 / (1 + e^s)$，正好等于 $1 - e^s / (e^s + 1)$。）
+
+    ## 一对的损失
 
     损失就是第 07 章的意外程度，即正确答案所得份额的 $-\log$，把一个真实词和 $k$ 个噪声词加起来。对真实词，正确答案是“真”，份额是 $\sigma(u \cdot v)$。对噪声词 $n$，正确答案是“假”，份额是 $\sigma(-u \cdot n)$：
 
     > $$\text{一对的损失} = -\log \sigma(u \cdot v) - \log \sigma(-u \cdot n_1) - \ldots - \log \sigma(-u \cdot n_k)$$
 
-    第一项把 $u$ 拉向真实的邻居，其余各项把它从假词那里推开。在 PyTorch 里，`F.logsigmoid(s)` 安全地计算 $\log \sigma(s)$，道理和第 07 章 softmax 的平移相似。
+    第一项把 $u$ 拉向真实的邻居，其余各项把它从假词那里推开。下面是几个分数对应的意外程度 $-\log \sigma(s)$：
 
+    | $s$ | −2 | −1 | 0 | 1 | 2 |
+    |---|---|---|---|---|---|
+    | $\sigma(s)$ | 0.12 | 0.27 | 0.50 | 0.73 | 0.88 |
+    | $-\log \sigma(s)$ | 2.13 | 1.31 | 0.69 | 0.31 | 0.13 |
+
+    ## 动手算：一对的损失
+
+    取 $u = [1, 2]$，真实的上下文词 $v = [2, 0]$，一个噪声词 $n = [1, -1]$。先算出两个分数 $u \cdot v$ 和 $u \cdot n$，再从表里查意外程度，算出损失。留意噪声分数前面的负号。
+
+    然后假设噪声词是 $[2, 0]$，和真实的上下文词一样。这时损失是多少？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    loss_boxes = hand.boxes(['真实分数', '噪声分数', '损失', '换了噪声词之后的损失'], step=0.01)
+    return (loss_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(loss_boxes):
+    hand.marked(loss_boxes, {'真实分数': 2, '噪声分数': -1, '损失': 0.44, '换了噪声词之后的损失': 2.26}, {
+        '真实分数': r"""$1 \times 2 + 2 \times 0$""",
+        '噪声分数': r"""$1 \times 1 + 2 \times (-1)$""",
+        '损失': r"""真实词的意外程度是表里 $s = 2$ 那一格。噪声词的是它的分数取负之后那一格，也就是 $s = 1$。把两个加起来。""",
+        '换了噪声词之后的损失': r"""现在噪声分数是 2，所以它的意外程度是表里 $s = -2$ 那一格""",
+    }, LOCALE, tolerance=0.011)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    第二个损失是第一个的五倍。噪声词的分数和真邻居一样高，正是损失要罚的情况；训练会把 $u$ 从这个词那里推开，让损失降下来。
+
+    ## 一次算一整批
+
+    练习里要一次算出很多对的损失，所以向量是叠在一起送来的：`u` 和 `v` 的形状是 `(b, d)`，表示 `b` 对、每个向量 `d` 个数字；`n` 的形状是 `(b, k, d)`，每对 `k` 个噪声向量。（这里的 `n` 指噪声，不是前面章节里的样本数。）
+
+    /// admonition | 🧰 工具箱：成批的点积
+    - 对两个形状为 `(b, d)` 的张量，`torch.sum(x * y, dim=1)` 先逐个位置相乘，再沿每一行相加：每行一个点积，形状是 `(b,)`。
+    - `x.unsqueeze(1)`（第 11 章）插入一个大小为 1 的维度：`(b, d)` 变成 `(b, 1, d)`。做算术时，大小为 1 的维度会重复自己去配合另一边，所以 `(b, 1, d)` 乘 `(b, k, d)` 是可以的，结果是 `(b, k, d)`：`x` 的第 0 行，分别和属于第 0 行的那 `k` 个向量相遇。
+    - `F.logsigmoid(s)` 对张量里的每个数计算 $\log \sigma(s)$，分数很大时也安全，道理和第 07 章 softmax 的平移相似。
+    ///
+
+    下面的单元格用 2 行、每行 3 个数字，和一个形状为 `(2, 4, 3)` 的张量，试了前两个工具，并显示三个形状。
+    """)
+    return
+
+
+@app.cell
+def _():
+    rows_demo = torch.ones(2, 3)
+    stack_demo = torch.ones(2, 4, 3)
+    product_demo = stack_demo * rows_demo.unsqueeze(1)
+    torch.sum(rows_demo * rows_demo, dim=1).shape, product_demo.shape, torch.sum(product_demo, dim=2).shape
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 练习 4：pair_loss
 
-    写 `pair_loss(u, v, n)`，一次处理一整批。`u` 和 `v` 的形状是 `(b, d)`，表示 `b` 对、每个向量 `d` 个数字。`n` 的形状是 `(b, k, d)`，每对 `k` 个噪声向量。（这里的 `n` 指噪声，不是前面章节里的样本数。）
+    写 `pair_loss(u, v, n)`，形状如上。它返回一个数，也就是一个没有维度的张量：`b` 对各自的损失的平均值。中间要经过：
 
-    1. `real = torch.sum(u * v, dim=1)`，每对一个点积，形状是 `(b,)`
-    2. `fake = torch.sum(n * u.unsqueeze(1), dim=2)`。`u.unsqueeze(1)` 的形状是 `(b, 1, d)`，大小为 1 的维度会被广播，所以它的作用相当于 `(b, k, d)`。这样每对得到 `k` 个点积，形状是 `(b, k)`
-    3. `surprise = -F.logsigmoid(real) - torch.sum(F.logsigmoid(-fake), dim=1)`
-    4. `return torch.mean(surprise)`
+    | 算什么 | 形状 |
+    |---|---|
+    | 真实分数 $u \cdot v$，每对一个 | `(b,)` |
+    | 噪声分数 $u \cdot n_j$，每对 `k` 个 | `(b, k)` |
+    | 按公式算出的每对的损失 | `(b,)` |
+    | 它们的平均值 | 一个数 |
+
+    你在动手算里得到的数就是其中一项检查：只有 1 对的一批，`u = [[1, 2]]`，`v = [[2, 0]]`，`n = [[[1, -1]]]`，结果大约是 `0.44`。
     """)
     return
 
@@ -267,12 +478,25 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""四行，表格的每一行对应一行代码。前两行的写法在工具箱单元格里。第三行：对真实分数和取负后的噪声分数分别用 `F.logsigmoid`，把每对的 `k` 个噪声项沿 `dim=1` 加起来，两部分前面都加负号。""",
+        r"""第一行是 `real = torch.sum(u * v, dim=1)`。算噪声分数时，`u` 要先 `unsqueeze(1)` 才能和 `n` 相乘，然后沿 `dim=2` 求和。最后一行返回这些损失的 `torch.mean`。""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## 训练
 
     最后一个 PyTorch 工具：`nn.Embedding(2000, 32)` 是一张 2,000 行、每行 32 个旋钮的表。给它任意形状的编号张量，它就为每个编号查出一行，所以 `(b,)` 的编号给出 `(b, 32)` 的向量，`(b, k)` 的编号给出 `(b, k, 32)`。就这么简单：一次查表，而表里的数字会学习。
 
-    噪声词按概率表 `noise` 抽取：每个词的次数取 0.75 次方，再缩放到总和为 1。小于 1 的次方对大数压得多、对小数压得少（`100 ** 0.75` 大约是 32，`10000 ** 0.75` 是 1,000），所以常见词没那么占优势了，少见的词也有机会当噪声词。`torch.multinomial(noise, m, replacement=True)` 按这些概率抽出 `m` 个编号。
+    /// admonition | 🧰 工具箱：小于 1 的次方
+    `x ** 0.5` 是 `x` 的平方根，其他小于 1 的次方也差不多：对大数压得多，对小数压得少。`100 ** 0.75` 大约是 32，`10000 ** 0.75` 是 1,000。所以相差 100 倍的两个次数，最后只相差大约 32 倍。
+    ///
+
+    噪声词按概率表 `noise` 抽取：每个词的次数取 0.75 次方，再缩放到总和为 1。这样常见词没那么占优势了，少见的词也有机会当噪声词。`torch.multinomial(noise, m, replacement=True)` 按这些概率抽出 `m` 个编号。
 
     `train_vectors` 就是第 10 章的 `train`，把交叉熵换成了 `pair_loss`。它做的事是：建两张表，交给 Adam 训练；每一批先查出 `u`、`v` 和 `n`，然后清空、反向、走一步。它返回 NumPy 数组形式的中心词表，每个词一行；上下文词表则丢掉。`nn.init.normal_` 给表一个小的随机起点。
     """)
@@ -302,6 +526,34 @@ def train_vectors(centres, contexts, noise, size, epochs, batch_size, rate):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    ## 动手算：读一读训练循环
+
+    在 `train_vectors` 里找到造出 `noise_ids` 和 `n` 的那两行。我们调用它时用 `size = 32`，每批 1,024 对。对一个完整的批：抽出了多少个噪声编号？`reshape` 之后，每对分到几个？`n` 里的每个噪声向量有多少个数字？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    loop_boxes = hand.boxes(['抽出的噪声编号', '每对的噪声词', '每个噪声向量的数字'])
+    return (loop_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(loop_boxes):
+    hand.marked(loop_boxes, {'抽出的噪声编号': 5120, '每对的噪声词': 5, '每个噪声向量的数字': 32}, {
+        '抽出的噪声编号': r"""`torch.multinomial` 的第二个输入是要抽多少个：批大小的 5 倍""",
+        '每对的噪声词': r"""编号被 `reshape` 成 `(len(batch), 5)`：每对一行""",
+        '每个噪声向量的数字': r"""`context_table` 的每一行有 `size` 个数字""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    所以 `n` 的形状是 `(1024, 5, 32)`：正是你的 `pair_loss` 要的 `(b, k, d)`，其中 $k = 5$。
+
     按钮先造出词对（`window = 2` 时大约 370 万对），再训练 2 轮：在笔记本上大约半分钟。完成之前，需要它的结果的单元格会显示 `Ancestor stopped`，这是正常的。完成后你会看到 `(2000, 32)`：2,000 个词，每个 32 个数字。
     """)
     return
@@ -333,7 +585,11 @@ def _():
 
     没有人告诉网络任何词的意思，它也没见过词典。它只看到一对对邻居。现在来找找，哪些词的向量和某个词最相似。
 
-    `nearest` 把每一行都缩放到长度 1。两个长度都是 1，相似度公式里的除法就没有了，所以光用 `@` 就能一次算出和所有词的相似度。`np.argsort` 给出从小到大排序的位置，所以我们对 `-sims` 排序，让最大的排在最前面。排第一的总是词本身，所以跳过它。在框里换一个词，按回车：
+    /// admonition | 🧰 工具箱：排好序的位置
+    `np.argsort(a)` 给出数组里各个数的位置，从最小的数排到最大的数：`np.argsort(np.array([0.5, 0.1, 0.9]))` 是 `[1, 0, 2]`。想让最大的排最前，就对取负后的数组排序。
+    ///
+
+    `nearest` 把每一行都缩放到长度 1。两个长度都是 1，相似度公式里的除法就没有了，所以光用 `@` 就能一次算出和所有词的相似度。然后它对 `-sims` 排序，让最大的排在最前面。排第一的总是词本身，所以跳过它。在框里换一个词，按回车：
     """)
     return
 
@@ -381,33 +637,6 @@ def _():
     mo.md(r"""
     `dog`（狗）周围是动物，`happy`（开心）周围是感受和状态，`mom`（妈妈）周围是家人，`red`（红色）周围是颜色，`ran`（跑）周围是各种移动方式。（你的列表每次运行可能略有不同。）这一切都只来自谁站在谁旁边。
 
-    ## 意义的算术
-
-    向量之间的差也能表示关系。如果从 `boy`（男孩）到 `girl`（女孩）的这一步大致是“变成女性”的方向，那么从 `he`（他）走同样一步，应该落在 `she`（她）附近。下面的单元格计算 $b - a + c$，并找出不属于这三个词的最近的词。（`not in` 是 `in` 的反义。）
-    """)
-    return
-
-
-@app.function
-def analogy(a, b, c, E, index, vocab):
-    query = E[index[b]] - E[index[a]] + E[index[c]]
-    return [word for word in nearest(query, E, vocab, 6) if word not in (a, b, c)][:3]
-
-
-@app.cell(hide_code=True)
-def _(E, index, vocab):
-    rows = ["| a 之于 b | 如同 c 之于 | 最佳猜测 |", "|---|---|---|"]
-    for a, b, c in [("boy", "girl", "he"), ("he", "she", "his"), ("boy", "girl", "brother"), ("go", "went", "see")]:
-        rows.append(f"| {a} : {b} | {c} | " + ", ".join(analogy(a, b, c, E, index, vocab)) + " |")
-    mo.md("\n".join(rows))
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    表里的英文词：`his` 他的，`her` 她的，`brother` 兄弟，`sister` 姐妹，`go`/`went` 去/去了，`see`/`saw` 看见/看见了。前三行排第一的猜测是 `she`、`her` 和 `sister`，最后一行的过去式 `saw` 排第二。（`lily's` 是“莉莉的”，算一个词，因为我们的切词保留撇号。）向量学到了男性和女性，甚至一点语法，而没有人告诉它们这些是什么。
-
     别指望它完美。它只有每个词 32 个数字，训练文本也只有约一百万个词，所以有些结果很奇怪，重新运行时也会有些不同。它也只学得到文本里有的东西。用儿童故事训练出的向量懂狗和妈妈，不懂化学。文本的各种习惯，包括关于谁该做什么的偏见，也会进到向量里。
 
     ## 接下来
@@ -420,14 +649,16 @@ def _():
     - 用字典计数，并把文本变成编号
     - 用余弦相似度衡量两个向量有多像
     - 从文本造出 skip-gram 词对
-    - 从 softmax 推出 sigmoid，并解释负采样
+    - 从 softmax 推出 sigmoid，并亲手算出一个负采样损失
     - 把 `nn.Embedding` 用作一张学出来的向量表
-    - 探索最近的词和类比，并说出它们的局限
+    - 探索最近的词，并说出它们的局限
 
     ---
 
     <!-- go-deeper -->
     **深入了解（选读）：** 这个方法是 *word2vec*（Mikolov 等，2013）。实际运行时还会丢掉一部分最常见的词，比如 `the`；*GloVe* 则直接统计词对，得到类似的向量。“词义体现在邻居里”这个想法叫*分布假说*（distributional hypothesis）。故事来自 *TinyStories*（Eldan 和 Li，2023）。
+
+    向量之间的差也能表示关系。如果从 `boy`（男孩）到 `girl`（女孩）的这一步大致是“变成女性”的方向，那么从 `he`（他）走同样一步，应该落在 `she`（她）附近。在一个新单元格里试试：`nearest(E[index["girl"]] - E[index["boy"]] + E[index["he"]], E, vocab, 6)`。你放进去的三个词往往也会出现在答案里，所以要跳过它们往后看。只有 32 个数字和一百万个词，这样的**类比**（analogy）有些成立，很多不成立。
     """)
     return
 

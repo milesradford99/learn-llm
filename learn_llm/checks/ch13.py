@@ -23,6 +23,7 @@ def _draws(f, chance, draws):
 
 EXERCISES = {
     "bigram_counts": [
+        Case("ch13.bigram_counts.page", lambda f: _plain(f([0, 1, 0, 1, 2], 3)), [[0.0, 2.0, 0.0], [1.0, 0.0, 1.0], [0.0, 0.0, 0.0]], hint="ch13.bigram_counts.hint"),
         Case("ch13.bigram_counts.pair", lambda f: _plain(f(TINY, 5))[0], [0.0, 2.0, 0.0, 0.0, 1.0], hint="ch13.bigram_counts.hint"),
         Case("ch13.bigram_counts.total", lambda f: _plain(np.sum(f(TINY, 5))), 8.0, hint="ch13.bigram_counts.hint"),
     ],
@@ -36,6 +37,7 @@ EXERCISES = {
         Case("ch13.sample_next.fair", lambda f: 300 < _draws(f, 0.4, 1000) < 500, True, hint="ch13.sample_next.hint"),
     ],
     "perplexity": [
+        Case("ch13.perplexity.hand", lambda f: _plain(f(np.log(np.array([0.5, 0.25, 0.125])))), 4.0, tolerance=1e-6, hint="ch13.perplexity.hint"),
         Case("ch13.perplexity.uniform", lambda f: _plain(f(np.full(5, math.log(1 / 50)))), 50.0, tolerance=1e-6, hint="ch13.perplexity.hint"),
         Case("ch13.perplexity.perfect", lambda f: _plain(f(np.zeros(3))), 1.0, tolerance=1e-9, hint="ch13.perplexity.hint"),
         Case("ch13.perplexity.mixed", lambda f: _plain(f(np.log(np.array([0.5, 0.125])))), 4.0, tolerance=1e-6, hint="ch13.perplexity.hint"),

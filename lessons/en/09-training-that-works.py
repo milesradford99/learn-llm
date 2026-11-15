@@ -77,10 +77,15 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    (`np.eye(10)[train_labels]` is a shortcut for chapter 07's `one_hot`: `np.eye(10)` is the
-    $10 \times 10$ table with 1s on its diagonal, so row $k$ of it is the one-hot row for digit $k$, and
-    giving a list of labels picks one such row per picture; picking several rows with a list is
-    explained under Small batches.)
+    /// admonition | 🧰 Toolbox: three small NumPy tools
+    - `np.eye(10)` is the $10 \times 10$ table with 1s on its diagonal, so row $k$ of it is the one-hot
+      row for digit $k$. That makes `np.eye(10)[train_labels]`, in the cell above, a shortcut for
+      chapter 07's `one_hot`: a list of labels picks one such row per picture. (Picking several
+      rows with a list is explained under Small batches.)
+    - `np.sqrt` is the square root: `np.sqrt(9)` is 3, since $3 \times 3 = 9$.
+    - `np.abs` removes minus signs: `np.abs(np.array([-2, 5]))` is `[2, 5]`. So `np.max(np.abs(W))`
+      is the size of the biggest number in `W`, whatever its sign.
+    ///
 
     ## How spread out? Variance
 
@@ -91,8 +96,7 @@ def _():
     > $$\textbf{variance} = \text{mean of } (\text{number} - \text{mean})^2$$
 
     For `[1, 3]`: the mean is 2, the distances are −1 and 1, squared 1 and 1, so the variance
-    is 1. Its square root is the **typical size** of the distances (in NumPy, `np.sqrt`; the
-    square root of 9 is 3, since $3 \times 3 = 9$). For numbers centred on 0, the mean is 0 and the
+    is 1. Its square root is the **typical size** of the distances (in NumPy, `np.sqrt`). For numbers centred on 0, the mean is 0 and the
     variance is simply the mean of the squares.
     """)
     return
@@ -184,8 +188,7 @@ def _(X, X_test, Y, test_labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The largest first-layer knob is still exactly 0 (`np.abs` removes the minus signs, so
-    `np.max(np.abs(...))` is the biggest size), and the test accuracy is about 12%: only `b2`,
+    The largest first-layer knob is still exactly 0 (`np.max(np.abs(...))` is the biggest size), and the test accuracy is about 12%: only `b2`,
     the scores' starting heights, learned (no blame reaches `b1` either), so it answers the same digit for every picture, about as good as guessing. Random starting knobs break the tie: every detector starts out different.
 
     **How big?** Look at one detector's sum for one picture, $z = w_0 \times x_0 + w_1 \times x_1 + \ldots$ over
@@ -408,8 +411,12 @@ def _():
     `len(X)` on a matrix is its number of rows.)
 
     The cell after it trains for 5 epochs and times it with `time.perf_counter()`, a clock in
-    seconds. `forward(X_test, *knobs)` passes the four knobs in `knobs` as four separate inputs;
-    the `*` unpacks them.
+    seconds.
+
+    /// admonition | 🧰 Toolbox: a list as separate inputs
+    A `*` before a list in a call unpacks it: with `pair = [3, 4]`, `print(*pair)` is `print(3, 4)`.
+    So `forward(X_test, *knobs)` passes the four knobs in `knobs` as four separate inputs.
+    ///
     """)
     return
 

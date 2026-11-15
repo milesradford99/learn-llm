@@ -12,9 +12,10 @@ with app.setup(hide_code=True):
     import torch.nn.functional as F
     from torch import nn
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import stories
+    from learn_llm.diagrams import pipeline
 
     LOCALE = "en"
     laptop_speed()
@@ -39,15 +40,17 @@ def _():
     four animals: `dog`, `cat`, `bird`, `fish`. The label is that animal. Now **blank out** the word wherever it appears, and ask the
     model which animal the story is about. It must work it out from clues like `barked` or `swam`. (Only those exact words are blanked, so a `dogs` can still slip through.)
 
+    /// admonition | 🧰 Toolbox: choosing between two values
+    `a if test else b` is an expression: it gives `a` when the test holds, and `b` otherwise. It fits inside a list-building
+    expression, to choose each item: `[0 if x < 0 else x for x in [3, -1, 2]]` gives `[3, 0, 2]`.
+    ///
+
     ## Exercise 1: blank_out
 
-    Write `blank_out(ids, hidden, blank)`. `ids` is a list of word ids, `hidden` is a list of ids to hide, and `blank` is the id to put in their place:
+    Write `blank_out(ids, hidden, blank)`. `ids` is a list of word ids, `hidden` is a list of the ids to hide, and `blank` is the id to put in their place.
+    It gives back a new list of the same length:
 
-    ```
-    return [blank if i in hidden else i for i in ids]
-    ```
-
-    The expression `a if test else b` gives `a` when the test holds, and `b` otherwise.
+    > `blank_out([5, 7, 5, 9], [5], 0)` gives `[0, 7, 0, 9]`
     """)
     return
 
@@ -66,21 +69,33 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""One list-building expression over `ids`. Each item is either `blank` or the id itself, and the test is whether the id is `in hidden`.""",
+        r"""It's one line, shaped like the Toolbox example: `return [... if ... else ... for i in ids]`.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
-    Here's chapter 17's model, smaller, and with a switch: `.features(ids)` gives the vectors from the last block, before the scores. A new layer on
-    top of those will do the classifying: `Classifier` averages the vectors over the 64 words, then applies one new `nn.Linear`. You've seen the rest in chapter 17, so you don't need to study this code. The next cells prepare the data: each example is the first 64 words of a story.
+    ## The model, and a new last layer
+
+    **From earlier chapters.** The two cells below hold chapter 17's model, smaller. Their code is folded away, because you wrote all of it there.
+    Two things are new. The model has a switch: `.features(ids)` gives the vectors from the last block, before the scores,
+    and `forward` is just `self.out(self.features(ids))`. And the three attention layers sit in an `nn.ModuleList`, a list that tells PyTorch its layers have knobs to train.
     """)
     return
 
 
-@app.function
+@app.function(hide_code=True)
 def attend(Q, K, V, mask):
     scores = Q @ K.transpose(-2, -1) / np.sqrt(K.shape[-1])
     A = torch.softmax(scores.masked_fill(mask, -torch.inf), dim=-1)
     return A @ V, A
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
     class Block(nn.Module):
         def __init__(self, d, heads):
@@ -117,7 +132,72 @@ def _():
 
         def forward(self, ids):
             return self.out(self.features(ids))
+    return (TinyGPT,)
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    To classify a story, we put a new, small layer on top of those features. Each example will be the first 64 words of a story, and the
+    features have 96 numbers per word. The plan:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pipeline([('ids', '(batch, 64)'), ('features', '(batch, 64, 96)'), ('one vector', '(batch, 96)'), ('scores', '(batch, 4)')],
+             ['the GPT body', 'mean over the words', 'new layer: the head'],
+             'The ids go through the GPT body to give features, the mean over the words gives one vector per story, and a new layer called the head gives four scores.')
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The GPT's blocks are called the **body**, and the new `nn.Linear(96, 4)` the **head**. Averaging over the words turns a story of any length into one vector, so the head
+    can score it: one score for each animal.
+
+    ## Exercise 2: classify
+
+    Write `classify(features, head)`, the last two arrows of the picture. `features` has shape `(batch, words, d)` and `head` is an `nn.Linear(d, 4)`.
+    It gives back the scores, of shape `(batch, 4)`. `torch.mean(x, dim=1)` takes the mean along dimension 1, which then disappears from the shape.
+    """)
+    return
+
+
+@app.function
+def classify(features, head):
+    # ← replace todo() below with your code
+    todo()
+
+
+@app.cell(hide_code=True)
+def _():
+    check("18", "classify", classify, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Two steps, one inside the other: the mean over the words, then the head called on the result.""",
+        r"""It's one line: `return head(...)`, with `torch.mean` of `features` along `dim=1` inside the brackets.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    `Classifier` holds a body and a head, and its `forward` is your function. The cells after it prepare the data. Until Exercises 1 and 2 pass, cells that
+    need them show an error. That's normal, and the same goes for the later exercises.
+    """)
+    return
+
+
+@app.cell
+def _():
     class Classifier(nn.Module):
         def __init__(self, body, d):
             super().__init__()
@@ -125,16 +205,16 @@ def _():
             self.head = nn.Linear(d, len(ANIMALS))
 
         def forward(self, ids):
-            return self.head(torch.mean(self.body.features(ids), dim=1))
-    return Classifier, TinyGPT
+            return classify(self.body.features(ids), self.head)
+    return (Classifier,)
 
 
-@app.function
+@app.function(hide_code=True)
 def to_words(text):
     return re.findall(r"[a-z']+", text.lower())
 
 
-@app.function
+@app.function(hide_code=True)
 def story_ids(story_list, index):
     ids = []
     for story in story_list:
@@ -195,7 +275,12 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    About 3,300 labelled stories for training, and 265 for testing: 107 dog, 55 cat, 79 bird, 24 fish. `torch.bincount` counts how often each number appears.
+    About 3,300 labelled stories for training, and 265 for testing: 107 dog, 55 cat, 79 bird, 24 fish.
+
+    /// admonition | 🧰 Toolbox: counting labels
+    `np.bincount(a)` counts how often each whole number appears in an array: position 0 of the result is the number of 0s, position 1 the number of 1s,
+    and so on. `np.bincount(np.array([0, 2, 2, 1, 2]))` is `[1, 1, 3]`. `torch.bincount`, used above, is its PyTorch twin.
+    ///
 
     ## First, a baseline
 
@@ -203,38 +288,12 @@ def _():
     That's the **majority baseline**, and a model is only interesting if it beats it. It works in the other direction too: on a task
     where 99% of emails are fine, a filter that blocks nothing scores 99%.
 
-    ## Exercise 2: majority_share
+    ## Exercise 3: majority_share
 
-    Write `majority_share(labels)` for a NumPy array of whole numbers. `np.bincount` is the NumPy twin of `torch.bincount`:
+    Write `majority_share(labels)`. `labels` is a NumPy array of whole numbers, 0 or above. It gives back the share of the labels
+    taken by the commonest one: the accuracy of always giving that answer.
 
-    ```
-    return np.max(np.bincount(labels)) / len(labels)
-    ```
-
-    ## Better than accuracy
-
-    Accuracy hides which mistakes a model makes. For one class, say `fish`, sort the predictions into three counts:
-
-    - **true positives** (`tp`): said fish, and it was fish;
-    - **false positives** (`fp`): said fish, and it wasn't;
-    - **false negatives** (`fn`): it was fish, and the model said something else.
-
-    From those come two measures:
-
-    > **precision** = tp / (tp + fp): when it says fish, how often is it right?
-
-    > **recall** = tp / (tp + fn): of the real fish, how many did it find?
-
-    A filter that never says "spam" finds no spam, so its recall is 0, and it makes no guesses to be precise about, so we score that 0 too. A filter that says "spam" for everything has recall 1 and poor precision. These two numbers keep each other honest.
-
-    ## Exercise 3: precision_recall
-
-    Write `precision_recall(guesses, labels, c)` for NumPy arrays, giving back both for class `c`. Comparing gives `True`/`False`, `&` means "and" position by position, and `np.sum` counts the `True`s. To avoid dividing by zero, `max(n, 1)` gives at least 1.
-
-    1. `tp = np.sum((guesses == c) & (labels == c))`
-    2. `fp = np.sum((guesses == c) & (labels != c))`
-    3. `fn = np.sum((guesses != c) & (labels == c))`
-    4. `return tp / max(tp + fp, 1), tp / max(tp + fn, 1)`
+    > `majority_share(np.array([1, 1, 1, 0, 2, 2]))` gives `0.5`
     """)
     return
 
@@ -248,6 +307,88 @@ def majority_share(labels):
 @app.cell(hide_code=True)
 def _():
     check("18", "majority_share", majority_share, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Count each label with `np.bincount`, take the biggest count with `np.max`, and divide by how many labels there are.""",
+        r"""It's one line. In the example the counts are `[1, 3, 2]`, the biggest is 3, and there are 6 labels.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Better than accuracy
+
+    Accuracy hides which mistakes a model makes. For one class, say `fish`, sort the predictions into three counts:
+
+    - **true positives** ($tp$): said fish, and it was fish;
+    - **false positives** ($fp$): said fish, and it wasn't;
+    - **false negatives** ($fn$): it was fish, and the model said something else.
+
+    From those come two measures:
+
+    > $$\text{precision} = \frac{tp}{tp + fp} \qquad \text{recall} = \frac{tp}{tp + fn}$$
+
+    **Precision** asks: when it says fish, how often is it right? **Recall** asks: of the real fish, how many did it find?
+
+    A filter that never says "spam" finds no spam, so its recall is 0, and it makes no guesses to be precise about, so we score that 0 too. A filter that says "spam" for everything has recall 1 and poor precision. These two numbers keep each other honest.
+
+    ## By hand: count the three kinds
+
+    Ten stories, with the model's guess and the true label for each. F is fish, D is dog.
+
+    | story | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+    |---|---|---|---|---|---|---|---|---|---|---|
+    | guess | F | F | F | D | F | D | D | F | D | D |
+    | label | F | F | D | D | F | F | D | F | F | D |
+
+    For the class fish, count $tp$, $fp$ and $fn$. Then work out the precision and the recall, to two decimals.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    fish_boxes = hand.boxes(['tp', 'fp', 'fn', 'precision', 'recall'], step=0.01)
+    return (fish_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(fish_boxes):
+    hand.marked(fish_boxes, {'tp': 4, 'fp': 1, 'fn': 2, 'precision': 0.8, 'recall': 0.67}, {
+        'tp': r"""the columns with F in both rows""",
+        'fp': r"""the columns with guess F and label D""",
+        'fn': r"""the columns with guess D and label F""",
+        'precision': r"""$tp$ divided by the number of F guesses, $tp + fp$""",
+        'recall': r"""$tp$ divided by the number of F labels, $tp + fn$""",
+    }, LOCALE, tolerance=0.006)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The model is right 7 times out of 10, and that one number can't tell you that it misses a third of the fish.
+
+    /// admonition | 🧰 Toolbox: counting with comparisons
+    - Comparing an array with a number gives an array of `True` and `False`: `np.array([1, 0, 1]) == 1` is `[True, False, True]`.
+    - `&` means "and", position by position: `True` only where both sides are `True`. Each comparison needs its own brackets:
+      `(a == 1) & (b != 1)`.
+    - `np.sum` of such an array counts its `True`s.
+    ///
+
+    ## Exercise 4: precision_recall
+
+    Write `precision_recall(guesses, labels, c)`. `guesses` and `labels` are NumPy arrays of class numbers, of the same length, and `c` is the class to measure.
+    It gives back the pair: precision, then recall. If the bottom of a fraction is 0, that measure is 0: `max(n, 1)` is a short way to keep a bottom from being 0, because the top is 0 then too.
+
+    With fish as class 1 and dog as class 0, the table above is one of the checks, and gives about `(0.8, 0.67)`.
+    """)
     return
 
 
@@ -265,25 +406,81 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""Three counts, each an `np.sum` of two comparisons joined with `&`. For `tp` both `guesses` and `labels` equal `c`. For `fp` the guess equals `c` and the label doesn't (`!=`). For `fn` it's the other way round.""",
+        r"""It's 4 lines. The first is `tp = np.sum((guesses == c) & (labels == c))`. The last gives back two fractions with a comma between them, precision first, each with `max(..., 1)` as its bottom.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## Is a difference real?
 
-    With only 265 test stories, scores are noisy. Picture each story as a coin that lands "right" (1) with chance $p$, and otherwise "wrong" (0). One such result has variance
+    With only 265 test stories, scores are noisy. To see how noisy, imagine a model that gets each story right with a chance of exactly 0.6.
+    Its true score is 60%. Now test it on 200 different test sets of 265 stories each. The cell below does that with random numbers
+    (`rng.random(shape)` gives numbers between 0 and 1, so each is below 0.6 with chance 0.6), and shows the lowest and the highest of the 200 scores.
+    """)
+    return
+
+
+@app.cell
+def _():
+    rng = np.random.default_rng(0)
+    right = rng.random((200, 265)) < 0.6
+    test_scores = np.mean(right, axis=1)
+    round(np.min(test_scores).item(), 3), round(np.max(test_scores).item(), 3)
+    return (test_scores,)
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The same model scored anywhere from about 52% to about 69%, depending only on which stories happened to be in the test. So a single score
+    is the truth plus some luck, and we need to know how big the luck can be.
+
+    Picture each story as a coin that lands "right" (1) with chance $p$, and otherwise "wrong" (0). One such result has variance
     $p \times (1 - p)$, which you can take on trust. Chapter 09 gave two rules for the rest: variances add, so $n$ stories add up to variance $n \times p \times (1 - p)$; and dividing by $n$ to get the mean divides the variance by $n^2$. That leaves $p \times (1 - p) / n$, and its square root tells how far a measured score tends to stray from the truth.
 
     Twice that size covers about 95% of cases, another fact to take on trust, so this is the usual **margin of error**:
 
     > $$\text{margin} = 2 \times \sqrt{\frac{p \times (1 - p)}{n}}$$
 
-    ## Exercise 4: margin
+    ## By hand: two margins
 
-    Write `margin(p, n)`:
+    A model scores $p = 0.5$ on a test of $n = 100$ examples. What's the margin? And what is it with four times the examples, $n = 400$?
+    """)
+    return
 
-    ```
-    return 2 * np.sqrt(p * (1 - p) / n)
-    ```
 
-    For `p = 0.6` and `n = 265` that's about 0.06, or 6 points. When comparing two scores, each has its own noise, and by adding variances the margin for the difference is about 1.4 times bigger: about 8.5 points here. So two models at 58% and 61% on this test can't be told apart.
+@app.cell(hide_code=True)
+def _():
+    margin_boxes = hand.boxes(['margin for n = 100', 'margin for n = 400'], step=0.01)
+    return (margin_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(margin_boxes):
+    hand.marked(margin_boxes, {'margin for n = 100': 0.1, 'margin for n = 400': 0.05}, {
+        'margin for n = 100': r"""$0.5 \times 0.5 / 100 = 0.0025$, and its square root is 0.05""",
+        'margin for n = 400': r"""$0.25 / 400 = 0.000625$, and its square root is 0.025""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Four times the data only halves the margin. That's why small test sets are so hard to escape from.
+
+    ## Exercise 5: margin
+
+    Write `margin(p, n)`, the formula above. `p` is a score between 0 and 1 and `n` the number of test examples. `np.sqrt` is the square root.
+
+    > `margin(0.5, 100)` gives `0.1`
+
+    The cell after the check counts how many of the 200 simulated scores landed within one margin of the true 0.6.
     """)
     return
 
@@ -297,6 +494,31 @@ def margin(p, n):
 @app.cell(hide_code=True)
 def _():
     check("18", "margin", margin, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""One line. The fraction goes inside `np.sqrt`, and the 2 multiplies the result.""",
+        r"""If `margin(0.5, 100)` gives 0.005, the square root is missing. If it gives 0.05, the 2 is missing.""",
+    ], LOCALE)
+    return
+
+
+@app.cell
+def _(test_scores):
+    np.mean(np.abs(test_scores - 0.6) < margin(0.6, 265)).item()
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    About 0.95, as promised: 19 scores in 20 fall within the margin, and 1 in 20 falls outside it.
+
+    For $p = 0.6$ and $n = 265$ the margin is about 0.06, or 6 points. When comparing two scores, each has its own noise, and by adding variances the margin for the difference is about 1.4 times bigger: about 8.5 points here. So two models at 58% and 61% on this test can't be told apart.
+    """)
     return
 
 
@@ -349,8 +571,11 @@ def _(TinyGPT, index, train_button, train_stories, vocab):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    (`model.state_dict()` holds all the knobs by name, and `load_state_dict` puts them back. So `saved` lets us start several models from the same point.
-    The number shown is how many named tensors of knobs there are.)
+    /// admonition | 🧰 Toolbox: saving the knobs
+    `model.state_dict()` gives a dictionary of all of a model's knobs, by name, and `model.load_state_dict(saved)` puts a saved set back into a model of the same design.
+    ///
+
+    So `saved` lets us start several models from the same pretrained point. The number shown is how many named tensors of knobs there are.
 
     ## With no labels at all
 
@@ -392,16 +617,20 @@ def _():
     ## Fine-tuning
 
     Now use labels. **Fine-tuning** means starting from pretrained knobs, adding a new last layer, and training gently on labelled examples.
-    Is that better than starting from random knobs? There's a middle way too: **freezing** the body, so that only the new layer learns. To freeze, set `requires_grad` to `False` on every knob of the body, so no blame reaches it.
+    Is that better than starting from random knobs? There's a middle way too: **freezing** the body, so that only the new layer learns. Here are the three, on the picture's two parts:
 
-    ## Exercise 5: freeze
+    | | body | head |
+    |---|---|---|
+    | **from scratch** | random start, trained | random start, trained |
+    | **frozen body** | pretrained, not trained | random start, trained |
+    | **fine-tuned** | pretrained, trained gently | random start, trained |
 
-    Write `freeze(model)`:
+    To freeze a knob, set its `requires_grad` to `False` (chapter 10), so no blame reaches it and no optimizer moves it.
 
-    1. `for p in model.parameters():`
-    2. Inside it: `p.requires_grad = False`
+    ## Exercise 6: freeze
 
-    It needs no `return`: it changes the model it's given.
+    Write `freeze(model)`. It sets `requires_grad` to `False` on every knob of the model, and gives nothing back: it changes the model it's given, so it needs no `return`.
+    `model.parameters()` goes through a model's knobs (chapter 10).
     """)
     return
 
@@ -415,6 +644,15 @@ def freeze(model):
 @app.cell(hide_code=True)
 def _():
     check("18", "freeze", freeze, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""A loop over `model.parameters()`, with one line inside it that stores `False`.""",
+        r"""It's 2 lines. Storing uses one `=`, as in `p.requires_grad = False`. Two, `==`, would only compare.""",
+    ], LOCALE)
     return
 
 
@@ -482,7 +720,7 @@ def _(
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Now read that table with Exercise 4 in hand. (Two cells showing the same number is a coincidence.) At 100 and 300 labels the gaps are a few points, far inside the margin of about 8.5, so the columns can't be told apart. At 1,000 labels, from scratch leads by 7 or 8 points, right at the edge of that margin: probably real, but not certain.
+    Now read that table with Exercise 5 in hand. (Two cells showing the same number is a coincidence.) At 100 and 300 labels the gaps are a few points, far inside the margin of about 8.5, so the columns can't be told apart. At 1,000 labels, from scratch leads by 7 or 8 points, right at the edge of that margin: probably real, but not certain.
 
     **So pretraining gave no clear gain here.** Writing this chapter, we expected the usual story, where it wins clearly, and tried several settings. It didn't happen. That's the honest result of a small model pretrained on a small amount of text, and spotting a task where it would shine is part of the craft.
     Pretraining pays off when the pretrained model is far bigger than anything you could train on your labels, and when your labels are very few. What's striking about the earlier 51% isn't its size, but that it needed no labels at all.
@@ -530,12 +768,104 @@ def _(Classifier, TinyGPT, X_test, Y_test, index, train_examples, vocab):
 def _():
     mo.md(r"""
     About 81%, then about 45%. The first number looks like a breakthrough, and is worthless: the model just reads the answer. On the real task it's barely above always saying `dog`. A test set protects you only if it's clean.
-    Leaks are usually subtler than this: the same text in both train and test, a date that gives away the answer, or a number
-    tuned on the test set again and again (chapter 13's `k`). Repeating a test until it looks good is itself a leak, and it's the same reason shared **benchmarks**, standard test sets used by everyone, slowly wear out.
+
+    ## A quieter leak: the same text twice
+
+    Leaks are usually subtler than that one. A common one: collections of text contain copies, and when the collection is cut into training and test parts,
+    a copy can land on each side. The model then gets tested on a text it has trained on, with its answer. Here's a split with that leak:
+    """)
+    return
+
+
+@app.function
+def leaky_split(texts, n_test):
+    cut = len(texts) - n_test
+    return texts[:cut], texts[cut:]
+
+
+@app.cell
+def _():
+    leaky_split(["a", "b", "a", "c", "b"], 2)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: find the leak
+
+    Look at the cell's result: the training texts, then the test texts. How many of the 3 training texts also appear in the test part?
+    And how many training texts are left once those are taken out?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    leak_boxes = hand.boxes(['training texts that are also in the test', 'training texts left'])
+    return (leak_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(leak_boxes):
+    hand.marked(leak_boxes, {'training texts that are also in the test': 1, 'training texts left': 2}, {
+        'training texts that are also in the test': r"""the test part is `["c", "b"]`. Which of `"a"`, `"b"`, `"a"` is in it?""",
+        'training texts left': r"""3 minus the ones you just counted""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Exercise 7: clean_split
+
+    Write `clean_split(texts, n_test)`, a split without that leak. `texts` is a list of strings and `n_test` a whole number. Like `leaky_split`, it gives back
+    the pair: training texts, then test texts, and the test part is the last `n_test` texts. But the training part leaves out every text that also appears in the test part.
+
+    > `clean_split(["a", "b", "a", "c", "b"], 2)` gives `(["a", "a"], ["c", "b"])`
+
+    We take from the training side, not the test side, so the test set stays the same whatever the training set is.
+    """)
+    return
+
+
+@app.function
+def clean_split(texts, n_test):
+    # ← replace todo() below with your code
+    todo()
+
+
+@app.cell(hide_code=True)
+def _():
+    check("18", "clean_split", clean_split, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Start as `leaky_split` does, so you have the two parts. Then build the training list again, keeping only the texts that are `not in` the test part: chapter 12's list-building expression with an `if` at the end.""",
+        r"""It can be 4 lines: the cut, the test part, the filtered training part, and the `return`. The filter is `[t for t in ... if t not in test]`.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Other leaks are harder to see: a date that gives away the answer, or a number
+    tuned on the test set again and again (chapter 13's $k$). Repeating a test until it looks good is itself a leak, and it's the same reason shared **benchmarks**, standard test sets used by everyone, slowly wear out.
 
     ## Looking both ways: BERT
 
     GPT reads left to right, because its job is to write. For understanding a text that already exists, why not look both ways? **BERT** is a transformer with no future mask, trained on a different job: hide 15% of the words, and predict them from both sides.
+    For the blank in `the ▢ barked loudly`:
+
+    | model | words it can use to fill the blank |
+    |---|---|
+    | GPT | `the` |
+    | BERT | `the`, `barked`, `loudly` |
 
     We tried that here too, expecting it to beat the 51% from before, since it can see the `barked` that comes after a blank. On this data it scored about 32%, below the baseline. It takes more data than a small model on a small text can offer. So keep that as a lesson rather than a recipe: an idea that wins at huge scale isn't guaranteed to win at small scale.
 
@@ -547,10 +877,11 @@ def _():
     ## What you can do now
 
     - explain pretraining, fine-tuning and freezing, and when each makes sense
+    - put a new head on a pretrained body
     - compare any score with a baseline
-    - compute precision and recall, and say what each one protects against
+    - count true and false positives by hand, compute precision and recall, and say what each one protects against
     - estimate a margin of error, and decide whether two scores really differ
-    - recognise leakage, and explain why a test set can wear out
+    - recognise leakage, and split data so that no text sits on both sides
     - explain how BERT differs from GPT
 
     ---

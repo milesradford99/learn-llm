@@ -17,6 +17,11 @@ def _rms_reference():
     return (torch.tensor([1.0, 2.0]) * x / torch.sqrt(torch.mean(x * x, dim=-1, keepdim=True) + 1e-6)).tolist()
 
 
+def _rms_deep(f):
+    out = f(torch.ones(2, 3, 4), torch.ones(4))
+    return list(out.shape) if isinstance(out, torch.Tensor) else _plain(out)
+
+
 def _swiglu(f):
     torch.manual_seed(4)
     W1, W2, W3 = nn.Linear(3, 4, bias=False), nn.Linear(4, 3, bias=False), nn.Linear(3, 4, bias=False)
@@ -27,57 +32,65 @@ def _swiglu(f):
     return bool(torch.max(torch.abs(mine - reference)) < 1e-6)
 
 
-def _adamw(f, steps):
-    w, m, v = np.array([1.0, -2.0]), np.zeros(2), np.zeros(2)
-    for t in range(1, steps + 1):
-        out = f(w, m, v, np.array([0.5, -3.0]) * t, t, 0.1, 0.5)
-        if not isinstance(out, tuple) or len(out) != 3:
-            return _plain_np(out)
-        w, m, v = out
-    return _plain_np(w)
+def _rounded(out):
+    return [round(float(v), 6) + 0.0 for v in out] if isinstance(out, np.ndarray) else _plain_np(out)
 
 
-def _adamw_pytorch(steps):
-    w = torch.tensor([1.0, -2.0], dtype=torch.float64, requires_grad=True)
-    optimizer = torch.optim.AdamW([w], lr=0.1, weight_decay=0.5)
-    for t in range(1, steps + 1):
-        w.grad = torch.tensor([0.5, -3.0], dtype=torch.float64) * t
-        optimizer.step()
-    return w.detach().tolist()
+def _rope_relative(f):
+    """The dot product of a turned query and key depends only on how far apart they are."""
+    rng = np.random.default_rng(3)
+    q, k, speeds = rng.random(6), rng.random(6), np.array([1.0, 0.1, 0.01])
+    near, far = f(q, 4, speeds) @ f(k, 1, speeds), f(q, 14, speeds) @ f(k, 11, speeds)
+    return bool(abs(near - far) < 1e-9 and abs(near - q @ k) > 1e-3)
 
 
-def _checkpoint(f):
-    model = nn.Linear(2, 2)
-    optimizer = torch.optim.AdamW(model.parameters())
-    out = f(model, optimizer, 7)
-    if not isinstance(out, dict):
-        return _plain(out)
-    return sorted(out), out.get("step"), sorted(out.get("model", {}))
+def _block(f):
+    """look doubles its input; the SwiGLU layers have known knobs."""
+    W1, W2, W3 = nn.Linear(2, 2, bias=False), nn.Linear(2, 2, bias=False), nn.Linear(2, 2, bias=False)
+    x = torch.tensor([[[1.0, 7.0], [3.0, -4.0]]])
+    gain1, gain2 = torch.tensor([1.0, 2.0]), torch.tensor([0.5, 1.0])
+    with torch.no_grad():
+        for layer, knobs in ((W1, [[1.0, 0.0], [0.0, 1.0]]), (W2, [[1.0, 1.0], [0.0, 1.0]]), (W3, [[0.5, 0.0], [0.0, 2.0]])):
+            layer.weight[:] = torch.tensor(knobs)
+
+        def norm(v, gain):
+            return gain * v / torch.sqrt(torch.mean(v * v, dim=-1, keepdim=True) + 1e-6)
+
+        def think(v):
+            return W2(nn.functional.silu(W1(v)) * W3(v))
+
+        mine = f(x, gain1, lambda y: 2 * y, gain2, W1, W2, W3)
+        middle = x + 2 * norm(x, gain1)
+        right = middle + think(norm(middle, gain2))
+        stale = middle + think(norm(x, gain2))
+    if not isinstance(mine, torch.Tensor):
+        return _plain(mine)
+    if torch.max(torch.abs(mine - right)) < 1e-5:
+        return "right"
+    return "second half used the old x" if torch.max(torch.abs(mine - stale)) < 1e-5 else "different"
 
 
 EXERCISES = {
     "rms_norm": [
+        Case("ch20.rms_norm.hand", lambda f: _plain(f(torch.tensor([[1.0, 7.0]]), torch.tensor([1.0, 1.0]))), [[0.2, 1.4]], tolerance=1e-5, hint="ch20.rms_norm.hint"),
         Case("ch20.rms_norm.values", _rms, _rms_reference(), tolerance=1e-5, hint="ch20.rms_norm.hint"),
+        Case("ch20.rms_norm.shape", _rms_deep, [2, 3, 4], hint="ch20.rms_norm.hint"),
     ],
     "rotate": [
         Case("ch20.rotate.quarter", lambda f: _plain(f(1.0, 0.0, np.pi / 2)), (0.0, 1.0), tolerance=1e-9, hint="ch20.rotate.hint"),
         Case("ch20.rotate.half", lambda f: _plain(f(2.0, 3.0, np.pi)), (-2.0, -3.0), tolerance=1e-9, hint="ch20.rotate.hint"),
         Case("ch20.rotate.none", lambda f: _plain(f(0.6, -0.8, 0.0)), (0.6, -0.8), tolerance=1e-9, hint="ch20.rotate.hint"),
     ],
+    "rope_one": [
+        Case("ch20.rope_one.page", lambda f: _rounded(f(np.array([1.0, 0.0, 0.0, 1.0]), 1, np.array([np.pi / 2, np.pi]))), [0.0, 0.0, 1.0, -1.0], tolerance=1e-6, hint="ch20.rope_one.hint"),
+        Case("ch20.rope_one.start", lambda f: _rounded(f(np.array([0.5, -2.0, 3.0, 1.0]), 0, np.array([1.0, 0.1]))), [0.5, -2.0, 3.0, 1.0], tolerance=1e-6, hint="ch20.rope_one.hint"),
+        Case("ch20.rope_one.position", lambda f: _rounded(f(np.array([1.0, 0.0, 0.0, 1.0]), 2, np.array([np.pi / 2, np.pi / 4]))), [-1.0, -1.0, 0.0, 0.0], tolerance=1e-6, hint="ch20.rope_one.hint"),
+        Case("ch20.rope_one.relative", _rope_relative, True, hint="ch20.rope_one.hint"),
+    ],
     "swiglu": [
         Case("ch20.swiglu.layers", _swiglu, True, hint="ch20.swiglu.hint"),
     ],
-    "adamw_step": [
-        Case("ch20.adamw_step.one", lambda f: _adamw(f, 1), _adamw_pytorch(1), tolerance=1e-6, hint="ch20.adamw_step.hint"),
-        Case("ch20.adamw_step.five", lambda f: _adamw(f, 5), _adamw_pytorch(5), tolerance=1e-6, hint="ch20.adamw_step.hint"),
-    ],
-    "learning_rate": [
-        Case("ch20.learning_rate.warmup", lambda f: f(50, 1000, 100, 0.002), 0.001, tolerance=1e-12, hint="ch20.learning_rate.hint"),
-        Case("ch20.learning_rate.peak", lambda f: f(100, 1000, 100, 0.002), 0.002, tolerance=1e-12, hint="ch20.learning_rate.hint"),
-        Case("ch20.learning_rate.middle", lambda f: f(550, 1000, 100, 0.002), 0.0011, tolerance=1e-12, hint="ch20.learning_rate.hint"),
-        Case("ch20.learning_rate.end", lambda f: f(1000, 1000, 100, 0.002), 0.0002, tolerance=1e-12, hint="ch20.learning_rate.hint"),
-    ],
-    "checkpoint": [
-        Case("ch20.checkpoint.parts", _checkpoint, (["model", "optimizer", "step"], 7, ["bias", "weight"]), hint="ch20.checkpoint.hint"),
+    "modern_block_step": [
+        Case("ch20.modern_block_step.values", _block, "right", hint="ch20.modern_block_step.hint"),
     ],
 }

@@ -234,6 +234,32 @@ need a real API key (it breaks "no accounts" and gives different results each ru
   ring all-reduce bytes; real training on 2 and 4 processes matching one process to about 1e-7;
   sharding stages from 112 to 14 GB per device; tensor parallel by columns.
 
+## Step plan: chapters 24–26 (written 2026-11-15)
+
+- **24 Scaling laws.** Power laws and the doubling rule by hand, logs turn them into lines, a
+  least-squares line in closed form. Sixteen small runs (4 widths, 4 amounts of text, 1 to 3
+  minutes): loss falls as tokens^-0.14 and knobs^-0.11. A budget fixes knobs × tokens; the
+  three-part law (floor + size + text) is fitted with Adam; the predicted best size (387,392
+  knobs at 1.86e12 FLOPs) is then run against its neighbours: 3.60, 3.52, 3.64 measured.
+- **25 Data.** A raw pile of 2,000 texts, half of them planted problems. Hashing and collisions
+  by hand; fingerprints drop exact copies (1,744 left); shingles, Jaccard and MinHash drop
+  near-copies and templates (1,351 left); two features and a one-layer classifier drop the junk
+  (1,000 left). Same compute on raw and clean text: loss 4.48 and 4.39.
+- **26 Alignment.** A model that writes sums with random answers (1% right). The same model
+  aligned three ways: SFT on 30 demonstrations (31%), DPO on about 1,500 judged pairs of its
+  own answers (40%), a policy gradient with group advantages on the learner's checker (92%,
+  80 to 90% on other seeds). The policy gradient is derived from the slope of log p.
+
+## Step plan: chapter 27 (written 2026-11-15)
+
+- **27 Running a real model.** A weight file by hand: 8 bytes of length, a JSON header, raw
+  numbers whose meaning depends on the dtype. The learner's reader loads Qwen3-0.6B (310
+  tensors, 596,049,920 numbers) in a few seconds. Three new parts next to chapter 20's design:
+  tied embeddings, grouped-query attention (16 query heads on 8 key heads), norms on queries
+  and keys. "The capital of France is" gives " Paris"; a greedy loop with the stop token and
+  the chat template answers in about 2.5 seconds for 9 tokens; then temperature and top-k.
+  Ends on the cost of recomputing everything for each token, which chapter 28 removes.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a

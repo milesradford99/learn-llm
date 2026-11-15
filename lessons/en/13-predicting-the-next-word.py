@@ -9,7 +9,7 @@ with app.setup(hide_code=True):
     import marimo as mo
     import numpy as np
 
-    from learn_llm import todo
+    from learn_llm import hand, todo
     from learn_llm.checks import check
     from learn_llm.data import stories
     from learn_llm.leaderboard import record, show
@@ -93,9 +93,9 @@ def _():
     So we want the chance of each next word **given** what came before. That's called a
     **conditional probability**, written with a bar:
 
-    > P(next | previous) is "the chance of `next`, given that we've just seen `previous`"
+    > $P(\text{next} \mid \text{previous})$ is "the chance of `next`, given that we've just seen `previous`"
 
-    The simplest way to estimate it is to count. Take this tiny text:
+    The simplest way to estimate it is to count. Take this tiny text, where the full stop counts as a word:
 
     > the dog ran . the dog sat . the cat ran .
 
@@ -104,15 +104,61 @@ def _():
     word and one column for each possible next word, is called a **bigram** model ("bi" for two: it
     looks at pairs).
 
+    ## By hand: a table of counts
+
+    Here's the table for the tiny text, with the row for `the` filled in. A row is the word that came first, a column the word that came next.
+
+    | first ↓ next → | the | dog | cat | ran | sat | . |
+    |---|---|---|---|---|---|---|
+    | **the** | 0 | 2 | 1 | 0 | 0 | 0 |
+    | **dog** | 0 | 0 | 0 | A | B | 0 |
+    | **ran** | 0 | 0 | 0 | 0 | 0 | C |
+    | **.** | D | 0 | 0 | 0 | 0 | 0 |
+
+    Fill in A to D by counting pairs in the text. Then two questions: how many neighbouring pairs
+    does the text have in all? (It has 12 words.) And what is $P(\text{ran} \mid \text{dog})$?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    count_boxes = hand.boxes(['A', 'B', 'C', 'D', 'pairs in all', 'P(ran | dog)'], step=0.01)
+    return (count_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(count_boxes):
+    hand.marked(count_boxes, {'A': 1, 'B': 1, 'C': 2, 'D': 2, 'pairs in all': 11, 'P(ran | dog)': 0.5}, {
+        'A': r"""how many times does `ran` come right after `dog`?""",
+        'B': r"""how many times does `sat` come right after `dog`?""",
+        'C': r"""`ran` is followed by a full stop each time it appears""",
+        'D': r"""the last full stop has nothing after it, so only the first two count""",
+        'pairs in all': r"""every word but the last starts one pair""",
+        'P(ran | dog)': r"""A divided by the total of the row for `dog`""",
+    }, LOCALE, per_row=6)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    /// admonition | 🧰 Toolbox: neighbouring pairs
+    - `items[1:]` is a slice with no stop: everything from position 1 on, so the list without its first item.
+    - `zip` (chapter 01) pairs two lists item by item, and stops when the shorter one runs out. Pair a list with
+      its own `[1:]` and you get every neighbouring pair: for `letters = ["a", "b", "c"]`,
+      `zip(letters, letters[1:])` gives `("a", "b")`, then `("b", "c")`.
+    - `for first, second in zip(...)` names the two halves of each pair as it goes.
+    ///
+
     ## Exercise 1: bigram_counts
 
-    Write `bigram_counts(ids, size)`, giving back a table `C` of shape `(size, size)` where `C[a, b]`
-    is how many times `b` came right after `a`. Pairing a list with itself, moved along by one, gives
-    every neighbouring pair: `ids[1:]` is `ids` without its first item.
+    Write `bigram_counts(ids, size)`. `ids` is a list or array of ids, each from 0 to `size - 1`. It gives back a NumPy
+    table `C` of shape `(size, size)`, where `C[a, b]` is how many times `b` came right after `a`:
 
-    1. `C = np.zeros((size, size))`
-    2. `for a, b in zip(ids, ids[1:]):`, and inside it `C[a, b] = C[a, b] + 1`
-    3. After the loop, `return C`
+    > `bigram_counts([0, 1, 0, 1, 2], 3)` gives `[[0, 2, 0], [1, 0, 1], [0, 0, 0]]`
+
+    Here 1 came after 0 twice, 0 after 1 once, and 2 after 1 once. Nothing ever came after 2, so its row stays 0.
     """)
     return
 
@@ -131,6 +177,15 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""Start from a table of zeros (`np.zeros`, with the shape in its own pair of brackets). Visit every neighbouring pair with the Toolbox's `zip`, and raise that pair's entry by 1. Give the table back after the loop.""",
+        r"""It's 4 lines. The loop is `for a, b in zip(ids, ids[1:]):`, and the one line inside it changes `C[a, b]`.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## The trouble with zero
 
@@ -138,15 +193,53 @@ def _():
     training then gets a chance of exactly 0, and chapter 07's surprise, $-\log 0$, is infinite. One unseen pair
     in the test stories would make the whole score infinite, as if the model had called it impossible.
 
-    The usual fix is to pretend every pair was seen a tiny number of extra times, `k`. This is called
-    **smoothing**: add `k` to every count first, then divide by the row's new total.
+    The usual fix is to pretend every pair was seen a small number of extra times, $k$. This is called
+    **smoothing**: add $k$ to every count first, then divide by the row's new total.
+
+    > $$P(b \mid a) = \frac{C[a, b] + k}{\text{total of row } a \text{, after adding } k \text{ to each of its entries}}$$
+
+    ## By hand: smooth one row
+
+    Take the row for `the` from the table above, $[0, 2, 1, 0, 0, 0]$, and smooth it with $k = 1$.
+    What are the new count for `dog`, the new count for `sat`, and the row's new total?
+    Then, as fractions of that total: before smoothing, `dog` had $2 / 3$ of the row. Does it have more or less now?
+    Write its new chance to two decimals.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    smooth_boxes = hand.boxes(['new count for dog', 'new count for sat', 'new total', 'new chance of dog'], step=0.01)
+    return (smooth_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(smooth_boxes):
+    hand.marked(smooth_boxes, {'new count for dog': 3, 'new count for sat': 1, 'new total': 9, 'new chance of dog': 0.33}, {
+        'new count for dog': r"""$2 + k$""",
+        'new count for sat': r"""$0 + k$: a pair never seen now counts as seen once""",
+        'new total': r"""the old total was 3, and each of the 6 entries got 1 more""",
+        'new chance of dog': r"""the new count divided by the new total""",
+    }, LOCALE, tolerance=0.006)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The chance of `dog` fell from 0.67 to 0.33, and `sat` rose from 0 to 0.11. With only 3 real counts in the row, $k = 1$ is
+    far too much: the made-up counts outweigh the real ones. We'll use a much smaller $k$ on the real text.
 
     ## Exercise 2: bigram_probs
 
-    Write `bigram_probs(C, k)`. Each row of the result must add up to 1:
+    Write `bigram_probs(C, k)`. `C` is a table of counts of shape `(size, size)` and `k` a number. It gives back a
+    table of the same shape, by the formula above, so each row adds up to 1:
 
-    1. `smoothed = C + k`
-    2. `return smoothed / np.sum(smoothed, axis=1, keepdims=True)`
+    > `bigram_probs(np.array([[1.0, 3.0], [0.0, 0.0]]), 0.5)` gives `[[0.3, 0.7], [0.5, 0.5]]`
+
+    The first row becomes $[1.5, 3.5]$, with total 5. The second row had no counts at all, and smoothing gives it equal chances.
+    You'll need one total per row, kept in a shape that divides row by row: chapter 07's `softmax` did the same.
     """)
     return
 
@@ -165,9 +258,25 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""Two steps: add `k` to the whole table at once (a number plus an array adds it to every entry), then divide by the row totals of the new table. `np.sum` with `axis=1` gives one total per row.""",
+        r"""It's 2 lines. The first is `smoothed = C + k`. In the second, `np.sum` also needs `keepdims=True`, so that the totals have shape `(size, 1)` and each row is divided by its own.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     Here's what the model thinks can follow `the`, and `once`: the five likeliest next words,
-    with their chances. (`np.argsort(-row)` lists positions from largest to smallest, as in chapter 12, and `round(x, 3)` keeps 3 digits after the point.
+    with their chances. The cell uses your two functions, so it shows an error until Exercises 1 and 2 pass.
+    That's normal, and so it is for the later cells that need them.
+
+    /// admonition | 🧰 Toolbox: rounding
+    `round(x, 3)` keeps 3 digits after the point: `round(0.12345, 3)` is `0.123`. It's only for showing numbers.
+    ///
+
+    (`np.argsort(-row)` lists positions from largest to smallest, as in chapter 12.
     After `the`, the likeliest "word" is `<unk>`: one entry stands for thousands of rare words.)
     """)
     return
@@ -193,17 +302,32 @@ def _():
 
     To generate text, start from a word, draw the next word at random using its row of chances,
     and repeat. Drawing **at random**, rather than always taking the likeliest word, matters: the likeliest word after
-    `the` might always be the same, and the text would soon go round in circles.
+    `the` might always be the same, and the text would soon go round in circles. Drawing from a list of chances is called **sampling**.
 
-    `rng.choice(n, p=p)` draws one number from $0$ to $n - 1$, with the chances in `p`.
+    /// admonition | 🧰 Toolbox: drawing with chances
+    `rng.choice(n, p=chances)` draws one whole number from $0$ to $n - 1$. `chances` holds $n$ numbers that add up to 1,
+    and number $i$ is drawn with chance `chances[i]`. So `rng.choice(3, p=[0.2, 0.5, 0.3])` gives 1 about half the time.
+    ///
 
+    The cell below draws 10 times with those chances.
+    """)
+    return
+
+
+@app.cell
+def _():
+    rng_demo = np.random.default_rng(1)
+    [rng_demo.choice(3, p=[0.2, 0.5, 0.3]) for _draw in range(10)]
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 3: sample_next
 
-    Write `sample_next(p, rng)`, drawing one id from the vector of chances `p`:
-
-    ```
-    return rng.choice(len(p), p=p)
-    ```
+    Write `sample_next(p, rng)`. `p` is a vector of chances, one for each id, and `rng` a random generator.
+    It gives back one id, drawn with those chances. With `p = [0.4, 0.6]`, about 400 of 1,000 calls should give 0.
 
     The cell after the check starts from `once` and writes 30 words.
     """)
@@ -219,6 +343,15 @@ def sample_next(p, rng):
 @app.cell(hide_code=True)
 def _():
     check("13", "sample_next", sample_next, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""It's one line: a `return` with `rng.choice`. The Toolbox example drew among 3 numbers. Here the number of choices isn't fixed: it's however many chances `p` holds.""",
+        r"""`len(p)` is the number of choices, and `p` itself goes after `p=`. Don't use `np.argmax`: that always takes the likeliest id.""",
+    ], LOCALE)
     return
 
 
@@ -244,8 +377,15 @@ def _():
     through the test stories and ask: what chance did the model give to the word that really came next?
 
     Multiplying all those chances gives the chance of the whole text, but with 159,000 small numbers
-    that's too tiny for a computer to store. Logs fix this, because $\log(a \times b) = \log a + \log b$: instead of multiplying
-    chances, we add their logs. Divide by the number of words and flip the sign, and you have
+    that's too tiny for a computer to store.
+
+    /// admonition | 🧰 Toolbox: logs turn multiplying into adding
+    $\log(a \times b) = \log a + \log b$. Chapter 07 met this the other way round, as $e^{a + b} = e^a \times e^b$.
+    So instead of multiplying many chances, we can add their logs, and no number gets too small to store.
+    Dividing works the same way: $\log(a / b) = \log a - \log b$.
+    ///
+
+    Add the logs of the chances, divide by the number of words and flip the sign, and you have
     a quantity you already know:
 
     > mean surprise = $-$(mean of $\log p$), chapter 07's cross-entropy
@@ -259,21 +399,52 @@ def _():
     **a perplexity of N means the model is as unsure as if it were choosing among N equally likely words.**
     A perfect model scores 1. Lower is better.
 
+    ## By hand: a perplexity
+
+    A model reads a text of three words. To the words that really came next, it gave the chances 0.5, 0.25 and 0.125.
+    Here are the numbers you need:
+
+    | $p$ | 0.5 | 0.25 | 0.125 |
+    |---|---|---|---|
+    | surprise, $-\log p$ | 0.69 | 1.39 | 2.08 |
+
+    | $x$ | 0.69 | 1.39 | 2.08 | 4.16 |
+    |---|---|---|---|---|
+    | $e^x$ | 2 | 4 | 8 | 64 |
+
+    Work out the total surprise, the mean surprise, and the perplexity.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    perplexity_boxes = hand.boxes(['total surprise', 'mean surprise', 'perplexity'], step=0.01)
+    return (perplexity_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(perplexity_boxes):
+    hand.marked(perplexity_boxes, {'total surprise': 4.16, 'mean surprise': 1.39, 'perplexity': 4}, {
+        'total surprise': r"""add the three surprises from the first table""",
+        'mean surprise': r"""the total divided by the 3 words""",
+        'perplexity': r"""$e$ to the mean surprise: look the mean up in the second table""",
+    }, LOCALE, tolerance=0.011)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The model was as unsure as someone choosing among 4 words: sure of one word in 2 at best, one in 8 at worst.
+    Note that the answer is $e$ to the *mean*, 4, not $e$ to the total, 64.
+
     ## Exercise 4: perplexity
 
-    Write `perplexity(log_probs)`, where `log_probs` is an array of the log of the chance given to each real next word:
+    Write `perplexity(log_probs)`. `log_probs` is a NumPy array holding $\log p$ for each real next word: the logs are
+    already taken, and they're negative or 0. It gives back one number, by the two formulas above. `np.exp(x)` is $e^x$.
 
-    ```
-    return np.exp(-np.mean(log_probs))
-    ```
-
-    After the check, the cell scores three models on the test stories, and the bigram again on its training text.
-
-    - **Know-nothing:** 1 / 2002 for every word. `np.full(n, x)` is an array of `n` copies of `x`.
-    - **Unigram:** just how common each word is, ignoring what came before. The total of row `a` of `C`
-      counts how many times `a` was followed by something, which is how often `a` appears, so the row totals give what we need.
-    - **Bigram:** `P[test_ids[:-1], test_ids[1:]]` looks up one chance for each neighbouring pair. Two arrays of positions pick
-      one entry per pair, so `P[[0, 2], [1, 3]]` gives `P[0, 1]` and `P[2, 3]`. (`test_ids[:-1]` is everything but the last item.)
+    > `perplexity(np.log(np.array([0.5, 0.25, 0.125])))` gives `4.0`
     """)
     return
 
@@ -287,6 +458,35 @@ def perplexity(log_probs):
 @app.cell(hide_code=True)
 def _():
     check("13", "perplexity", perplexity, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Three tools, one inside the other: `np.mean` of the logs, a minus sign to turn that into the mean surprise, and `np.exp` around it all.""",
+        r"""It's one line, and it starts `return np.exp(`. If your result is below 1, the minus sign is missing.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The next cell scores three models on the test stories, and the bigram again on its training text.
+
+    /// admonition | 🧰 Toolbox: filling and picking
+    - `np.full(n, x)` is an array of `n` copies of `x`: `np.full(3, 0.5)` is `[0.5, 0.5, 0.5]`.
+    - `items[:-1]` is everything but the last item, the mirror image of `items[1:]`.
+    - A table can be indexed with two arrays of positions at once, one for the rows and one for the columns. They pick
+      one entry per pair: `P[[0, 2], [1, 3]]` gives `P[0, 1]` and `P[2, 3]`.
+    ///
+
+    - **Know-nothing:** $1 / 2002$ for every word.
+    - **Unigram:** just how common each word is, ignoring what came before. The total of row `a` of `C`
+      counts how many times `a` was followed by something, which is how often `a` appears, so the row totals give what we need.
+    - **Bigram:** `P[test_ids[:-1], test_ids[1:]]` looks up one chance for each neighbouring pair of the test text.
+    """)
     return
 
 
@@ -332,10 +532,20 @@ def _():
 
     ## Looking two words back
 
-    One word of memory isn't much. A **trigram** model looks at the two previous words, P(next | a, b).
+    One word of memory isn't much. A **trigram** model looks at the two previous words, $P(\text{next} \mid a, b)$.
     A table for that would need $2{,}002 \times 2{,}002 \times 2{,}002$ entries, about 8 billion, but almost all of them would be 0. So
     we use a dictionary instead, storing only what we actually saw: each pair `(a, b)` is a key, and its value
-    is a smaller dictionary counting what came next. (A key can be a pair in round brackets.) In the function below, `followers` isn't a copy: it's the same smaller
+    is a smaller dictionary counting what came next.
+
+    /// admonition | 🧰 Toolbox: more dictionary tools
+    - A key can be a pair in round brackets: `seen[("the", "dog")] = 2`.
+    - `key not in seen` is the opposite of `in`: true when the dictionary doesn't have that key.
+    - `seen.values()` goes through a dictionary's values, and `sum(...)` adds up a run of numbers: for
+      `ages = {"ann": 30, "bo": 12}`, `sum(ages.values())` is 42.
+    - `array.tolist()` turns a NumPy array into a plain list, which is faster to loop over and to use in dictionary keys.
+    ///
+
+    In the function below, `followers` isn't a copy: it's the same smaller
     dictionary that sits inside `table`, so changing it changes the table. And `zip` can pair three lists as easily as two.
     """)
     return
@@ -355,14 +565,29 @@ def trigram_counts(ids):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    For the ids `[0, 1, 2, 0, 1, 3]`, the pair `(0, 1)` appears twice, followed once by 2 and once by 3. The cell shows the whole table:
+    """)
+    return
+
+
+@app.cell
+def _():
+    trigram_counts([0, 1, 2, 0, 1, 3])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Exercise 5: trigram_chance
 
-    Write `trigram_chance(table, a, b, c)`: of all the times `(a, b)` was seen, the share that were
-    followed by `c`. A pair never seen gives 0. `followers.values()` goes through a dictionary's values, and `sum` adds them up.
+    Write `trigram_chance(table, a, b, c)`. `table` is what `trigram_counts` gives back, and `a`, `b`, `c` are three ids. It gives back
+    one number: of all the times the pair `(a, b)` was seen, the share that were followed by `c`.
+    A pair that was never seen gives `0.0`, and so does a `c` that never followed the pair. With `table = {(0, 1): {2: 3, 3: 1}}`:
 
-    1. `if (a, b) not in table:`, and inside it `return 0.0`
-    2. `followers = table[(a, b)]`
-    3. `return followers.get(c, 0) / sum(followers.values())`
+    > `trigram_chance(table, 0, 1, 2)` gives `0.75`, and `trigram_chance(table, 5, 5, 2)` gives `0.0`
+
+    The pair `(0, 1)` was seen $3 + 1 = 4$ times, and 3 of those were followed by 2.
     """)
     return
 
@@ -381,10 +606,19 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""Deal with the unseen pair first: an `if` with `not in`, and a `return` inside it. After that, the pair is known, so take its smaller dictionary out of `table`. The answer is one count from it, divided by the sum of all its counts.""",
+        r"""It's 4 lines. The count of `c` comes from `.get` with 0 as the fallback, since `c` may not be a key. The total is `sum` of the smaller dictionary's `.values()`. A `KeyError` means the first check is missing.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     Trigrams have the zero problem much worse: many pairs in the test stories were never seen. So
     we **mix**: half the chance comes from the trigram, half from the smoothed bigram.
-    When the trigram knows nothing, the bigram still has an answer. `.tolist()` turns an array into a plain list, which is faster to loop over and to use in dictionary keys. The loop below takes a few seconds:
+    When the trigram knows nothing, the bigram still has an answer. The loop below takes a few seconds:
     """)
     return
 
@@ -440,11 +674,11 @@ def _():
 
     ## What you can do now
 
-    - explain what a language model does, and read P(next | previous)
+    - explain what a language model does, and read $P(\text{next} \mid \text{previous})$
     - count bigrams and trigrams, and turn counts into chances
     - explain why zero chances are a problem, and fix them with smoothing or mixing
     - generate text by sampling
-    - compute perplexity and say what it means
+    - compute perplexity, by hand and in code, and say what it means
     - name a hyperparameter, and explain why test data shouldn't choose it
     - explain why counting stops working, and what vectors would add
 

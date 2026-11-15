@@ -11,7 +11,7 @@ with app.setup(hide_code=True):
     import torch
     import torch.nn.functional as F
 
-    from learn_llm import laptop_speed, todo
+    from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
 
     LOCALE = "en"
@@ -29,17 +29,20 @@ def _():
 
     ## Measuring time
 
-    `time.perf_counter()` (chapter 09) gives a clock in seconds. Measuring one run is unreliable: the first run of anything is often slow while the computer gets ready,
+    Measuring one run of anything is unreliable: the first run is often slow while the computer gets ready,
     and every run varies a little. So we run once to warm up, then time several runs and take the mean.
+
+    /// admonition | 🧰 Toolbox: a clock
+    `time.perf_counter()` gives the time in seconds, counted from some arbitrary start. One reading means nothing, but the difference between two readings is
+    how long the lines between them took: `started = time.perf_counter()`, then the work, then `time.perf_counter() - started`.
+    ///
 
     ## Exercise 1: time_it
 
-    Write `time_it(f, repeats)`, the mean seconds of one call of `f`, after one warm-up call:
+    Write `time_it(f, repeats)`. `f` is a function with no inputs and `repeats` a whole number. It calls `f` once to warm up, without timing that call,
+    then calls it `repeats` more times, and gives back the mean number of seconds one of those calls took.
 
-    1. `f()`
-    2. `started = time.perf_counter()`
-    3. `for i in range(repeats):`, with `f()` inside
-    4. `return (time.perf_counter() - started) / repeats`
+    One of the checks hands in a function whose first call takes 0.1 seconds and later ones 0.01: your answer must be 0.01.
     """)
     return
 
@@ -58,22 +61,58 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""Four parts: the warm-up call, a reading of the clock, a loop that calls `f` again and again, and the `return`. The clock is read after the warm-up, so the slow first call isn't counted.""",
+        r"""It's 5 lines. The last gives back the time that passed since `started`, divided by `repeats`.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## Counting arithmetic
 
-    The work in a network is almost all matrix products. Each number of `A @ B`, for `A` of shape `(n, k)` and `B` of shape `(k, m)`, is a dot product of length `k`:
-    `k` multiplications and about `k` additions. There are $n \times m$ such numbers, so a product costs about $2nkm$ **floating-point operations**, or **FLOPs** (a
+    The work in a network is almost all matrix products. Each number of `A @ B`, for `A` of shape `(n, k)` and `B` of shape `(k, m)`, is a dot product of length $k$:
+    $k$ multiplications and about $k$ additions. A multiplication or an addition of two such numbers is one **floating-point operation**, or **FLOP** (a
     "floating-point number" is a computer number with a point, the kind we've been using).
+
+    ## By hand: one small product
+
+    Take `A` of shape `(2, 3)` and `B` of shape `(3, 4)`. How many numbers does `A @ B` have? How many FLOPs does each one cost, counting $k$ multiplications and $k$ additions? And how many FLOPs is the whole product?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    flop_boxes = hand.boxes(['numbers in the result', 'FLOPs for each', 'FLOPs in all'])
+    return (flop_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(flop_boxes):
+    hand.marked(flop_boxes, {'numbers in the result': 8, 'FLOPs for each': 6, 'FLOPs in all': 48}, {
+        'numbers in the result': r"""the result has shape `(2, 4)`""",
+        'FLOPs for each': r"""a dot product of length 3: 3 multiplications and 3 additions""",
+        'FLOPs in all': r"""your first answer times your second""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    In general there are $n \times m$ numbers, each costing $2k$:
+
+    > $$\text{FLOPs of a product} \approx 2 \times n \times k \times m$$
 
     ## Exercise 2: matmul_flops
 
-    Write `matmul_flops(n, k, m)`:
+    Write `matmul_flops(n, k, m)`, that formula: the FLOPs of multiplying a matrix of shape `(n, k)` by one of shape `(k, m)`. Your hand answer is the check: `matmul_flops(2, 3, 4)` gives `48`.
 
-    ```
-    return 2 * n * k * m
-    ```
-
-    The cell after the check uses it to measure your computer: it times the product of two $1024 \times 1024$ matrices and divides. A **gigaFLOP** is a billion FLOPs.
+    The cell after the check uses it to measure your computer: it times the product of two $1024 \times 1024$ matrices and divides the FLOPs by the seconds. A **gigaFLOP** is a billion FLOPs.
+    (This cell needs Exercises 1 and 2, and shows an error until they pass. That's normal, and the same goes for later cells that use your functions.)
     """)
     return
 
@@ -87,6 +126,14 @@ def matmul_flops(n, k, m):
 @app.cell(hide_code=True)
 def _():
     check("22", "matmul_flops", matmul_flops, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""One line: the formula, with `*` for each $\times$.""",
+    ], LOCALE)
     return
 
 
@@ -111,9 +158,37 @@ def _():
 
     ## The cost of training
 
-    For a model with `N` knobs, here's a rule that's close enough to plan with. In the forward pass, each knob takes part in about one multiplication and one addition per token:
+    For a model with $N$ knobs, here's a rule that's close enough to plan with. In the forward pass, each knob takes part in about one multiplication and one addition per token:
     2 FLOPs. The backward pass needs about twice that: one product for the slopes of the knobs, and one for the blame passed back to the layer's input (chapter 08's
-    `X.T @ G` and `G @ W.T`). That makes 4 more. So:
+    two products). That makes 4 more.
+
+    ## By hand: a tiny training run
+
+    A model has 1,000 knobs, and reads 10 tokens once. By the rule, how many FLOPs does the forward pass take? The backward pass? And both together?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cost_boxes = hand.boxes(['forward', 'backward', 'together'])
+    return (cost_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(cost_boxes):
+    hand.marked(cost_boxes, {'forward': 20000, 'backward': 40000, 'together': 60000}, {
+        'forward': r"""2 FLOPs for each knob, for each token""",
+        'backward': r"""twice the forward pass""",
+        'together': r"""that's 6 FLOPs for each knob, for each token""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    So:
 
     > $$\text{training FLOPs} \approx 6 \times N \times \text{tokens}$$
 
@@ -121,11 +196,7 @@ def _():
 
     ## Exercise 3: training_flops
 
-    Write `training_flops(knobs, tokens)`:
-
-    ```
-    return 6 * knobs * tokens
-    ```
+    Write `training_flops(knobs, tokens)`, that rule. `tokens` is the number of tokens read in the whole run, counting each reading. `training_flops(1000, 10)` gives `60000`.
     """)
     return
 
@@ -144,39 +215,129 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
-    mo.md(r"""
-    Chapter 20's run read about 2 million tokens twice with about 1.17 million knobs. The cell below works out the arithmetic, and how long it would take at your computer's best speed.
-    The cell shows two numbers: the teraFLOPs of arithmetic, and the seconds at full speed. Compare those seconds with how long chapter 20's button really took. The share of the best possible speed that a run achieves is called its **utilisation**.
-    """)
-    return
-
-
-@app.cell
-def _(machine_speed):
-    flops_ch18 = training_flops(1.17e6, 2 * 2.03e6)
-    round(flops_ch18 / 1e12, 1), round(flops_ch18 / machine_speed)
+    hand.stuck([
+        r"""One line: 6, times the knobs, times the tokens.""",
+    ], LOCALE)
     return
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    About 28 teraFLOPs (a teraFLOP is $10^{12}$), which at full speed would take a couple of minutes. The real run took 4 or 5 minutes on the test machine, so it used roughly half of
+    ## From FLOPs to seconds
+
+    A computer never works at its best speed all the time. The share of its best speed that a run achieves is called the run's **utilisation**: 0.5 means half. So:
+
+    > $$\text{seconds} = \frac{\text{FLOPs}}{\text{speed} \times \text{utilisation}}$$
+
+    ## By hand: how long?
+
+    A run needs 30 teraFLOPs, which is $30 \times 10^{12}$ FLOPs, on a computer whose best speed is 100 gigaFLOPs per second, $100 \times 10^9$. How many seconds would it take at full speed? And at a utilisation of 0.5?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    seconds_boxes = hand.boxes(['seconds at full speed', 'seconds at utilisation 0.5'])
+    return (seconds_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(seconds_boxes):
+    hand.marked(seconds_boxes, {'seconds at full speed': 300, 'seconds at utilisation 0.5': 600}, {
+        'seconds at full speed': r"""$30 \times 10^{12} / (100 \times 10^9)$: the 12 zeros lose 9, and 30,000 divided by 100 is left""",
+        'seconds at utilisation 0.5': r"""half the speed takes twice as long""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Exercise 4: run_seconds
+
+    Write `run_seconds(flops, speed, utilisation)`, the formula above. `flops` is the arithmetic of a run, `speed` the computer's best speed in FLOPs per second, and `utilisation` a share between 0 and 1.
+    `run_seconds(30e12, 100e9, 0.5)` gives `600.0`.
+
+    /// admonition | 🧰 Toolbox: big numbers, written short
+    `30e12` means $30 \times 10^{12}$: the number after the `e` says how many places to move the point to the right. So `7e9` is 7 billion. A minus sign moves the point left, as in chapter 09's `1e-8`.
+    ///
+
+    Chapter 21's run read about 2 million tokens twice with about 1.17 million knobs. The cell after the check works out its arithmetic in teraFLOPs (a teraFLOP is $10^{12}$), and how many seconds it would take at your computer's best speed.
+    """)
+    return
+
+
+@app.function
+def run_seconds(flops, speed, utilisation):
+    # ← replace todo() below with your code
+    todo()
+
+
+@app.cell(hide_code=True)
+def _():
+    check("22", "run_seconds", run_seconds, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""One line: a division. The bottom is two things multiplied, so it needs its own brackets.""",
+        r"""If `run_seconds(30e12, 100e9, 0.5)` gives 150 and not 600, the utilisation ended up on top: without brackets, Python divides by the speed and then multiplies by 0.5.""",
+    ], LOCALE)
+    return
+
+
+@app.cell
+def _(machine_speed):
+    flops_run = training_flops(1.17e6, 2 * 2.03e6)
+    round(flops_run / 1e12, 1), round(run_seconds(flops_run, machine_speed, 1.0))
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    About 28 teraFLOPs, which at full speed would take a couple of minutes. Compare the second number with how long chapter 21's button really took on your computer: divide the first by the second in your head, and you have your run's utilisation.
+    On the test machine the real run took 4 or 5 minutes, so it used roughly half of
     the computer's best speed. The rest goes to small operations, such as softmax, normalisation, and moving numbers about, which do little arithmetic but take time.
     For a 7-billion-knob model and a trillion tokens, the same formula gives $4.2 \times 10^{22}$ FLOPs: about a thousand GPUs, each doing around 200 trillion FLOPs per second, for about a week at half their best speed.
 
     ## Counting memory
 
-    During training with Adam, each knob needs four numbers: itself, its slope, and Adam's two averages. At 32 bits, that's 4 bytes each, 16 bytes per knob. On top of that
+    During training with Adam, each knob needs four numbers: itself, its slope, and Adam's two averages. At 32 bits, each number takes 4 bytes. On top of that
     come the **activations**: every value the forward pass keeps for the backward pass, which grow with the batch and the window.
 
-    ## Exercise 4: adam_bytes
+    ## By hand: bytes for one model
 
-    Write `adam_bytes(knobs)`, the bytes for knobs, slopes and Adam's averages at 32 bits:
+    How many bytes does one knob need during training with Adam? And how many megabytes, MB, does a model of 1 million knobs need for its knobs, slopes and averages? (A megabyte is a million bytes.)
+    """)
+    return
 
-    ```
-    return 16 * knobs
-    ```
+
+@app.cell(hide_code=True)
+def _():
+    byte_boxes = hand.boxes(['bytes for one knob', 'MB for a million knobs'])
+    return (byte_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(byte_boxes):
+    hand.marked(byte_boxes, {'bytes for one knob': 16, 'MB for a million knobs': 16}, {
+        'bytes for one knob': r"""4 numbers of 4 bytes each""",
+        'MB for a million knobs': r"""a million times your first answer, in millions of bytes""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Exercise 5: adam_bytes
+
+    Write `adam_bytes(knobs)`: the bytes that training with Adam needs for a model's knobs, slopes and averages, at 32 bits. `adam_bytes(1000000)` gives `16000000`.
     """)
     return
 
@@ -195,8 +356,16 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    hand.stuck([
+        r"""One line: the bytes for one knob, times the number of knobs.""",
+    ], LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
-    For chapter 20's model, that's under 19 MB. For a 7-billion-knob model, 112 GB, which doesn't fit on most GPUs. Chapter 23 is about what to do then.
+    For chapter 20's model, with 1.17 million knobs, that's under 19 MB. For a 7-billion-knob model, 112 GB, which doesn't fit on most GPUs. Chapter 23 is about what to do then.
 
     ## Speed-up 1: smaller numbers
 
@@ -205,7 +374,39 @@ def _():
     - **float16** keeps about 3 digits, but can't hold numbers above 65,504;
     - **bfloat16** keeps fewer digits, about 2 or 3, but reaches as high as float32.
 
-    `torch.finfo` describes a format: `max` is its largest number, and `eps` is the gap between 1 and the next number it can hold, a measure of how precise it is. An `eps` of about 0.001 is 1 part in 1,000, so about 3 correct digits:
+    /// admonition | 🧰 Toolbox: asking about a format
+    `torch.finfo(dtype)` describes a number format: its `max` is the largest number it can hold, and its `eps` is the gap between 1 and the next number it can hold, a measure of how precise it is.
+    An `eps` of about 0.001 is 1 part in 1,000, so about 3 correct digits.
+    ///
+
+    ## By hand: will it fit?
+
+    Before running the cell below, predict. In float16, where nothing above 65,504 fits: does $200 \times 200$ fit? Does $300 \times 300$? Answer 1 for yes and 0 for no.
+    And how many MB do a million numbers take in a 16-bit format?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    fit_boxes = hand.boxes(['200 × 200 fits', '300 × 300 fits', 'MB for a million numbers'])
+    return (fit_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(fit_boxes):
+    hand.marked(fit_boxes, {'200 × 200 fits': 1, '300 × 300 fits': 0, 'MB for a million numbers': 2}, {
+        '200 × 200 fits': r"""$200 \times 200 = 40{,}000$. Is that above 65,504?""",
+        '300 × 300 fits': r"""$300 \times 300 = 90{,}000$. Is that above 65,504?""",
+        'MB for a million numbers': r"""16 bits is 2 bytes""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The cell shows each format's `max` and `eps`, then what float16 makes of 70,000, and what bfloat16 makes of $1 + 0.001$:
     """)
     return
 
@@ -265,33 +466,78 @@ def _():
 
     This is the idea of **FlashAttention**.
 
-    ## Exercise 5: tiled_attention
+    Here it is on a small case: 1 number per vector, scores $[1, 3, 2]$, values $[10, 20, 30]$ and tiles of 1.
 
-    Write `tiled_attention(q, K, V, tile)` for one query `q` of shape `(d,)`, keys `K` and values `V` of shape `(n, d)`, no mask, scaled by $\sqrt{d}$. It must give the same
-    answer as `torch.softmax(K @ q / np.sqrt(d), dim=0) @ V`.
-
-    1. Three lines: `best = -np.inf`, `total = 0.0` and `acc = torch.zeros(V.shape[1])`
-    2. `for start in range(0, len(K), tile):`, and inside it:
-    3. `scores = K[start:start + tile] @ q / np.sqrt(len(q))`
-    4. `new_best = max(best, torch.max(scores).item())`
-    5. `fix = np.exp(best - new_best)`
-    6. `weights = torch.exp(scores - new_best)`
-    7. `total = total * fix + torch.sum(weights).item()`
-    8. `acc = acc * fix + weights @ V[start:start + tile]`
-    9. `best = new_best`
-    10. After the loop, `return acc / total`
-
-    (`np.inf` is infinity, like `torch.inf`, and `np.exp(-np.inf)` is 0, so the very first tile works too.)
-
-    Here it is by hand, for 1 number per vector, keys `[1, 3, 2]`, values `[10, 20, 30]` and tiles of 1 (we skip the $\sqrt{d}$, which is 1):
-
-    | tile | `best` | `fix` | `total` | `acc` |
+    | tile | `best` | fix | `total` | `acc` |
     |---|---|---|---|---|
     | 1 | 1 | 0 | 1 | 10 |
-    | 2 | 3 | $e^{-2} \approx 0.135$ | 1.135 | 21.35 |
-    | 3 | 3 | 1 | 1.503 | 32.39 |
+    | 2 | 3 | $e^{1 - 3} \approx 0.135$ | $1 \times 0.135 + 1 = 1.135$ | $10 \times 0.135 + 20 = 21.35$ |
+    | 3 | 3 | $e^{3 - 3} = 1$ | $1.135 + e^{2 - 3} = 1.503$ | $21.35 + 0.368 \times 30 = 32.39$ |
 
-    And $32.39 / 1.503 \approx 21.55$, the same as softmax over all three scores at once.
+    And $32.39 / 1.503 \approx 21.55$, the same as softmax over all three scores at once. In the second tile the maximum grew, so everything before it was scaled down. In the third it didn't, so the fix was 1.
+
+    ## By hand: four scores in two tiles
+
+    One query, with 1 number per vector, so a score is just a key times the query, and we take the query to be 1 and skip the $\sqrt{d}$, which is 1.
+    The scores are $[0, 1, 2, 0]$ and the values $[10, 20, 30, 40]$, in tiles of 2: first scores $[0, 1]$ with values $[10, 20]$, then scores $[2, 0]$ with values $[30, 40]$.
+    You'll need $e^0 = 1$, $e^{-1} = 0.368$ and $e^{-2} = 0.135$.
+
+    For each tile: the new `best` is the largest score so far. Each weight is $e^{\text{score} - \text{best}}$. What was accumulated before gets multiplied by $e^{\text{old best} - \text{new best}}$, and then the tile's weights are added to `total`, and its weights times its values to `acc`.
+    In the first tile nothing was accumulated before, so just add.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    tile_boxes = hand.boxes(['best after tile 1', 'total after tile 1', 'acc after tile 1', 'best after tile 2', 'total after tile 2', 'acc after tile 2', 'answer'], step=0.001)
+    return (tile_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(tile_boxes):
+    hand.marked(tile_boxes, {'best after tile 1': 1, 'total after tile 1': 1.368, 'acc after tile 1': 23.68, 'best after tile 2': 2, 'total after tile 2': 1.638, 'acc after tile 2': 44.11, 'answer': 26.93}, {
+        'best after tile 1': r"""the larger of the scores 0 and 1""",
+        'total after tile 1': r"""the weights are $e^{0 - 1}$ and $e^{1 - 1}$: add them""",
+        'acc after tile 1': r"""$0.368 \times 10 + 1 \times 20$""",
+        'best after tile 2': r"""the largest score so far is now 2""",
+        'total after tile 2': r"""the old total times $e^{1 - 2}$, plus the new weights $e^{2 - 2}$ and $e^{0 - 2}$""",
+        'acc after tile 2': r"""the old `acc` times $e^{1 - 2}$, plus $1 \times 30 + 0.135 \times 40$""",
+        'answer': r"""`acc` divided by `total`""",
+    }, LOCALE, tolerance=0.05, per_row=3)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Softmax over all four scores at once gives 26.93 too: the two tiles never needed to be in memory together.
+
+    ## Exercise 6: tiled_attention
+
+    Write `tiled_attention(q, K, V, tile)` for one query `q` of shape `(d,)`, keys `K` of shape `(n, d)` and values `V` of shape `(n, v)`, with no mask, and scores scaled by $\sqrt{d}$ as in chapter 16. `tile` is how many keys to take at a time.
+    It gives back a tensor of shape `(v,)`, the same answer as `torch.softmax(K @ q / np.sqrt(d), dim=0) @ V`, without ever holding more than `tile` scores.
+
+    Start with three running values: `best` as `-np.inf` (minus infinity, so that any score beats it, and $e^{-\infty}$ is 0, which makes the first tile work like the others), `total` as `0.0`, and `acc` as a tensor of `v` zeros.
+    The loop over tiles is given, since slicing by steps is chapter 09's tool:
+
+    ```
+    for start in range(0, len(K), tile):
+    ```
+
+    Inside it, the tile's keys are `K[start:start + tile]` and its values `V[start:start + tile]`. Do what you did by hand:
+
+    | step | in math |
+    |---|---|
+    | the tile's scores | $\text{keys} \cdot q / \sqrt{d}$ |
+    | the new best | the larger of `best` and the tile's largest score |
+    | the fix for what came before | $e^{\text{best} - \text{new best}}$ |
+    | the tile's weights | $e^{\text{scores} - \text{new best}}$ |
+    | `total` | $\text{total} \times \text{fix} + \text{the sum of the weights}$ |
+    | `acc` | $\text{acc} \times \text{fix} + \text{weights} \cdot \text{values}$ |
+    | `best` | becomes the new best |
+
+    After the loop, the answer is `acc` divided by `total`. `torch.max(scores).item()` and `torch.sum(weights).item()` give plain numbers, `torch.exp` works on tensors, and `np.exp` on plain numbers.
     """)
     return
 
@@ -305,6 +551,15 @@ def tiled_attention(q, K, V, tile):
 @app.cell(hide_code=True)
 def _():
     check("22", "tiled_attention", tiled_attention, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    hand.stuck([
+        r"""Seven lines inside the loop, one for each row of the table, in that order. `best` must be updated last: the fix needs the old `best` and the new one. The dot product of a tile's keys with `q` is `@`, and so is the weights with the tile's values.""",
+        r"""The first two lines inside the loop are `scores = K[start:start + tile] @ q / np.sqrt(len(q))` and `new_best = max(best, torch.max(scores).item())`. If the check with big scores fails, you're taking $e$ to a score without subtracting the best first.""",
+    ], LOCALE)
     return
 
 
@@ -371,6 +626,41 @@ def _():
     The table is dense, so read only the names and the `CPU total` column. Matrix products (names with `mm` in them, such as `aten::mm` and `AddmmBackward0`) usually lead. If something else does, that's
     where to look first. A row's total includes the operations it calls, so the same time can appear on several rows. (`print` shows text as it is, with its columns lined up, which is why it's used here.)
 
+    ## By hand: read a profile
+
+    Your table depends on your computer, so here's a made-up one to practise on. `aten::linear` is a whole `nn.Linear` layer, and it calls `aten::addmm`, the matrix product with its bias. `aten::softmax` calls neither.
+
+    | name | CPU total |
+    |---|---|
+    | `aten::linear` | 9.1 ms |
+    | `aten::addmm` | 8.0 ms |
+    | `aten::softmax` | 1.2 ms |
+
+    How many milliseconds did the linear layers spend outside their matrix products? And how long did everything take, counting no time twice?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    profile_boxes = hand.boxes(['ms in linear outside addmm', 'ms in all'], step=0.1)
+    return (profile_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(profile_boxes):
+    hand.marked(profile_boxes, {'ms in linear outside addmm': 1.1, 'ms in all': 10.3}, {
+        'ms in linear outside addmm': r"""the 9.1 of `aten::linear` already includes the 8.0 of `aten::addmm`""",
+        'ms in all': r"""add `aten::linear` and `aten::softmax`, and leave out `aten::addmm`, which is inside the first""",
+    }, LOCALE, tolerance=0.01)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Adding all three rows would give 18.3 ms, nearly twice the truth. And 8.0 of the 10.3 ms is one matrix product: that's the line worth making faster.
+
     ## What's next
 
     One computer can only go so fast. **Chapter 23** spreads training over several devices, here several processes on your computer, and checks they learn exactly what one would.
@@ -378,12 +668,12 @@ def _():
     ## What you can do now
 
     - time code fairly, with a warm-up and repeats
-    - count the FLOPs of a matrix product and of a training run
+    - count the FLOPs of a matrix product and of a training run, by hand and in code
     - estimate a run's time from your computer's speed, and its utilisation
     - count the memory that training with Adam needs
     - explain float16, bfloat16 and mixed precision, and test whether they help on your hardware
-    - explain why attention's score table is the bottleneck, and write tiled attention
-    - read a profile
+    - explain why attention's score table is the bottleneck, trace tiled attention by hand, and write it
+    - read a profile without counting time twice
 
     ---
 
