@@ -250,6 +250,16 @@ need a real API key (it breaks "no accounts" and gives different results each ru
   own answers (40%), a policy gradient with group advantages on the learner's checker (92%,
   80 to 90% on other seeds). The policy gradient is derived from the slope of log p.
 
+## Step plan: chapter 27 (written 2026-11-15)
+
+- **27 Running a real model.** A weight file by hand: 8 bytes of length, a JSON header, raw
+  numbers whose meaning depends on the dtype. The learner's reader loads Qwen3-0.6B (310
+  tensors, 596,049,920 numbers) in a few seconds. Three new parts next to chapter 20's design:
+  tied embeddings, grouped-query attention (16 query heads on 8 key heads), norms on queries
+  and keys. "The capital of France is" gives " Paris"; a greedy loop with the stop token and
+  the chat template answers in about 2.5 seconds for 9 tokens; then temperature and top-k.
+  Ends on the cost of recomputing everything for each token, which chapter 28 removes.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a
