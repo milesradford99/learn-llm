@@ -260,6 +260,39 @@ need a real API key (it breaks "no accounts" and gives different results each ru
   the chat template answers in about 2.5 seconds for 9 tokens; then temperature and top-k.
   Ends on the cost of recomputing everything for each token, which chapter 28 removes.
 
+## Step plan: chapter 28 (written 2026-11-16)
+
+- **28 Fast single request.** Passes counted by hand (46 for 13 new tokens); the mask is why
+  earlier tokens' keys and values never change. `attend_new` (a new-by-total mask), `remember`,
+  `rope` with a start position, then `generate_cached`: the same 14 tokens in 2.6 seconds instead
+  of 9.2, prefill 0.57 s for 92 tokens, decode 0.14 s a token. The cache is 229,376 bytes a token.
+  Decoding is limited by bytes per knob (64 bits takes twice 32). Quantization with a scale per
+  row (errors 1%, 3%, 15% at 8, 6, 4 bits); 8 bits writes the same sentence, 4 bits names Lille.
+  The 8-bit model is slower in PyTorch because `q.float()` copies every matrix; three ways of the
+  product are timed (1.24, 0.63, 0.27 ms) to show why the fused int8 product is what's missing.
+
+## Step plan: chapter 29 (written 2026-11-16)
+
+- **29 A mini vLLM.** Batched decode shares one fetch of the knobs (7.5 tokens/s alone, 22 for 8,
+  35 for 16); attention stays per request. Static against continuous batching counted by hand and
+  simulated (281 against 182 steps for 40 requests on 8 places). A paged KV cache: a pool of
+  160 blocks of 16 tokens, block tables, a free list (`blocks_for`, `slot`, `read_cache`). A
+  scheduler that admits in arrival order within room and free blocks (`admit`), and a token
+  budget for chunked prefill (`chunk_sizes`). Eight questions together: the same answers, 7.4 s
+  against 19 one at a time. A 540-token prompt arriving mid-run: a 3.9 s step without chunks,
+  0.83 s at most with a budget of 64, its answer starting 8 steps later.
+
+## Step plan: chapter 30 (written 2026-11-16)
+
+- **30 Capstone: guess, then check.** Speculative decoding, chosen from the three capstone
+  options because it builds directly on chapters 28 and 29. Feeding 17 tokens costs 2.4 times
+  one. The acceptance rule by hand, `accept`; the cache rollback rule (every token except the
+  last), `trim`; prompt lookup as the guesser, `lookup_draft`; the loop, `speculate`; and
+  $1 + a + \dots + a^k$, `expected_tokens`. On the real model every answer is identical to
+  greedy: a copied story in 3.6 s instead of 9.3, a question about it about even, counting to
+  20 slower (12.6 s against 9.3). Ends with the course's road and two pointers onward:
+  mixture of experts, and the agents track.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a

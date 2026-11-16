@@ -247,3 +247,23 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | stop token | 停止词元 | 27 |
 | chat template | 对话模板 | 27 |
 | greedy choice | 贪心选择 | 27 |
+| request | 请求 | 28 |
+| time to first token / tokens per second | 首个词元的等待时间 / 每秒词元数 | 28 |
+| pass (one token through all blocks) | 趟 | 28 |
+| KV cache | KV 缓存 | 28 |
+| prefill / decode | 预填充 / 解码 | 28 |
+| quantization / scale | 量化 / 缩放系数 | 28 |
+| fused operation | 融合运算 | 28 |
+| inference engine | 推理引擎 | 29 |
+| throughput / latency | 吞吐量 / 延迟 | 29 |
+| batching / static / continuous batching | 批处理 / 静态批处理 / 连续批处理 | 29 |
+| place-step | 位置步 | 29 |
+| block (of a KV cache) / pool / block table | 块 / 池 / 块表 | 29 |
+| paged KV cache | 分页 KV 缓存 | 29 |
+| scheduler / admit | 调度器 / 接纳 | 29 |
+| chunked prefill / token budget | 分块预填充 / 词元预算 | 29 |
+| speculative decoding | 推测解码 | 30 |
+| guess / guesser | 猜测 / 猜测器 | 30 |
+| draft model | 草稿模型 | 30 |
+| prompt lookup | 提示查找 | 30 |
+| mixture of experts / expert | 混合专家 / 专家 | 30 |

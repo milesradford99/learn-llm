@@ -5,9 +5,9 @@
 Go from almost no maths or programming to building your own large language model, then
 serving it the way production systems do. Everything happens on one page in your browser.
 
-> **Status: early.** Chapters 00–27 are ready: from your first line of Python to a modern
-> transformer you build, train and align, and a real published model run with your own code.
-> Chapter 28 (Fast single request) is next.
+> **Status: early.** The main course, chapters 00–30, is ready: from your first line of Python to a modern
+> transformer you build, train and align, and a real published model run, made fast and served to many people at once, with your own code.
+> The optional agents track, chapters 40–51, is ready too.
 > See the [full chapter map](SCOPE.md).
 
 **New: an optional agents track.** Chapters 40–51 take you through two real open-source agents,
