@@ -260,6 +260,17 @@ need a real API key (it breaks "no accounts" and gives different results each ru
   the chat template answers in about 2.5 seconds for 9 tokens; then temperature and top-k.
   Ends on the cost of recomputing everything for each token, which chapter 28 removes.
 
+## Step plan: chapter 28 (written 2026-11-16)
+
+- **28 Fast single request.** Passes counted by hand (46 for 13 new tokens); the mask is why
+  earlier tokens' keys and values never change. `attend_new` (a new-by-total mask), `remember`,
+  `rope` with a start position, then `generate_cached`: the same 14 tokens in 2.6 seconds instead
+  of 9.2, prefill 0.57 s for 92 tokens, decode 0.14 s a token. The cache is 229,376 bytes a token.
+  Decoding is limited by bytes per knob (64 bits takes twice 32). Quantization with a scale per
+  row (errors 1%, 3%, 15% at 8, 6, 4 bits); 8 bits writes the same sentence, 4 bits names Lille.
+  The 8-bit model is slower in PyTorch because `q.float()` copies every matrix; three ways of the
+  product are timed (1.24, 0.63, 0.27 ms) to show why the fused int8 product is what's missing.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a

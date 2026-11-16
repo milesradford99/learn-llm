@@ -460,6 +460,28 @@ uses = [
     "builtin-len", "builtin-range", "position-table", "block", "transformer",
 ]
 
+[chapters.28]
+introduces = [
+    "request", "recomputation", "kv-cache", "attention-for-new-tokens", "prefill-and-decode",
+    "cache-memory", "bytes-per-token", "quantization", "quantization-error", "quantized-matmul",
+    "fused-operation", "triu-any-table", "empty-tensor", "tensor-abs", "tensor-amax",
+    "torch-round", "int8", "double-method",
+]
+toolbox = [
+    "triu-any-table", "empty-tensor", "tensor-abs", "tensor-amax", "torch-round", "int8",
+    "double-method",
+]
+uses = [
+    "serving", "weight-file", "grouped-query-attention", "stop-token", "chat-template",
+    "greedy-decoding", "self-attention", "future-mask", "torch-triu", "masked-fill", "softmax",
+    "rope", "rms-norm", "swiglu", "block", "torch-cat", "function-as-value", "return-pair",
+    "tuple", "early-return", "argmax", "item", "no-grad", "cache", "tiled-attention", "flops",
+    "bits-and-precision", "float-formats", "dtype", "float-method", "typical-size",
+    "variances-add", "new-axis", "broadcasting", "power", "module-time", "list-comprehension",
+    "builtin-sum", "builtin-len", "builtin-range", "builtin-round", "builtin-print", "dict",
+    "not-equal", "and-operator", "numpy-abs", "transpose", "reshape", "token",
+]
+
 [concepts]
 gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
@@ -1000,3 +1022,21 @@ torch-topk = "torch.topk(x, k) gives the k largest values and their positions"
 "module-learn_llm.qwen" = "TYPES maps a weight file's dtype names to PyTorch's"
 builtin-bytearray = "bytearray(data) is a copy of bytes that may be changed, which torch.frombuffer wants"
 builtin-open = "open(path, 'rb') opens a file for reading bytes"
+request = "one person's question, from its arrival to the end of the answer; felt as the time to the first token and the tokens per second after it"
+recomputation = "writing by rerunning the model on the whole text repeats nearly all its work: the passes grow with the square of the length"
+kv-cache = "nothing computed for a token depends on later tokens, so each block keeps every token's key and value instead of computing them again"
+attention-for-new-tokens = "queries of the new tokens against the keys of all tokens: a mask of new rows by total columns, and positions that start where the cache ends"
+prefill-and-decode = "prefill reads the whole prompt once and fills the caches; decode then feeds one token per call"
+cache-memory = "a KV cache holds blocks × 2 × key heads × numbers per head for every token: 229,376 bytes a token for Qwen3-0.6B at 32 bits"
+bytes-per-token = "decoding one token fetches every knob once, so its time follows the bytes per knob, not the arithmetic"
+quantization = "q = round(w / scale) stored as a small whole number, w ≈ q × scale; one scale per row, set by the row's largest knob"
+quantization-error = "rounding is off by at most half a scale; each bit fewer doubles the error, and too few bits change the model's answers"
+quantized-matmul = "multiply by the whole numbers first and by each row's scale once, at the end"
+fused-operation = "one operation that does several steps in a single trip through memory, without storing the results in between"
+triu-any-table = "torch.triu works on tables that aren't square, with any diagonal"
+empty-tensor = "torch.zeros(1, 8, 0, 128) holds no numbers but has a shape, and torch.cat can join onto it"
+tensor-abs = "x.abs() and torch.abs(x) make every number positive"
+tensor-amax = "x.amax(dim=1) is the largest number in each row"
+torch-round = "torch.round(x) rounds every number to the nearest whole number"
+int8 = "torch.int8: whole numbers from −128 to 127 in one byte each; x.to(torch.int8) converts"
+double-method = "x.double() turns a tensor into 64-bit floats"

@@ -160,5 +160,7 @@ On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
 
 - Even depth, chapters 06–23 (user, 2026-11-09; plan in docs/design/depth-plan.md): a review found that chapters 06–20 (old numbers) taught about twice as many ideas per page as 00–05 and printed 78–100% of each exercise's answer in the lesson. Three chapters are split (old 06 → 06, 07; old 15 → 16, 17; old 18 → 20, 21), later chapters are renumbered, and the agents track moves from 30–41 to 40–51 because the main course now reaches 30. All three splits are done, and chapters 06–23 are reworked (2026-11-14). Exercises give a spec and a worked example, not the solution's lines; the main idea of a chapter is done by hand first
 
+- Chapter 28: no new dependency and no compiled code. The KV cache works on chapter 27's own model and leaves its answers unchanged token for token. Quantization is 8-bit symmetric with a scale per row, stored as `torch.int8`; the lesson measures that it is smaller but slower in plain PyTorch and teaches fused operations from that measurement, rather than adding a compiled kernel. 4-bit is shown failing with this simple recipe, and the lesson says it's the recipe, not 4 bits (agent-default, 2026-11-16)
+
 ## Open decisions
 - (none)
