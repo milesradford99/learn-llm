@@ -380,7 +380,7 @@ def _():
     mo.md(r"""
     /// admonition | 🧰 Toolbox: counting down, and comparing lists
     - `range(5, -1, -1)` counts 5, 4, 3, 2, 1, 0: chapter 09's step of `range` can be negative. The stop is still left out, so −1 makes it end at 0.
-    - `[4, 7] == [4, 7]` is `True`: two lists are equal when they hold the same items in the same order. `ids[-2:]` is the last 2 items (chapter 09's slices count from the end with negative numbers).
+    - `[4, 7] == [4, 7]` is `True`: two lists are equal when they hold the same items in the same order. `ids[-2:]` is the last 2 items, as chapter 17's `words[-32:]` was the last 32.
     ///
 
     ## Exercise 3: lookup_draft
@@ -578,7 +578,7 @@ def _():
     Each row: the chance $a$, then the tokens a run adds on average with 4 guesses and with 8. At $a = 0.2$, 8 guesses buy nothing over 4, and both cost more than a plain step: guessing loses. At $a = 0.95$, a run of 9 tokens adds about 7 of them.
     Engines therefore watch how often guesses are right and change $k$ as they go, or stop guessing.
 
-    A good draft model is right for about 70 to 90% of tokens on ordinary text, which is why speculative decoding is now a standard part of serving. Some models are trained with small extra heads that guess the next few tokens themselves, so they need no separate draft at all.
+    A good draft model's guesses are often right 60 to 90% of the time on ordinary text, which is why speculative decoding is now a standard part of serving. Some models are trained with small extra heads that guess the next few tokens themselves, so they need no separate draft at all.
 
     ## What you built
     """)
@@ -603,7 +603,7 @@ def _():
     - **Part 3:** tokenize bytes, build a modern transformer, train it properly, make it fast, spread it over processes, fit scaling laws, clean its data and align it.
     - **Part 4:** open a real model's file and run it, keep its cache, shrink its knobs, serve many people at once, and now write several tokens per run.
 
-    Two directions from here, both beyond this course:
+    Two directions from here, both beyond Part 4:
 
     - **Mixture of experts.** Many large models now have several SwiGLU halves per block, the *experts*, and a small layer that sends each token to only 2 or so of them. The model has many knobs but each token uses few, which makes serving it a new memory problem. With chapter 20's SwiGLU and chapter 07's softmax for the choosing, you can read their code.
     - **Agents.** A model that can call tools, read results and keep going is a loop around everything in Part 4. The course's optional agents track, chapters 40 to 51, reads two real agent systems to their source.
