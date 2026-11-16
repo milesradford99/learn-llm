@@ -262,3 +262,8 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | paged KV cache | 分页 KV 缓存 | 29 |
 | scheduler / admit | 调度器 / 接纳 | 29 |
 | chunked prefill / token budget | 分块预填充 / 词元预算 | 29 |
+| speculative decoding | 推测解码 | 30 |
+| guess / guesser | 猜测 / 猜测器 | 30 |
+| draft model | 草稿模型 | 30 |
+| prompt lookup | 提示查找 | 30 |
+| mixture of experts / expert | 混合专家 / 专家 | 30 |

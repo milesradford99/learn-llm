@@ -282,6 +282,17 @@ need a real API key (it breaks "no accounts" and gives different results each ru
   against 19 one at a time. A 540-token prompt arriving mid-run: a 3.9 s step without chunks,
   0.83 s at most with a budget of 64, its answer starting 8 steps later.
 
+## Step plan: chapter 30 (written 2026-11-16)
+
+- **30 Capstone: guess, then check.** Speculative decoding, chosen from the three capstone
+  options because it builds directly on chapters 28 and 29. Feeding 17 tokens costs 2.4 times
+  one. The acceptance rule by hand, `accept`; the cache rollback rule (every token except the
+  last), `trim`; prompt lookup as the guesser, `lookup_draft`; the loop, `speculate`; and
+  $1 + a + \dots + a^k$, `expected_tokens`. On the real model every answer is identical to
+  greedy: a copied story in 3.6 s instead of 9.3, a question about it about even, counting to
+  20 slower (12.6 s against 9.3). Ends with the course's road and two pointers onward:
+  mixture of experts, and the agents track.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a

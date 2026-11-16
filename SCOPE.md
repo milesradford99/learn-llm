@@ -65,7 +65,7 @@ that covers the essential knowledge of CS231n → CS224N → CS336 → tiny-llm.
 | 27 | Running a real model | Load Qwen3-0.6B weights into *your* code; GQA; decoding loop | Weight files, dtypes | tiny-llm wk 1 |
 | 28 | Fast single request | KV cache, quantized matmul, fused ops | Integer quantization | tiny-llm wk 2 |
 | 29 | A mini vLLM | Continuous batching, paged KV cache, chunked prefill | Queues, paging | tiny-llm wk 3 |
-| 30 | Capstone (optional) | Speculative decoding, MoE, or a small agent loop | — | tiny-llm wk 3–4 |
+| 30 | Capstone (optional) | Speculative decoding with prompt lookup; MoE and agents pointed to | Geometric sums | tiny-llm wk 3–4 |
 
 Each chapter = one marimo notebook (a plain `.py` file) served on localhost: the lesson text,
 editable exercise cells with stubs, and live check cells that grade them on the page. Reference
@@ -163,6 +163,8 @@ On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
 - Chapter 28: no new dependency and no compiled code. The KV cache works on chapter 27's own model and leaves its answers unchanged token for token. Quantization is 8-bit symmetric with a scale per row, stored as `torch.int8`; the lesson measures that it is smaller but slower in plain PyTorch and teaches fused operations from that measurement, rather than adding a compiled kernel. 4-bit is shown failing with this simple recipe, and the lesson says it's the recipe, not 4 bits (agent-default, 2026-11-16)
 
 - Chapter 29: the engine is plain Python and PyTorch on the CPU, with requests as dictionaries and one function for the loop, no classes, threads or server. Arrivals are counted in steps, not seconds, so runs are repeatable. The pool is fixed at 160 blocks of 16 tokens (0.59 GB); running out of blocks (preemption) is explained, not built (agent-default, 2026-11-16)
+
+- Chapter 30: the capstone is speculative decoding, the first of the three options in the chapter map; mixture of experts and agents are pointed to at the end (agents as chapters 40–51). Qwen3-0.6B is the smallest model of its family, so the guesser is prompt lookup instead of a draft model, which keeps the chapter free of a second download. Greedy decoding only, so answers are checked identical to chapter 28's (agent-default, 2026-11-16)
 
 ## Open decisions
 - (none)

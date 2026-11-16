@@ -499,6 +499,22 @@ uses = [
     "transpose", "reshape", "not-equal", "token", "serving",
 ]
 
+[chapters.30]
+introduces = [
+    "speculative-decoding", "verify-cost", "acceptance-rule", "cache-rollback", "draft-model",
+    "prompt-lookup", "expected-accepted-tokens", "mixture-of-experts", "range-down",
+    "list-equality", "argmax-per-row",
+]
+toolbox = ["range-down", "list-equality", "argmax-per-row"]
+uses = [
+    "kv-cache", "prefill-and-decode", "bytes-per-token", "greedy-decoding", "stop-token",
+    "chat-template", "attention-for-new-tokens", "inference-engine", "swiglu", "softmax",
+    "while-loop", "and-operator", "slicing", "list-comprehension", "tuple", "return-pair",
+    "function-as-value", "early-return", "power", "builtin-range", "range-step", "tolist",
+    "argmax", "item", "no-grad", "torch-cat", "builtin-len", "builtin-print", "builtin-round",
+    "module-time", "dict", "not-equal", "token",
+]
+
 [concepts]
 gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
@@ -1069,3 +1085,14 @@ chunked-prefill = "a long prompt is read a chunk per step, so the requests alrea
 token-budget = "a cap on the tokens fed in one step: decoding requests first, one each, then chunks of prompts"
 list-of-tensors = "[pool[b] for b in table] is a list of tensors, and torch.cat joins a list of any length"
 new-first-axis = "x[None] puts a new dimension of size 1 in front"
+speculative-decoding = "a cheap guesser proposes a few tokens and the model checks them all in one run, keeping exactly what greedy decoding would write"
+verify-cost = "one run fed a few tokens costs about as much as one fed a single token, because fetching the knobs dominates"
+acceptance-rule = "keep the guesses up to the first that differs from the model's greedy choice there, then add the model's choice"
+cache-rollback = "after checking, cut the caches back so they hold every token of the text except the last"
+draft-model = "a much smaller model of the same family, with the same tokenizer, used as the guesser"
+prompt-lookup = "guess that the tokens after the latest earlier copy of the text's last few tokens come again"
+expected-accepted-tokens = "with each guess right at chance a, a run adds 1 + a + a² + … + a^k tokens on average"
+mixture-of-experts = "several SwiGLU halves per block, and a small layer that sends each token to only a few of them"
+range-down = "range(5, -1, -1) counts 5, 4, …, 0"
+list-equality = "[4, 7] == [4, 7] is True: same items in the same order"
+argmax-per-row = "torch.argmax(scores, dim=-1) gives the position of the largest number in every row"
