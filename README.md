@@ -5,9 +5,9 @@
 Go from almost no maths or programming to building your own large language model, then
 serving it the way production systems do. Everything happens on one page in your browser.
 
-> **Status: early.** Chapters 00–28 are ready: from your first line of Python to a modern
-> transformer you build, train and align, and a real published model run, and made fast, with your own code.
-> Chapter 29 (A mini vLLM) is next.
+> **Status: early.** Chapters 00–29 are ready: from your first line of Python to a modern
+> transformer you build, train and align, and a real published model run, made fast and served to many people at once, with your own code.
+> Chapter 30 (the optional capstone) is next.
 > See the [full chapter map](SCOPE.md).
 
 **New: an optional agents track.** Chapters 40–51 take you through two real open-source agents,

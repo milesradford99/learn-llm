@@ -162,5 +162,7 @@ On a fresh clone, on Ubuntu and macOS CI runners with no GPU:
 
 - Chapter 28: no new dependency and no compiled code. The KV cache works on chapter 27's own model and leaves its answers unchanged token for token. Quantization is 8-bit symmetric with a scale per row, stored as `torch.int8`; the lesson measures that it is smaller but slower in plain PyTorch and teaches fused operations from that measurement, rather than adding a compiled kernel. 4-bit is shown failing with this simple recipe, and the lesson says it's the recipe, not 4 bits (agent-default, 2026-11-16)
 
+- Chapter 29: the engine is plain Python and PyTorch on the CPU, with requests as dictionaries and one function for the loop, no classes, threads or server. Arrivals are counted in steps, not seconds, so runs are repeatable. The pool is fixed at 160 blocks of 16 tokens (0.59 GB); running out of blocks (preemption) is explained, not built (agent-default, 2026-11-16)
+
 ## Open decisions
 - (none)

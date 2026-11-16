@@ -271,6 +271,17 @@ need a real API key (it breaks "no accounts" and gives different results each ru
   The 8-bit model is slower in PyTorch because `q.float()` copies every matrix; three ways of the
   product are timed (1.24, 0.63, 0.27 ms) to show why the fused int8 product is what's missing.
 
+## Step plan: chapter 29 (written 2026-11-16)
+
+- **29 A mini vLLM.** Batched decode shares one fetch of the knobs (7.5 tokens/s alone, 22 for 8,
+  35 for 16); attention stays per request. Static against continuous batching counted by hand and
+  simulated (281 against 182 steps for 40 requests on 8 places). A paged KV cache: a pool of
+  160 blocks of 16 tokens, block tables, a free list (`blocks_for`, `slot`, `read_cache`). A
+  scheduler that admits in arrival order within room and free blocks (`admit`), and a token
+  budget for chunked prefill (`chunk_sizes`). Eight questions together: the same answers, 7.4 s
+  against 19 one at a time. A 540-token prompt arriving mid-run: a 3.9 s step without chunks,
+  0.83 s at most with a budget of 64, its answer starting 8 steps later.
+
 ## Decisions
 
 - Route: **R3** (user). R1 rejected: restarts between parts. R2 rejected: vision shrinks to a

@@ -28,6 +28,7 @@
   "26-alignment.py": "sha256:f57281fe8268a6a752e9931b22538bf27d6c2cd8a124b0b97862fc7cc6b77de4",
   "27-running-a-real-model.py": "sha256:ecd9fa42115651ffdbe79d11cb9ca405d0de07427a284e68abe85bb5c714a466",
   "28-fast-single-request.py": "sha256:c26d673350638ef9b9385169a384d4b5ce38e5aaee2e92eca97bea4bca0ae25f",
+  "29-a-mini-vllm.py": "sha256:c96a8c8ed3221ee99f96e6e2691c97e2f4aefddd0707830523dec07810c4cffc",
   "40-the-agent-loop.py": "sha256:169b328d27902897fb357811f21b0f5f50a7d5e4a22a71c170a033f9995275d9",
   "41-inside-pis-loop.py": "sha256:9366d8b6125d1b45c48da79a567fabd9c22e208151272642274af307041ab677",
   "42-one-api-for-every-model.py": "sha256:5116e56f398927b2887609ea67b3f9444e191a3df3dcf43546071ab6c12c1fb9",

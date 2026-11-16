@@ -482,6 +482,23 @@ uses = [
     "not-equal", "and-operator", "numpy-abs", "transpose", "reshape", "token",
 ]
 
+[chapters.29]
+introduces = [
+    "inference-engine", "throughput-and-latency", "batched-decode", "static-batching",
+    "continuous-batching", "paged-kv-cache", "block-table", "scheduler", "chunked-prefill",
+    "token-budget", "list-of-tensors", "new-first-axis",
+]
+toolbox = ["list-of-tensors", "new-first-axis"]
+uses = [
+    "request", "kv-cache", "attention-for-new-tokens", "prefill-and-decode", "cache-memory",
+    "bytes-per-token", "fused-operation", "grouped-query-attention", "stop-token", "chat-template",
+    "rope", "rms-norm", "swiglu", "torch-cat", "new-axis", "floor-division", "remainder",
+    "while-loop", "and-operator", "builtin-min", "list-append", "slicing", "index-array", "dict",
+    "list-comprehension", "builtin-zip", "return-pair", "tuple", "builtin-max", "builtin-len",
+    "builtin-range", "builtin-print", "module-time", "argmax", "item", "no-grad", "random-generator",
+    "transpose", "reshape", "not-equal", "token", "serving",
+]
+
 [concepts]
 gate = "a vector of numbers between 0 and 1, multiplied position by position: 0 blocks, 1 passes"
 notebook-cell = "a page is made of cells; Shift + Enter runs a code cell and shows its last line's result below it"
@@ -1040,3 +1057,15 @@ tensor-amax = "x.amax(dim=1) is the largest number in each row"
 torch-round = "torch.round(x) rounds every number to the nearest whole number"
 int8 = "torch.int8: whole numbers from −128 to 127 in one byte each; x.to(torch.int8) converts"
 double-method = "x.double() turns a tensor into 64-bit floats"
+inference-engine = "the program that serves many people's requests on one machine, deciding every step what the model runs on"
+throughput-and-latency = "throughput: tokens per second for everyone together; latency: how long each person waits"
+batched-decode = "several requests' new tokens share one run of the model: the knobs are fetched once, attention stays per request"
+static-batching = "a group runs until its longest answer ends, so finished requests leave their places empty"
+continuous-batching = "the batch is decided again every step: finished requests leave at once and waiting ones take their places"
+paged-kv-cache = "the caches live in one pool of fixed-size blocks, handed out one at a time as a request grows and returned when it ends"
+block-table = "a request's list of block numbers in order: token p is in block table[p // size] at place p % size"
+scheduler = "the part of the engine that decides who runs: in arrival order, within a limit on running requests and free memory"
+chunked-prefill = "a long prompt is read a chunk per step, so the requests already writing don't freeze"
+token-budget = "a cap on the tokens fed in one step: decoding requests first, one each, then chunks of prompts"
+list-of-tensors = "[pool[b] for b in table] is a list of tensors, and torch.cat joins a list of any length"
+new-first-axis = "x[None] puts a new dimension of size 1 in front"
