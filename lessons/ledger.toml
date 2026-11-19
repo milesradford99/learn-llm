@@ -512,7 +512,7 @@ uses = [
     "while-loop", "and-operator", "slicing", "list-comprehension", "tuple", "return-pair",
     "function-as-value", "early-return", "power", "builtin-range", "range-step", "tolist",
     "argmax", "item", "no-grad", "torch-cat", "builtin-len", "builtin-print", "builtin-round",
-    "module-time", "dict", "not-equal", "token",
+    "module-time", "dict", "not-equal", "token", "list-from-end",
 ]
 
 [concepts]

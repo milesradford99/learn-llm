@@ -645,7 +645,7 @@ def _():
 
     ## Knobs as small whole numbers
 
-    One byte can hold a whole number from −128 to 127. A knob is a number like 0.0731 or −0.4125. To store it in a byte, pick a small number called the **scale**, and store how many scales the knob is worth, rounded to a whole number:
+    A byte has 256 possible values. Chapter 19 read them as 0 to 255; read the other way, they're the whole numbers from −128 to 127, and that's how they're used here. A knob is a number like 0.0731 or −0.4125. To store it in a byte, pick a small number called the **scale**, and store how many scales the knob is worth, rounded to a whole number:
 
     > $$q = \text{round}\left(\frac{w}{\text{scale}}\right) \qquad\qquad w \approx q \times \text{scale}$$
 
@@ -968,7 +968,7 @@ def _():
     What's missing is a fourth way: fetch the small whole numbers, one byte a knob, and multiply and add them straight away, **once** through memory, with no copy. That would move a quarter of the bytes of the 32-bit product, and you've measured what bytes cost.
 
     An operation that does the work of several steps in one go, without writing the results in between to memory, is called a **fused operation**. You met one in chapter 22: `F.scaled_dot_product_attention` does scores, mask, softmax and blend without ever building the table.
-    The quantized product is the other one that matters for serving. It can't be written in Python: stepping through a matrix number by number in Python is thousands of times too slow. It's written in a compiled language, once for each kind of processor, and PyTorch doesn't have one for a plain `int8` tensor on a laptop's processor.
+    The quantized product is the other one that matters for serving. It can't be written in Python: stepping through a matrix number by number in Python is thousands of times too slow. It's written in a compiled language, once for each kind of processor. PyTorch's `@` has none for an `int8` matrix and a vector of floats. (PyTorch has a few `int8` tools of its own, but they turn the vector into small whole numbers too: a different recipe from this one.)
 
     The engines people use to run models on their own computers are, for the most part, collections of exactly these fused operations, wrapped around the same loop you wrote. That's where a 4-bit model on a laptop gets its speed: your KV cache, your scales, and a product that reads each knob once.
 

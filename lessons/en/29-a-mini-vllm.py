@@ -181,7 +181,8 @@ def _(static_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Half the places stand empty. The cell below counts the steps for 40 requests with answers between 5 and 60 tokens long, drawn at random, on 8 places, both ways. `continuous` says which way: with `False`, new requests may only come in when the batch is empty.
+    Half the places stand empty. `steps_needed` counts the steps for a list of answer lengths on a number of places. `running` holds, for each request, the tokens it still has to write: each step takes one off, and a request leaves when it has none left.
+    `continuous` says which way to batch: with `False`, new requests may only come in when the batch is empty.
     """)
     return
 
@@ -200,6 +201,31 @@ def steps_needed(lengths, places, continuous):
     return steps
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: run it
+
+    Run `steps_needed` in your head on the answer lengths 3, 10, 2, 5, 4, 4, with 4 places. How many steps does it count with `continuous` set to `False`? And with `True`?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    run_boxes = hand.boxes(['steps, static', 'steps, continuous'])
+    return (run_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(run_boxes):
+    hand.marked(run_boxes, {'steps, static': 14, 'steps, continuous': 10}, {
+        'steps, static': r"""the first four take 10 steps, as in the last exercise; only then do the two 4s start""",
+        'steps, continuous': r"""the 2 leaves after step 2, so a 4 runs in steps 3 to 6; the 3 leaves after step 3, so the other 4 runs in steps 4 to 7; the 10 ends last""",
+    }, LOCALE)
+    return
+
+
 @app.cell
 def _():
     answer_lengths = np.random.default_rng(29).integers(5, 61, 40).tolist()
@@ -210,9 +236,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Steps with static batching, steps with continuous batching, and the fewest possible, if all 8 places were busy every step: 281, 182 and 150. Continuous batching is much closer to the fewest. Every real engine batches this way.
-
-    (`running` holds, for each request, the tokens it still has to write. Each step takes one off, and a request leaves when it has none left.)
+    Now 40 requests, with answers between 5 and 60 tokens long, drawn at random, on 8 places. The cell shows the steps with static batching, the steps with continuous batching, and the fewest possible, if all 8 places were busy every step: on the test machine, 281, 182 and 150. Continuous batching is much closer to the fewest. Every real engine batches this way.
 
     ## Where to keep the caches
 
@@ -352,6 +376,8 @@ def _():
 def _():
     mo.md(r"""
     ## Reading a request's cache
+
+    (Two kinds of block meet in this chapter: the model's 28 blocks from chapter 16, and the cache's blocks of memory. The page says "block of the model" for the first kind.)
 
     The pool for one block of the model is a tensor of the shape (blocks, heads, block size, numbers): for Qwen, (160, 8, 16, 128) in this chapter. Keys and values each have their own pool, and each of the 28 blocks of the model has its own pair.
 
@@ -517,7 +543,7 @@ def _(knobs, tokenizer):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    On the test machine: 7.5 tokens per second for one request, 22 for 8, 35 for 16. Not the ideal 16 times, but more than 4 times as much from the same computer, for free. The time per step grows slowly, so each person's tokens come a little slower: throughput bought with a little latency.
+    On the test machine: 7.5 tokens per second for one request, 22 for 8, 35 for 16. Not the ideal 16 times, but more than 4 times as much from the same computer, at no extra cost. The time per step grows slowly, so each person's tokens come a little slower: throughput bought with a little latency.
 
     (The gain is smaller than the ideal partly because of this page's Python: `block_batch` loops over the requests and over every new token. A real engine does that work in fused operations, chapter 28's word.)
 
@@ -691,6 +717,36 @@ def engine(knobs, requests, max_running, budget, limit):
                     r["ids"] = r["ids"] + [token]
         step = step + 1
     return finished, log
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## By hand: one step of the engine
+
+    Two requests are running, the budget is 64, and blocks hold 16 tokens. Request A has read its prompt and is writing: its `"fed"` is 40, its `"ids"` holds 41 tokens, and its table has 3 blocks. Request B has a prompt of 100 tokens, of which 40 have been fed, and its table has 3 blocks too.
+
+    In the next step, how many tokens is A fed? And B? How many new blocks does each take from the free list? Does B get a token at the end of the step? (Enter 1 for yes, 0 for no.)
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    engine_boxes = hand.boxes(['tokens fed to A', 'tokens fed to B', 'new blocks for A', 'new blocks for B', 'B gets a token'])
+    return (engine_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(engine_boxes):
+    hand.marked(engine_boxes, {'tokens fed to A': 1, 'tokens fed to B': 60, 'new blocks for A': 0, 'new blocks for B': 4, 'B gets a token': 1}, {
+        'tokens fed to A': r"""A is decoding, so it goes first, with its one unfed token""",
+        'tokens fed to B': r"""B has 60 unfed tokens, and 63 are left of the budget""",
+        'new blocks for A': r"""41 tokens fit in 3 blocks of 16""",
+        'new blocks for B': r"""after the step B has fed 100 tokens: `blocks_for(100, 16)` minus the 3 it has""",
+        'B gets a token': r"""its `"fed"` reaches the length of its `"ids"`, so its last row of scores is used""",
+    }, LOCALE, per_row=3)
+    return
 
 
 @app.cell(hide_code=True)
