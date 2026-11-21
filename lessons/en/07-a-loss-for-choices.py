@@ -10,6 +10,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
+    from learn_llm.diagrams import grids, pipeline
     from learn_llm.plot import chart
 
     LOCALE = "en"
@@ -474,36 +475,281 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## All pictures, all knobs
+    ## From the scores to the knobs
 
-    For the mean loss over `n` pictures, each picture's slopes are divided by `n`. So the
-    slopes of the loss for all the scores at once are
+    Gradient descent doesn't move scores, though: it moves knobs, the $784 \times 10$ numbers in
+    $W$ and the 10 in $b$. Here is the whole recipe for all the pictures at once, with the shape
+    of each value:
+    """)
+    return
 
-    > `G = (P - Y) / n`
+
+@app.cell(hide_code=True)
+def _():
+    pipeline([("X", "(n, 784)"), ("S", "(n, 10)"), ("P", "(n, 10)"), ("L", "one number")],
+             ["@ W + b", "softmax", "cross-entropy"],
+             "X, times W plus b, gives the scores S; softmax gives the shares P; cross-entropy gives the loss L")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Blame flows backwards, as in chapter 03. The last section took it from $L$ back to the
+    scores. One step is left: from the scores back to the knobs. We'll take it first in a world
+    small enough to see every number; the real pictures then do exactly the same, only bigger.
+
+    ### The blame of every score
+
+    For the mean loss over $n$ pictures, each picture's slopes are divided by $n$. So the slopes
+    of the loss for all the scores at once are
+
+    > $$G = (P - Y) / n$$
 
     a matrix of shape `(n, 10)`, one row per picture, one column per digit: `G[i, c]` is the blame
     of score `S[i, c]`.
 
-    Now from scores to knobs, with the same idea as in chapter 05 (there the blame vector came
-    first, `(2 * e) @ X`; here the shapes call for a different arrangement, worked out below). The knob `W[j, c]` (pixel $j$, digit $c$)
-    multiplies pixel $j$ in digit $c$'s score, for every picture. So its slope is: for each
-    picture, the score's blame `G[i, c]` times the local slope `X[i, j]` (in $X[i, j] \times W[j, c]$,
-    nudging `W[j, c]` moves the score by `X[i, j]` per unit), all added up, because `W[j, c]`
-    feeds $n$ scores and their blames add. That
-    is the dot product of **column $j$ of $X$** with **column $c$ of $G$**.
+    ### A world small enough to see
 
-    We want that for every `j` and every `c`: a `(784, 10)` matrix, the same shape as `W`. If
-    `X`'s columns were rows, it would be `matrix @ matrix`. Turning columns into rows is called
-    the **transpose**, written `X.T`: row `j` of `X.T` is column `j` of `X`, so `X.T` has shape
-    `(784, n)`. Then
+    Two pictures of only 3 pixels each, and only two digits, 0 and 1. A pixel is 1 where there's
+    ink and 0 where there isn't. Picture 0 is a 0, with ink in pixels 0 and 2; picture 1 is a 1,
+    with ink in pixels 1 and 2. The model gives picture 0 the shares `[0.6, 0.4]` (right, but
+    not sure) and picture 1 the shares `[0.8, 0.2]` (sure, and wrong). Share minus one-hot,
+    divided by $n = 2$, gives each picture's row of blames:
 
-    > `X.T @ G` has shape `(784, n) @ (n, 10)` = `(784, 10)`, with entry `[j, c]` = column `j` of
-    > `X` dotted with column `c` of `G`
-
-    which is exactly the slope of every knob. And the slope for `b[c]` is the sum of column $c$
-    of $G$ (each $b$ adds 1 $\times$ itself to its score, for every picture): `np.sum(G, axis=0)`, which
-    adds **down** each column.
+    > $$([0.6, 0.4] - [1, 0]) / 2 = [-0.2, 0.2] \qquad ([0.8, 0.2] - [0, 1]) / 2 = [0.4, -0.4]$$
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "X", "values": [[1, 0, 1], [0, 1, 1]],
+         "rows": ["picture 0", "picture 1"], "cols": ["pixel 0", "pixel 1", "pixel 2"]},
+        "   ",
+        {"name": "G", "values": [[-0.2, 0.2], [0.4, -0.4]], "cols": ["digit 0", "digit 1"]},
+    ], "The pixels X, one row per picture, and the blames G of their scores, one column per digit")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### Which scores does one knob touch?
+
+    Each digit has one knob per pixel: `W[j, c]` is the knob for pixel $j$ and digit $c$, so
+    here `W` has shape `(3, 2)`. Take the knob `W[2, 0]`. The score of picture $i$ for digit 0 is
+
+    > $$S[i, 0] = X[i, 0] \times W[0, 0] + X[i, 1] \times W[1, 0] + X[i, 2] \times W[2, 0] + b[0]$$
+
+    So `W[2, 0]` is in the digit-0 score of **every** picture, each time multiplied by that
+    picture's pixel 2. In the picture below: the knob is outlined, the pixel it multiplies is
+    blue, and the scores it touches, with their blames, are red.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "X", "values": [[1, 0, 1], [0, 1, 1]], "rows": ["picture 0", "picture 1"],
+         "cols": ["pixel 0", "pixel 1", "pixel 2"], "marks": {(0, 2): "blue", (1, 2): "blue"}},
+        "@",
+        {"name": "W", "values": [["W[0,0]", "W[0,1]"], ["W[1,0]", "W[1,1]"], ["W[2,0]", "W[2,1]"]],
+         "cols": ["digit 0", "digit 1"], "marks": {(2, 0): "box"}},
+        "→",
+        {"name": "S", "values": [["S[0,0]", "S[0,1]"], ["S[1,0]", "S[1,1]"]],
+         "cols": ["digit 0", "digit 1"], "marks": {(0, 0): "red", (1, 0): "red"}},
+        "→",
+        {"name": "G", "values": [[-0.2, 0.2], [0.4, -0.4]],
+         "cols": ["digit 0", "digit 1"], "marks": {(0, 0): "red", (1, 0): "red"}},
+    ], "The knob W[2,0] multiplies pixel 2 of each picture and is part of each picture's digit-0 score")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Its slope adds up, for each score it touches, the score's blame times the local slope (in
+    $X[i, 2] \times W[2, 0]$, nudging `W[2, 0]` moves the score by `X[i, 2]` per unit). They add
+    because blames add (chapter 03):
+
+    > $$\text{slope of } W[2, 0] = G[0, 0] \times X[0, 2] + G[1, 0] \times X[1, 2] = -0.2 \times 1 + 0.4 \times 1 = 0.2$$
+
+    ## By hand: three more knobs
+
+    Work out the slopes of three more knobs the same way: find the pixel column and the digit
+    column, then multiply in pairs and add.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    knob_boxes = hand.boxes(["W[0, 0]", "W[1, 0]", "W[2, 1]"], step=0.1)
+    return (knob_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(knob_boxes):
+    hand.marked(knob_boxes, {"W[0, 0]": -0.2, "W[1, 0]": 0.4, "W[2, 1]": -0.2}, {
+        "W[0, 0]": r"""pixel 0 and digit 0: $G[0, 0] \times X[0, 0] + G[1, 0] \times X[1, 0]$""",
+        "W[1, 0]": r"""pixel 1 and digit 0: only picture 1 has ink in pixel 1""",
+        "W[2, 1]": r"""pixel 2 and digit 1: both pictures have ink in pixel 2, so add both blames of digit 1""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Read the signs as the step rule will, moving each knob against its slope:
+
+    - `W[0, 0]` goes **up**. Only picture 0 has ink in pixel 0, and picture 0 is a 0: from now
+      on, ink there counts more for a 0.
+    - `W[1, 0]` goes **down**. Only picture 1 has ink in pixel 1, and the model gave that 1 a
+      share of 0.8 for being a 0: ink there will count less for a 0.
+    - `W[2, 1]` goes up a little. Both pictures have ink in pixel 2, so both their blames
+      count, $0.2 + (-0.4)$, and they partly cancel.
+
+    ### The pattern: two columns
+
+    Look at what you multiplied for the knob `W[j, c]`. Going down the pictures, you took
+    pixel $j$ of each one, which is **column $j$ of $X$**, and the blame of digit $c$ for each
+    one, which is **column $c$ of $G$**. You multiplied them in pairs and added up: that is the
+    dot product of the two columns.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "X", "values": [[1, 0, 1], [0, 1, 1]], "rows": ["picture 0", "picture 1"],
+         "cols": ["pixel 0", "pixel 1", "pixel 2"], "marks": {(0, 2): "blue", (1, 2): "blue"}},
+        "·",
+        {"name": "G", "values": [[-0.2, 0.2], [0.4, -0.4]],
+         "cols": ["digit 0", "digit 1"], "marks": {(0, 1): "red", (1, 1): "red"}},
+        "=",
+        {"name": "slope of W[2,1]", "values": [[-0.2]], "marks": {(0, 0): "box"}},
+    ], "Column 2 of X dotted with column 1 of G gives the slope of the knob W[2,1]: 1 times 0.2 plus 1 times -0.4")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### Columns into rows: the transpose
+
+    We want that dot product for every pixel $j$ and every digit $c$: a matrix of slopes with
+    the same shape as `W`. `matrix @ matrix` (chapter 06) dots every **row** of the first matrix
+    with every column of the second, so the columns of $X$ would have to be rows. Turning every
+    column into a row is called the **transpose**, written `X.T`: row $j$ of `X.T` is column $j$
+    of `X`. Our `(2, 3)` matrix becomes `(3, 2)`:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "X", "values": [[1, 0, 1], [0, 1, 1]], "rows": ["picture 0", "picture 1"],
+         "cols": ["pixel 0", "pixel 1", "pixel 2"], "marks": {(0, 2): "blue", (1, 2): "blue"}},
+        "→",
+        {"name": "X.T", "values": [[1, 0], [0, 1], [1, 1]], "rows": ["pixel 0", "pixel 1", "pixel 2"],
+         "cols": ["picture 0", "picture 1"], "marks": {(2, 0): "blue", (2, 1): "blue"}},
+    ], "Transposing X: column 2 of X becomes row 2 of X.T")
+    return
+
+
+@app.cell
+def _():
+    X_tiny = np.array([[1, 0, 1], [0, 1, 1]])
+    X_tiny.T
+    return (X_tiny,)
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Now `X.T @ G` dots row $j$ of `X.T` (pixel $j$ in every picture) with column $c$ of `G`
+    (digit $c$'s blame in every picture), for every $j$ and every $c$: all the knob slopes at
+    once. Shapes: `(3, 2) @ (2, 2)` gives `(3, 2)`, the shape of `W`.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "X.T", "values": [[1, 0], [0, 1], [1, 1]], "rows": ["pixel 0", "pixel 1", "pixel 2"],
+         "cols": ["picture 0", "picture 1"], "marks": {(2, 0): "blue", (2, 1): "blue"}},
+        "@",
+        {"name": "G", "values": [[-0.2, 0.2], [0.4, -0.4]], "cols": ["digit 0", "digit 1"],
+         "marks": {(0, 1): "red", (1, 1): "red"}},
+        "=",
+        {"name": "slopes for W", "values": [[-0.2, 0.2], [0.4, -0.4], [0.2, -0.2]],
+         "rows": ["pixel 0", "pixel 1", "pixel 2"], "cols": ["digit 0", "digit 1"],
+         "marks": {(2, 1): "box"}},
+    ], "X.T times G gives one slope per knob, in the shape of W: row 2 of X.T dotted with column 1 of G is the slope in row 2, column 1")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Your three answers are in it, at `[0, 0]`, `[1, 0]` and `[2, 1]`. In NumPy:
+    """)
+    return
+
+
+@app.cell
+def _(X_tiny):
+    G_tiny = np.array([[-0.2, 0.2], [0.4, -0.4]])
+    X_tiny.T @ G_tiny
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    And `b`? `b[c]` is added, times 1, to the digit-$c$ score of every picture, so its slope is
+    the sum of the blames in column $c$ of $G$: `np.sum(G, axis=0)`, which adds **down** each
+    column. Here $-0.2 + 0.4 = 0.2$ for digit 0 and $0.2 + (-0.4) = -0.2$ for digit 1.
+
+    ### The same, full size
+
+    Nothing changes for the real pictures but the sizes. `X` is `(n, 784)`, so `X.T` is
+    `(784, n)`: one row per pixel, one column per picture. `G` is `(n, 10)`. Then
+
+    > `X.T @ G` has shape `(784, n) @ (n, 10)` = `(784, 10)`, the shape of `W`
+
+    and its entry `[j, c]` is the slope of the knob for pixel $j$ and digit $c$. Each column, like
+    a column of `W`, has one number per pixel: once you've written the exercise, you'll see the
+    columns drawn as $28 \times 28$ pictures.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "X.T  (784, n)", "values": [["·", "·", "⋯", "·"], ["·", "·", "⋯", "·"],
+                                             ["⋮", "⋮", "", "⋮"], ["·", "·", "⋯", "·"]],
+         "rows": ["pixel 0", "pixel 1", "⋮", "pixel 783"], "cols": ["pic 0", "pic 1", "⋯", "pic n-1"],
+         "marks": {(1, c): "blue" for c in range(4)}},
+        "@",
+        {"name": "G  (n, 10)", "values": [["·", "·", "⋯", "·"], ["·", "·", "⋯", "·"],
+                                          ["⋮", "⋮", "", "⋮"], ["·", "·", "⋯", "·"]],
+         "rows": ["pic 0", "pic 1", "⋮", "pic n-1"], "cols": ["digit 0", "digit 1", "⋯", "digit 9"],
+         "marks": {(r, 3): "red" for r in range(4)}},
+        "=",
+        {"name": "slopes for W  (784, 10)", "values": [["·", "·", "⋯", "·"], ["·", "·", "⋯", "·"],
+                                                       ["⋮", "⋮", "", "⋮"], ["·", "·", "⋯", "·"]],
+         "rows": ["pixel 0", "pixel 1", "⋮", "pixel 783"], "cols": ["digit 0", "digit 1", "⋯", "digit 9"],
+         "marks": {(1, 3): "box"}},
+    ], "At full size: X.T of shape 784 by n, times G of shape n by 10, gives the slopes for W, 784 by 10")
     return
 
 
@@ -562,13 +808,36 @@ def _(W_zero, X, Y, b_zero, h):
     after = cross_entropy(softmax(X @ (W_zero + nudge) + b_zero), Y)
     dW_zero, db_zero = gradient(X, Y, W_zero, b_zero)
     (after - before) / h, dW_zero[300, 3]
-    return
+    return (dW_zero,)
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
     Both about 0.0108. The formula and the nudge agree.
+
+    ### The slopes as pictures
+
+    Column $c$ of `dW_zero` has one slope per pixel for digit $c$, so it can be drawn as a
+    $28 \times 28$ picture, like the columns of `W` in chapter 06. Here is minus the slope for
+    each digit, the direction the first step will move its knobs: **blue** knobs go up, **red**
+    ones go down.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(dW_zero):
+    images.weight_maps([-dW_zero[:, c] for c in range(10)], list(range(10)))
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    A blurry copy of each digit, after a single step. At the all-zero start every share is 0.1,
+    so a knob goes up where its digit has more ink than pictures usually have, and down where it
+    has less: the matrix `X.T @ G` holds all ten of these pictures at once.
 
     ## Training
 
