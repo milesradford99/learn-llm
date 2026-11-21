@@ -2,7 +2,7 @@
 
 from html import escape
 
-from learn_llm.plot import AXIS, DOT, LINE, TEXT
+from learn_llm.plot import AXIS, DOT, GRID, LINE, TEXT
 
 # Mia's one-day recipe: p = w * t, g = p + b, e = g - s, L = e * e.
 _BOXES = {"w": (40, 40), "t": (40, 120), "p": (200, 80), "b": (200, 175),
@@ -201,3 +201,80 @@ def ring(names: list[str], label: str):
         parts.append(f'<text x="{x:.1f}" y="{y + 5:.1f}" font-size="14" fill="{TEXT}">{escape(name)}</text>')
     parts.append("</svg>")
     return mo.Html("".join(parts))
+
+
+def _width(text: str, size: float) -> float:
+    """About how wide `text` is in pixels: CJK characters are about twice a Latin one."""
+    return sum(1.0 if ord(ch) > 0x2E80 else 0.62 for ch in str(text)) * size
+
+
+def _entry(value) -> str:
+    return f"{value:g}" if isinstance(value, (int, float)) else str(value)
+
+
+def grids(parts: list, label: str):
+    """Small matrices side by side, with their entries, to show which entries meet.
+
+    A string in `parts` is drawn between the grids ("@", "=", "→"). A grid is a dict with
+    `name` (written above it), `values` (its rows, numbers or text), and optionally `rows`
+    and `cols` (a label for each row and column) and `marks`, mapping (row, column) to
+    "blue", "red" or "box" (outlined), or several of them with spaces. `label` describes the
+    picture for screen readers, in the lesson's language.
+    """
+    import marimo as mo
+
+    fills = {"blue": DOT, "red": LINE}
+    ch, top, gap, pad = 30, 52, 18, 10
+    height = top + ch * max(len(p["values"]) for p in parts if isinstance(p, dict)) + 12
+    x, body = pad, []
+    for part in parts:
+        if isinstance(part, str):
+            w = _width(part, 18) + 2 * gap
+            body.append(f'<text x="{x + w / 2:.1f}" y="{top + 20}" font-size="18" fill="{TEXT}">{escape(part)}</text>')
+            x += w
+            continue
+        values, rows, cols = part["values"], part.get("rows") or [], part.get("cols") or []
+        n_rows, n_cols = len(values), len(values[0])
+        cw = max([52.0] + [_width(_entry(v), 14) + 16 for r in values for v in r]
+                 + [_width(c, 11) + 16 for c in cols])
+        cw = max(cw, (_width(part.get("name", ""), 14) + 12) / n_cols)  # room for the name above
+        lw = max([0.0] + [_width(r, 11) + 8 for r in rows])
+        gx = x + lw
+        body.append(f'<text x="{gx + cw * n_cols / 2:.1f}" y="16" font-size="14" font-weight="600" '
+                    f'fill="{TEXT}">{escape(part.get("name", ""))}</text>')
+        for c, text in enumerate(cols):
+            body.append(f'<text x="{gx + cw * (c + 0.5):.1f}" y="{top - 8}" font-size="11" '
+                        f'fill="{AXIS}">{escape(text)}</text>')
+        for r, text in enumerate(rows):
+            body.append(f'<text x="{gx - 6:.1f}" y="{top + ch * r + 19}" font-size="11" text-anchor="end" '
+                        f'fill="{AXIS}">{escape(text)}</text>')
+        marks = part.get("marks") or {}
+        for r in range(n_rows):
+            for c in range(n_cols):
+                kinds = marks.get((r, c), "").split()
+                cx, cy = gx + cw * c, top + ch * r
+                for kind in kinds:
+                    if kind in fills:
+                        body.append(f'<rect x="{cx:.1f}" y="{cy}" width="{cw:.1f}" height="{ch}" '
+                                    f'fill="{fills[kind]}" fill-opacity="0.2"/>')
+                body.append(f'<text x="{cx + cw / 2:.1f}" y="{cy + 20}" font-size="14" '
+                            f'fill="{TEXT}">{escape(_entry(values[r][c]))}</text>')
+        for c in range(1, n_cols):
+            body.append(f'<line x1="{gx + cw * c:.1f}" y1="{top}" x2="{gx + cw * c:.1f}" y2="{top + ch * n_rows}" '
+                        f'stroke="{GRID}"/>')
+        for r in range(1, n_rows):
+            body.append(f'<line x1="{gx:.1f}" y1="{top + ch * r}" x2="{gx + cw * n_cols:.1f}" y2="{top + ch * r}" '
+                        f'stroke="{GRID}"/>')
+        body.append(f'<rect x="{gx:.1f}" y="{top}" width="{cw * n_cols:.1f}" height="{ch * n_rows}" rx="4" '
+                    f'fill="none" stroke="{AXIS}" stroke-width="1.2"/>')
+        for r in range(n_rows):
+            for c in range(n_cols):
+                if "box" in marks.get((r, c), "").split():
+                    body.append(f'<rect x="{gx + cw * c + 1.5:.1f}" y="{top + ch * r + 1.5}" width="{cw - 3:.1f}" '
+                                f'height="{ch - 3}" rx="3" fill="none" stroke="{TEXT}" stroke-width="2.5"/>')
+        x = gx + cw * n_cols
+    width = x + pad
+    head = (f'<svg viewBox="0 0 {width:.0f} {height}" width="100%" style="max-width:{width:.0f}px" role="img" '
+            f'aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
+            'font-family="ui-monospace, monospace" text-anchor="middle">')
+    return mo.Html(head + "".join(body) + "</svg>")
