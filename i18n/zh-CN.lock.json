@@ -6,7 +6,7 @@
   "04-keeping-the-books.py": "sha256:427f67d0fad15dba77b7e8bfb36a531eed9e51cfa12faa61f7c3d12566be08ce",
   "05-many-numbers-at-once.py": "sha256:217b09bbe06f020bfbd84279a83ca548868203fd0f37234ddbc2d1f801ce036a",
   "06-recognizing-digits.py": "sha256:c83473dde1b7fe3801ea9a88fde61a6046492b1b62e700e8526560645ea88aec",
-  "07-a-loss-for-choices.py": "sha256:322bcbe4e35bdf8289f5c57538415279c0b42590ffbce190cb4689340c88bf41",
+  "07-a-loss-for-choices.py": "sha256:6c97235591803a436b5f447d85b8bfdd5a82093cdec81dc855d790443467133f",
   "08-neural-networks.py": "sha256:fa3d09a0b422357e684b62141db0bb9a9ec3e9dc4be61b90c4741b3039017dd0",
   "09-training-that-works.py": "sha256:f8ec6b7dec69efcec3e33d0fe3c63dfbaf22a4086cc833b8c766235afa4e711a",
   "10-hello-pytorch.py": "sha256:d64c05f964dfb470cc989c7d0b7036d1c2fd88b896b62a7f969d42b4b20af8ce",

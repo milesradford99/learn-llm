@@ -358,13 +358,13 @@ def bars(items: list[tuple[str, float]], label: str, top: float | None = None, d
     return mo.Html("".join(parts))
 
 
-def network(layers: list[list], edges: list[tuple], label: str, heads: list[str] = ()):
+def network(layers: list[list], edges: list[tuple], label: str, heads: list[str] = (), at: float = 0.3):
     """A small network drawn as columns of nodes joined by arrows.
 
     `layers` is a list of columns, top to bottom; a node is a string or a list of lines (for
     example a value and, under it, a blame). `edges` are (column, from, to, text): an arrow from
     node `from` of that column to node `to` of the next, with `text` written on it near its
-    start. `heads` names each column above it. `label` describes the picture for screen
+    start (`at` of the way along). `heads` names each column above it. `label` describes the picture for screen
     readers, in the lesson's language.
     """
     import marimo as mo
@@ -396,7 +396,7 @@ def network(layers: list[list], edges: list[tuple], label: str, heads: list[str]
         parts.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{AXIS}" '
                      f'marker-end="url(#net)"/>')
         if text:
-            tx, ty = x1 + (x2 - x1) * 0.3, y1 + (y2 - y1) * 0.3
+            tx, ty = x1 + (x2 - x1) * at, y1 + (y2 - y1) * at
             w = _width(text, 13) + 8
             parts.append(f'<rect x="{tx - w / 2:.1f}" y="{ty - 10:.1f}" width="{w:.1f}" height="18" rx="4" '
                          f'fill="var(--background, white)" stroke="{GRID}"/>')
