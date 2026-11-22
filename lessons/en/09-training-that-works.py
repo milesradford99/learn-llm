@@ -12,6 +12,8 @@ with app.setup(hide_code=True):
     from learn_llm import hand, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
+    from learn_llm.diagrams import grids
+    from learn_llm.plot import chart
 
     LOCALE = "en"
     temps = [14, 17, 20, 22, 25, 28, 31, 33]
@@ -98,6 +100,30 @@ def _():
     For `[1, 3]`: the mean is 2, the distances are −1 and 1, squared 1 and 1, so the variance
     is 1. Its square root is the **typical size** of the distances (in NumPy, `np.sqrt`). For numbers centred on 0, the mean is 0 and the
     variance is simply the mean of the squares.
+
+    Why bother? Because the mean alone hides a lot. Two classes both average 4 out of 8 on a quiz:
+    in class A the marks are `[3, 4, 4, 5]`, in class B `[1, 4, 4, 7]`. Here they are on a number
+    line, each with a dashed line to the mean:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _a, _b = [3, 4, 4, 5], [1, 4, 4, 7]
+    _dots = [(x, 2 + 0.15 * (i == 2)) for i, x in enumerate(_a)] + [(x, 1 + 0.15 * (i == 2)) for i, x in enumerate(_b)]
+    _segs = [(x, 2, 4, 2) for x in _a] + [(x, 1, 4, 1) for x in _b]
+    chart((0, 8), (0.5, 2.5), "mark (class A on the upper line, class B on the lower)", "class",
+          dots=_dots, segments=_segs + [(4, 0.5, 4, 2.5)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Same mean, very different spread. Class A's distances from 4 are $-1, 0, 0, 1$: squared $1, 0, 0, 1$,
+    variance $2 / 4 = 0.5$. Class B's are $-3, 0, 0, 3$: squared $9, 0, 0, 9$, variance
+    $18 / 4 = 4.5$. The variance says in one number what the picture shows.
     """)
     return
 
@@ -168,7 +194,9 @@ def _():
     **Why not zeros?** If every knob starts at 0, every hidden detector computes exactly the same
     thing (all zeros), receives exactly the same blame, and gets exactly the same update. They
     stay identical forever. Worse: with `W2` at 0 too, chapter 08's `dH = G @ W2.T` is all zeros,
-    so no blame reaches `W1` at all. The cell below trains a network started at zero for 100
+    so no blame reaches `W1` at all. Think of 64 workers who start in the same place, get the
+    same instructions and are given the same corrections: they'll never end up doing different
+    jobs. The cell below trains a network started at zero for 100
     steps:
     """)
     return
@@ -197,7 +225,54 @@ def _():
     without looking at the others. A useful fact about sums of independent random parts: **their
     variances add**. Each part $w \times x$ (the picture is fixed; only the knobs are random)
     has variance $s^2 \times x^2$ (scaling a random number by $x$
-    scales its spread by $x$, so the variance by $x^2$). Adding the $n$ parts gives
+    scales its spread by $x$, so the variance by $x^2$).
+
+    "Variances add" sounds abstract, so check it on the smallest example: coins. A coin is worth
+    $+1$ for heads and $-1$ for tails. One coin has mean 0 and variance
+    $(1^2 + (-1)^2) / 2 = 1$. Two coins added up have four equally likely outcomes:
+
+    | first coin | second coin | sum | sum squared |
+    |---|---|---|---|
+    | +1 | +1 | +2 | 4 |
+    | +1 | −1 | 0 | 0 |
+    | −1 | +1 | 0 | 0 |
+    | −1 | −1 | −2 | 4 |
+
+    The mean of the sums is 0, so the variance is the mean of the squares: $8 / 4 = 2$, which is
+    $1 + 1$. The spreads don't cancel and don't multiply: they add.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### By hand: three coins
+
+    Three coins give 8 equally likely outcomes. Two of them have sum $+3$ or $-3$; the other six
+    have sum $+1$ or $-1$. What is the variance of the sum?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    coin_boxes = hand.boxes(["variance of three coins"])
+    return (coin_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(coin_boxes):
+    hand.marked(coin_boxes, {"variance of three coins": 3}, {
+        "variance of three coins": r"""the mean is 0, so take the mean of the squares: two outcomes square to 9 and six square to 1, over 8 outcomes""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Three coins, variance 3: one per coin. Back to the detector: adding the $n$ parts gives
     $s^2 \times (x_0^2 + x_1^2 + \ldots)$, and that sum of $n$ squares is $n$ times their mean:
 
     > $$\text{variance of } z \approx n \times s^2 \times (\text{mean of } x^2)$$
@@ -316,6 +391,11 @@ def _():
     (from 1.8 after layer 1 to 24 after layer 6, about 13 times bigger).
     $\sqrt{2 / n}$ keeps them steady. That's why deep networks need a reasoned start.
 
+    It's like passing a message down a line of people. If each speaks a little more quietly than
+    they heard it, by the sixth person it's a whisper nobody can make out; if each speaks a little
+    louder, it ends as a shout. The right starting size makes every layer pass the message on at
+    the volume it arrived.
+
     ## Small batches
 
     Each step in chapter 08 used all 10,000 pictures to compute one slope. But the slope is a
@@ -329,6 +409,37 @@ def _():
 
     One pass through all the batches is called an **epoch**: 10,000 pictures in batches of 100
     gives 100 steps per epoch, for the price of one full step.
+
+    It's like an opinion poll: you don't ask the whole country, you ask a random thousand people,
+    and the answer is close. Here is the slope of one knob of a freshly started network
+    (the one in `W2` with the biggest slope), worked out from all 10,000 pictures, and then from
+    five random batches of 100:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(X, Y):
+    _r = np.random.default_rng(3)
+    _k = [_r.normal(0, np.sqrt(2 / 784), (784, 64)), np.zeros(64), _r.normal(0, np.sqrt(2 / 64), (64, 10)), np.zeros(10)]
+    _Z, _H, _S = forward(X, *_k)
+    _full = backward(X, Y, _Z, _H, _S, _k[2])[2]
+    _j, _c = np.unravel_index(np.argmax(np.abs(_full)), _full.shape)
+    _rows = ["| pictures used | slope of this knob |", "|---|---|", f"| all 10,000 | **{_full[_j, _c]:.4f}** |"]
+    for _i in range(5):
+        _pick = _r.permutation(10000)[:100]
+        _Zb, _Hb, _Sb = forward(X[_pick], *_k)
+        _rows.append(f"| random batch {_i + 1} of 100 | {backward(X[_pick], Y[_pick], _Zb, _Hb, _Sb, _k[2])[2][_j, _c]:.4f} |")
+    mo.md("\n".join(_rows))
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Each batch is off, some by a lot, and now and then one even points the wrong way (batch 5
+    here). But on average they point the right way, at a hundredth of the work: over many steps
+    the errors go one way, then the other, and largely cancel out.
     """)
     return
 
@@ -367,6 +478,31 @@ def _(cut_boxes):
         'batches': r"""the slices start at positions 0, 4 and 8""",
         'in the last batch': r"""positions 8 and 9 are all that's left""",
     }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Here it is drawn out. Say the shuffle put the ten pictures in the order below. The slices
+    `[0:4]`, `[4:8]` and `[8:12]` of that order are the three batches; the last slice asks for
+    positions up to 12 but the order ends at 10, so it just stops there:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _order = [7, 2, 9, 0, 5, 1, 8, 3, 6, 4]
+    grids([
+        {"name": "the shuffled order: rng.permutation(10)", "values": [_order], "cols": [str(i) for i in range(10)],
+         "marks": {**{(0, c): "blue" for c in range(4)}, **{(0, c): "box" for c in range(4, 8)},
+                   **{(0, c): "red" for c in range(8, 10)}}},
+        "→",
+        {"name": "batch 0", "values": [_order[0:4]], "marks": {(0, c): "blue" for c in range(4)}},
+        {"name": "batch 1", "values": [_order[4:8]], "marks": {(0, c): "box" for c in range(4)}},
+        {"name": "batch 2", "values": [_order[8:10]], "marks": {(0, c): "red" for c in range(2)}},
+    ], "A shuffled order of ten positions cut into batches of 4, 4 and 2")
     return
 
 
@@ -562,7 +698,27 @@ def _(momentum_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    It climbs towards 10, the steady value worked out above, quickly at first and then more and more slowly.
+    It climbs towards 10, the steady value worked out above, quickly at first and then more and more slowly:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _v, _points = 0.0, [(0, 0.0)]
+    for _step in range(1, 61):
+        _v = 0.9 * _v + 1
+        _points.append((_step, _v))
+    chart((0, 60), (0, 11), "steps with slope 1", "velocity", curve=_points, dots=_points[1:4],
+          segments=[(0, 10, 60, 10)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Like a ball rolling down a long, gentle slope: each push is small, but it keeps its speed from
+    the pushes before, so it goes faster and faster, up to a top speed (here 10 times one push).
 
     ## Exercise 3: momentum_step
 
@@ -730,6 +886,42 @@ def _():
     −107, loss about 26.8, on raw temperatures, without any rescaling. Adam (with small changes) trains almost every
     large model today, including the transformers later in this course.
 
+    Here is the knob `b` along the way, for all three rules (each at the largest rate it takes
+    here). The best line has `b` at about −107:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    try:
+        _paths = {"plain steps": [], "momentum": [], "Adam": []}
+        _k = np.array([6.0, 0.0])
+        for _step in range(500):
+            _k = _k - 0.0016 * mia_gradient(_k)
+            _paths["plain steps"].append((_step + 1, _k[1]))
+        _k, _vel = np.array([6.0, 0.0]), np.zeros(2)
+        for _step in range(500):
+            _k, _vel = momentum_step(_k, _vel, mia_gradient(_k), 0.003)
+            _paths["momentum"].append((_step + 1, _k[1]))
+        _k, _m, _v = np.array([6.0, 0.0]), np.zeros(2), np.zeros(2)
+        for _t in range(1, 501):
+            _k, _m, _v = adam_step(_k, _m, _v, mia_gradient(_k), _t, 1.0)
+            _paths["Adam"].append((_t, _k[1]))
+        _out = chart((0, 500), (-130, 10), "step", "b", series=list(_paths.items()), segments=[(0, -107, 500, -107)])
+    except Exception:
+        _out = mo.md("*Finish exercises 3 and 4 to see the three paths.*")
+    _out
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Plain steps creep, and after 500 steps `b` has hardly begun its journey. Momentum gathers speed
+    and gets most of the way. Adam heads straight for the dashed line,
+    because it never let the huge slope of `w` decide how small the steps of `b` must be.
+
     ## Learning or memorising?
 
     Last loose end. Train the same network on only **500** pictures, for 200 epochs, and compare
@@ -759,6 +951,42 @@ def _():
     knobs to **memorise** its 500 pictures, scratches and smudges included, and memorised details
     don't carry over to new handwriting. This is called **overfitting**: the training score
     looks perfect and says nothing about new data. It's why we always keep test data aside.
+
+    It's the student who memorises the answers to last year's exam instead of learning the
+    method: full marks on last year's paper, stuck on this year's. Here is a run like the one
+    above (100 epochs on the same 500 pictures), with both scores measured after every epoch:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(X, X_test, Y, test_labels, train_labels):
+    try:
+        _r = np.random.default_rng(0)
+        _k = [_r.normal(0, np.sqrt(2 / 784), (784, 64)), np.zeros(64), _r.normal(0, np.sqrt(2 / 64), (64, 10)), np.zeros(10)]
+        _seen, _new = [], []
+        for _epoch in range(1, 101):
+            for _batch in batches(500, 50, _r):
+                _Z, _H, _S = forward(X[_batch], *_k)
+                _g = backward(X[_batch], Y[_batch], _Z, _H, _S, _k[2])
+                _k = [_w - 0.5 * _d for _w, _d in zip(_k, _g)]
+            _seen.append((_epoch, accuracy(forward(X[:500], *_k)[2], train_labels[:500])))
+            _new.append((_epoch, accuracy(forward(X_test, *_k)[2], test_labels)))
+        _out = chart((0, 100), (0.6, 1.0), "epoch", "accuracy",
+                     series=[("the 500 it learns from", _seen), ("2,000 new pictures", _new)])
+    except Exception:
+        _out = mo.md("*Finish exercise 2 to see the two curves.*")
+    _out
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    For the first few epochs both curves climb together: the network is learning things that are
+    true of handwriting in general. Then they part. The training curve keeps going until it hits
+    100%, while the test curve flattens out below 90%. Everything learned after that point is about
+    these 500 particular pictures, and it doesn't help with new ones.
     """)
     return
 

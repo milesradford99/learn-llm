@@ -14,6 +14,7 @@ LINE = "var(--crimson-9, #dc2626)"
 AXIS = "var(--slate-9, #64748b)"
 TEXT = "var(--slate-12, #1e293b)"
 GRID = "var(--slate-4, #e2e8f0)"
+SERIES = [LINE, DOT, "var(--grass-9, #16a34a)", "var(--amber-9, #d97706)"]
 
 
 def _ticks(lo: float, hi: float, n: int = 6) -> list[float]:
@@ -35,6 +36,7 @@ def chart(
     curve: list[tuple[float, float]] = (),  # points joined in order
     marker: tuple[float, float] | None = None,  # one highlighted point on the curve
     segments: list[tuple[float, float, float, float]] = (),  # (x1, y1, x2, y2), dashed
+    series: list[tuple[str, list[tuple[float, float]]]] = (),  # (name, points): several curves, with a key
 ):
     """Return an SVG chart as a marimo Html element."""
     import marimo as mo
@@ -80,9 +82,20 @@ def chart(
     if curve:
         path = " ".join(f"{'M' if i == 0 else 'L'}{sx(x):.1f},{sy(y):.1f}" for i, (x, y) in enumerate(curve))
         parts.append(f'<path d="{path}" fill="none" stroke="{LINE}" stroke-width="2.5"/>')
+    for i, (_, points) in enumerate(series):
+        path = " ".join(f"{'M' if j == 0 else 'L'}{sx(x):.1f},{sy(y):.1f}" for j, (x, y) in enumerate(points))
+        dash = ' stroke-dasharray="6 4"' if i % 2 else ""
+        parts.append(f'<path d="{path}" fill="none" stroke="{SERIES[i % len(SERIES)]}" stroke-width="2.5"{dash}/>')
     for x, y in dots:
         parts.append(f'<circle cx="{sx(x):.1f}" cy="{sy(y):.1f}" r="5" fill="{DOT}"/>')
     if marker:
         parts.append(f'<circle cx="{sx(marker[0]):.1f}" cy="{sy(marker[1]):.1f}" r="7" fill="{DOT}" stroke="white" stroke-width="2"/>')
-    parts.append("</g></svg>")
+    parts.append("</g>")
+    for i, (name, _) in enumerate(series):
+        y = PAD_T + 14 + 18 * i
+        dash = ' stroke-dasharray="6 4"' if i % 2 else ""
+        parts.append(f'<line x1="{W - PAD_R - 150}" y1="{y - 4}" x2="{W - PAD_R - 126}" y2="{y - 4}" '
+                     f'stroke="{SERIES[i % len(SERIES)]}" stroke-width="2.5"{dash}/>')
+        parts.append(f'<text x="{W - PAD_R - 120}" y="{y}" font-size="12" fill="{TEXT}">{escape(name)}</text>')
+    parts.append("</svg>")
     return mo.Html("".join(parts))
