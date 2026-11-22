@@ -1,0 +1,706 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.25.2",
+    "script_metadata_hash": null
+  },
+  "cells": [
+    {
+      "id": "setup",
+      "code_hash": "7bb262d481b57b59b109373b1e880fbe",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hbol",
+      "code_hash": "f7e630df683244061a7aff536a69a7db",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"04-keeping-the-books\">04 \u00b7 Keeping the books</h1>\n<span class=\"paragraph\">In chapter 03 you worked out the backward steps for Mia's line by hand, then wrote them as\ncode in <code>day_slopes</code>. That works, but only for that one recipe. Change the recipe (a curve\ninstead of a line, a neural network) and you'd have to work out every backward step by hand\nagain.</span>\n<span class=\"paragraph\">In this chapter you'll build a small <strong>engine</strong> that does it for you. While a calculation\nruns, the engine writes down every step in a book, like a shopkeeper keeping the books. Then\nit reads the book backwards and hands out the blame by itself, using exactly the rules from\nchapter 03.</span>\n<h2 id=\"what-the-engine-has-to-do\">What the engine has to do</h2>\n<span class=\"paragraph\">Recall the rule from chapter 03. Every box gets a blame (how much the loss moves per unit\nthis box moves, for a tiny nudge), and walking backwards:</span>\n<blockquote>\n<span class=\"paragraph\">blame of a box = the sum, over every arrow leaving it, of\n(local slope of that arrow <marimo-tex class=\"arithmatex\">||(\\times||)</marimo-tex> blame of the box the arrow points to)</span>\n</blockquote>\n<span class=\"paragraph\">So for every box, the engine must remember three things: its <strong>value</strong>, the boxes it was\n<strong>made from</strong>, and the <strong>local slope</strong> towards each of them. That calls for a new kind of\nPython value.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "1ede77400ff481c06acb76e83fcc01bd",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"a-new-kind-of-value-classes\">A new kind of value: classes</h2>\n<span class=\"paragraph\">So far you've used numbers, lists and functions. Python lets you invent your own kind of\nvalue, with named slots for whatever it needs to remember. The recipe for a new kind of value\nis called a <strong>class</strong>.</span>\n<span class=\"paragraph\">Think of a form at a doctor's office. The blank form is printed once, with labelled boxes:\nname, age, phone. Every patient gets their <strong>own copy</strong> and fills in their own answers. A\nclass is the blank form; each value made from it is one filled-in copy. Our form has four\nboxes: the number itself, its blame, the boxes it was made from, and the local slopes\ntowards them. Here is the class:</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "6b0fed3c1db684f55df045ef2bfe3fd3",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "e33d38ddbd6701d6e690275b40e861ff",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Line by line:</span>\n<ul>\n<li><code>class Value:</code> says \"here is the recipe for a new kind of value, called <code>Value</code>\".</li>\n<li><code>def __init__(self, data):</code> is the setup function Python runs every time you make a new\n  <code>Value</code>. The name <code>__init__</code> (two underscores on each side, short for <em>initialise</em>) is fixed\n  by Python. It has two inputs: <code>self</code> is the new value being set up, and <code>data</code> is the\n  number you give it.</li>\n<li><code>self.data = data</code> stores the number in a slot called <code>data</code>, inside this value. A slot like\n  this is called an <strong>attribute</strong>. The word <code>data</code> appears twice here, meaning two different\n  things: on the left, <code>self.data</code> is the slot inside the value; on the right, <code>data</code> is the\n  input from the <code>def</code> line.</li>\n<li><code>self.grad = 0</code> starts its blame at 0. (\"grad\" is short for gradient: the blame from\n  chapter 03. It starts at 0 because blame is collected later, by adding.)</li>\n<li><code>self.parents = []</code> and <code>self.local_slopes = []</code> start as empty lists: the boxes this one\n  was made from, and the local slope towards each, filled in later.</li>\n</ul>\n<span class=\"paragraph\">Making one looks like calling a function, but with only <strong>one</strong> input: <code>Value(3)</code>. You never\npass <code>self</code> yourself. <code>Value(3)</code> does three things:</span>\n<ol>\n<li>Python makes a new, empty value.</li>\n<li>It runs <code>__init__</code>, passing that new value in as <code>self</code> and <code>3</code> in as <code>data</code>. So\n   <code>self.data = data</code> fills the new value's <code>data</code> slot with 3.</li>\n<li>It gives the filled-in value back, and <code>v = Value(3)</code> stores it under the name <code>v</code>.</li>\n</ol>\n<span class=\"paragraph\">A dot reads a slot: <code>v.data</code> means \"the <code>data</code> slot of <code>v</code>\". Each value has its own slots, so\nbelow, <code>v</code> and <code>u</code> hold different numbers. (As in chapter 03, several values separated by\ncommas on the last line show up as a numbered list of items, counting from 0.)</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "1c853472c7daee63761d5189e057e069",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "application/json": "[3, 10, 0, []]"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "d74db968ea7a88c871a57eb51ff46b4a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Drawn as cards, <code>v</code> and <code>u</code> are two copies of the same form, filled in differently. Their\n<code>parents</code> lists are empty: nobody worked them out from other boxes, you typed them in.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "6283698d49e18f09997c93664a3bbd6d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<svg viewBox=\"0 0 354 136\" width=\"100%\" style=\"max-width:354px\" role=\"img\" aria-label=\"Two cards with the same four slots: v holds 3 and u holds 10; both have blame 0 and no parents\" xmlns=\"http://www.w3.org/2000/svg\" font-family=\"ui-monospace, monospace\"><g><rect x=\"4.0\" y=\"4\" width=\"165.0\" height=\"128\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"4.0\" y=\"4\" width=\"165.0\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"86.5\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">v</text><text x=\"14.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 3</text><text x=\"14.0\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">grad = 0</text><text x=\"14.0\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = []</text><text x=\"14.0\" y=\"114\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = []</text></g><g><rect x=\"185.0\" y=\"4\" width=\"165.0\" height=\"128\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"185.0\" y=\"4\" width=\"165.0\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"267.5\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">u</text><text x=\"195.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 10</text><text x=\"195.0\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">grad = 0</text><text x=\"195.0\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = []</text><text x=\"195.0\" y=\"114\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = []</text></g></svg>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "f441b070b6ee95549cb96eef73a21348",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">You can also store into a slot with the dot: <code>v.grad = 5</code> would replace its blame with 5.</span>\n<h2 id=\"the-book\">The book</h2>\n<span class=\"paragraph\">The book is an ordinary list. Every time the engine does one step, it adds the result to the\nend of the book. Lists have a built-in way to do that: <code>book.append(x)</code> adds <code>x</code> to the end\nof <code>book</code>. (The dot again: <code>append</code> is a function that belongs to every list.)</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "78b78bbab788885ba24e157236f71cb8",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "application/json": "[5, 8]"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "f453eb81f81890b83b1fa900be6303a6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"one-step-multiply\">One step: multiply</h2>\n<span class=\"paragraph\">Here is how the engine multiplies two values. It works out the result like normal maths,\nthen fills in the result's memory and writes it in the book:</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "fbdd63212c3aef4bdc3534f2bc40cefa",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "emfo",
+      "code_hash": "aec331847698ea0d12e9ae4999f1bdbe",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><ul>\n<li><code>out = Value(a.data * b.data)</code>: a new box holding the product of the two values.</li>\n<li><code>out.parents = [a, b]</code>: it was made from <code>a</code> and <code>b</code>.</li>\n<li><code>out.local_slopes = [b.data, a.data]</code>: the local slopes from chapter 03. In <marimo-tex class=\"arithmatex\">||(a \\times b||)</marimo-tex>, nudging\n  <marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> moves the result by <marimo-tex class=\"arithmatex\">||(b||)</marimo-tex> per unit, and nudging <marimo-tex class=\"arithmatex\">||(b||)</marimo-tex> moves it by <marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> per unit. The order\n  matches <code>parents</code>: the first slope goes with the first parent.</li>\n<li><code>book.append(out)</code>: write the step in the book.</li>\n<li><code>return out</code>: hand back the new box, so it can be used in the next step.</li>\n</ul>\n<span class=\"paragraph\">Try it:</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "ffcf307954ce2ae858d27e160123d63c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "application/json": "[12, [4, 3], 1]"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "81111cee37a557a67f3a415b7c2c3d3c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><code>z</code> holds 12; its local slopes are 4 (towards <code>x</code>) and 3 (towards <code>y</code>); the book has one entry.\nAs cards:</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "iLit",
+      "code_hash": "58d1233be14648ca703cb2c048db3291",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<svg viewBox=\"0 0 567 116\" width=\"100%\" style=\"max-width:567px\" role=\"img\" aria-label=\"Cards x holding 3 and y holding 4, and the card z holding 12 with parents x and y and local slopes 4 and 3\" xmlns=\"http://www.w3.org/2000/svg\" font-family=\"ui-monospace, monospace\"><g><rect x=\"4.0\" y=\"4\" width=\"165.0\" height=\"108\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"4.0\" y=\"4\" width=\"165.0\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"86.5\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">x</text><text x=\"14.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 3</text><text x=\"14.0\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = []</text><text x=\"14.0\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = []</text></g><g><rect x=\"185.0\" y=\"4\" width=\"165.0\" height=\"108\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"185.0\" y=\"4\" width=\"165.0\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"267.5\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">y</text><text x=\"195.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 4</text><text x=\"195.0\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = []</text><text x=\"195.0\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = []</text></g><g><rect x=\"366.0\" y=\"4\" width=\"197.3\" height=\"108\" rx=\"8\" fill=\"none\" stroke=\"var(--blue-9, #2563eb)\" stroke-width=\"3\"/><rect x=\"366.0\" y=\"4\" width=\"197.3\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"464.7\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">z (book entry 0)</text><text x=\"376.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 12</text><text x=\"376.0\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = [x, y]</text><text x=\"376.0\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = [4, 3]</text></g></svg>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "7f0bf32a4f41212671e8261fc0948e4a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Read <code>z</code>'s card as a sentence: \"I am 12. I was made from <code>x</code> and <code>y</code>. If <code>x</code> moves by a tiny\namount, I move 4 times as much; if <code>y</code> moves, I move 3 times as much.\" That is everything the\nbackward pass will need to know about this step. Notice that only <code>z</code> went into the book:\n<code>x</code> and <code>y</code> weren't made by a step, you typed them in.</span>\n<h2 id=\"exercise-1-add\">Exercise 1: add</h2>\n<span class=\"paragraph\">Write <code>add(a, b, book)</code> the same way. Think first: in <code>a + b</code>, if <code>a</code> gets a tiny nudge, how\nmuch does the result move per unit? And for <code>b</code>? (Chapter 03's table has the answer.)</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ROlb",
+      "code_hash": "dbf85388efd5510a84a299bcb8860dcc",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "044bf2c815c6aa40e8c539ae521e19c7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-callout-output data-html='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e&#92;u003cstrong&#92;u003eNot started yet: delete the todo() line and write your code there.&#92;u003c/strong&#92;u003e&#92;u003c/span&#92;u003e&#92;n&#92;u003cul&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c add(3, 4) holds 7: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c its local slopes are [1, 1]: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c its parents are [a, b], in that order: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c the result is written in the book, once: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003c/ul&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;'></marimo-callout-output>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TqIu",
+      "code_hash": "dba72a4f9c0dfb1186f780fb800d7240",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"exercise-2-subtract\">Exercise 2: subtract</h2>\n<span class=\"paragraph\">Write <code>sub(a, b, book)</code> for <code>a - b</code>. Careful with the second local slope: if <code>b</code> grows by a\ntiny <code>h</code>, the result <code>a - b</code> <strong>shrinks</strong> by <code>h</code>. So per unit of <code>b</code>, the result moves by <code>-1</code>.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Vxnm",
+      "code_hash": "7f65732d338ecddd4e304d4eb2c88699",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "DnEU",
+      "code_hash": "ec5d9951837e127fceb9d6c029b5d852",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-callout-output data-html='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e&#92;u003cstrong&#92;u003eNot started yet: delete the todo() line and write your code there.&#92;u003c/strong&#92;u003e&#92;u003c/span&#92;u003e&#92;n&#92;u003cul&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c sub(3, 4) holds -1: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c its local slopes are [1, -1]: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c its parents are [a, b], in that order: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c the result is written in the book, once: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003c/ul&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;'></marimo-callout-output>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ulZA",
+      "code_hash": "3e137a415224fd222140442bf06e634a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"exercise-3-square\">Exercise 3: square</h2>\n<span class=\"paragraph\">Write <code>square(a, book)</code> for <marimo-tex class=\"arithmatex\">||(a \\times a||)</marimo-tex>. It has only <strong>one</strong> parent, <marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> (so <code>out.parents = [a]</code>),\nand one local slope: chapter 02's slope of <marimo-tex class=\"arithmatex\">||(x \\times x||)</marimo-tex>, which is <marimo-tex class=\"arithmatex\">||(2 \\times x||)</marimo-tex>. Here <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex> is <code>a.data</code>.\n(On the keyboard, <marimo-tex class=\"arithmatex\">||(\\times||)</marimo-tex> is <code>*</code>: Python doesn't know the <marimo-tex class=\"arithmatex\">||(\\times||)</marimo-tex> sign.)</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ecfG",
+      "code_hash": "2fb10e8d7cf2bf2a2262f03eac73bc8c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Pvdt",
+      "code_hash": "6833976ff2587542d86f7d34735f9ee9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-callout-output data-html='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e&#92;u003cstrong&#92;u003eNot started yet: delete the todo() line and write your code there.&#92;u003c/strong&#92;u003e&#92;u003c/span&#92;u003e&#92;n&#92;u003cul&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c square(-5) holds 25: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c its one local slope is &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(2 &#92;&#92;times (-5) = -10||)&#92;u003c/marimo-tex&#92;u003e: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c its only parent is a: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c the result is written in the book, once: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003c/ul&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;'></marimo-callout-output>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZBYS",
+      "code_hash": "c98787de3f5383b30f0fce438b777ba9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"reading-the-book-backwards\">Reading the book backwards</h2>\n<span class=\"paragraph\">Now the heart of the engine. After the calculation, the book lists every step in the order it\nhappened, and the last entry is the loss. To hand out blame:</span>\n<ol>\n<li>The loss blames itself 1: <code>loss.grad = 1</code>.</li>\n<li>Go through the book <strong>from the last entry to the first</strong>. For each entry, pass blame to each\n   of its parents: add (local slope <marimo-tex class=\"arithmatex\">||(\\times||)</marimo-tex> this entry's blame) to the parent's blame.</li>\n</ol>\n<span class=\"paragraph\">We <strong>add</strong> to the parent's blame because blames add up when a box feeds several arrows\n(chapter 03): each arrow out of a box brings its own share.</span>\n<span class=\"paragraph\">Why from last to first? A box is always written in the book <strong>after</strong> the boxes it was made\nfrom: it can't be worked out before them. So when we read backwards, we reach every box that\n<em>uses</em> a value before we reach the value itself. By the time we get to a box, all its users\nhave already passed their share of blame to it: its blame is complete, and it's safe to pass\nit on.</span>\n<span class=\"paragraph\">Here it is on Mia's day 1 from chapter 03. Recording <marimo-tex class=\"arithmatex\">||(p = w \\times t||)</marimo-tex>, <marimo-tex class=\"arithmatex\">||(g = p + b||)</marimo-tex>, <marimo-tex class=\"arithmatex\">||(e = g - s||)</marimo-tex>,\n<marimo-tex class=\"arithmatex\">||(L = e \\times e||)</marimo-tex> writes the book in this order: entry 0 is <marimo-tex class=\"arithmatex\">||(p||)</marimo-tex>, then <marimo-tex class=\"arithmatex\">||(g||)</marimo-tex>, then <marimo-tex class=\"arithmatex\">||(e||)</marimo-tex>, then <marimo-tex class=\"arithmatex\">||(L||)</marimo-tex>. With\nday 1's numbers, <marimo-tex class=\"arithmatex\">||(p = 140||)</marimo-tex>, <marimo-tex class=\"arithmatex\">||(g = 80||)</marimo-tex>, <marimo-tex class=\"arithmatex\">||(e = 17||)</marimo-tex> and <marimo-tex class=\"arithmatex\">||(L = 289||)</marimo-tex>, so the local slope of <marimo-tex class=\"arithmatex\">||(e \\times e||)</marimo-tex>\nis <marimo-tex class=\"arithmatex\">||(2 \\times 17 = 34||)</marimo-tex>.</span>\n<span class=\"paragraph\">Drag the slider to read the book one entry at a time, from the end. The blue outline shows\nthe entry being read; the blames grow under the boxes as they arrive.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aLJB",
+      "code_hash": "620ca9df26501d9208ca934db28ac8fd",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='aLJB-0' random-id='62f7c939-ccf1-32bd-7e5e-e25f15adcccc'><marimo-slider data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eentries read&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-start='0' data-stop='4' data-steps='[]' data-debounce='false' data-disabled='false' data-orientation='&quot;horizontal&quot;' data-show-value='true' data-include-input='false' data-full-width='false'></marimo-slider></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nHfw",
+      "code_hash": "e992af147c262c01c598721b57b95b66",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>Start.</strong> The loss blames itself 1: <marimo-tex class=\"arithmatex\">||(L||)</marimo-tex> gets blame 1. Nothing has been read yet.</span></span><svg viewBox=\"0 0 760 270\" width=\"100%\" style=\"max-width:760px\" role=\"img\" aria-label=\"w times t gives p; p plus b gives g; g minus s gives e; e squared gives L\" xmlns=\"http://www.w3.org/2000/svg\" font-family=\"ui-monospace, monospace\" text-anchor=\"middle\"><defs><marker id=\"arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"var(--slate-9, #64748b)\"/></marker></defs><line x1=\"78.0\" y1=\"40\" x2=\"158.0\" y2=\"80\" stroke=\"var(--slate-9, #64748b)\" marker-end=\"url(#arrow)\"/><text x=\"118.0\" y=\"54.0\" font-size=\"15\" fill=\"var(--slate-12, #1e293b)\">\u00d7</text><line x1=\"78.0\" y1=\"120\" x2=\"158.0\" y2=\"80\" stroke=\"var(--slate-9, #64748b)\" marker-end=\"url(#arrow)\"/><text x=\"118.0\" y=\"94.0\" font-size=\"15\" fill=\"var(--slate-12, #1e293b)\">\u00d7</text><line x1=\"238.0\" y1=\"80\" x2=\"318.0\" y2=\"125\" stroke=\"var(--slate-9, #64748b)\" marker-end=\"url(#arrow)\"/><text x=\"278.0\" y=\"96.5\" font-size=\"15\" fill=\"var(--slate-12, #1e293b)\">+</text><line x1=\"238.0\" y1=\"175\" x2=\"318.0\" y2=\"125\" stroke=\"var(--slate-9, #64748b)\" marker-end=\"url(#arrow)\"/><text x=\"278.0\" y=\"144.0\" font-size=\"15\" fill=\"var(--slate-12, #1e293b)\">+</text><line x1=\"398.0\" y1=\"125\" x2=\"478.0\" y2=\"170\" stroke=\"var(--slate-9, #64748b)\" marker-end=\"url(#arrow)\"/><text x=\"438.0\" y=\"141.5\" font-size=\"15\" fill=\"var(--slate-12, #1e293b)\">\u2212</text><line x1=\"398.0\" y1=\"215\" x2=\"478.0\" y2=\"170\" stroke=\"var(--slate-9, #64748b)\" marker-end=\"url(#arrow)\"/><text x=\"438.0\" y=\"186.5\" font-size=\"15\" fill=\"var(--slate-12, #1e293b)\">\u2212</text><line x1=\"558.0\" y1=\"170\" x2=\"618.0\" y2=\"170\" stroke=\"var(--slate-9, #64748b)\" marker-end=\"url(#arrow)\"/><text x=\"588.0\" y=\"164.0\" font-size=\"15\" fill=\"var(--slate-12, #1e293b)\">\u00b2</text><rect x=\"2.0\" y=\"18.0\" width=\"76\" height=\"44\" rx=\"6\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><text x=\"40\" y=\"45\" font-size=\"14\" fill=\"var(--slate-12, #1e293b)\">w = 10</text><rect x=\"2.0\" y=\"98.0\" width=\"76\" height=\"44\" rx=\"6\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><text x=\"40\" y=\"125\" font-size=\"14\" fill=\"var(--slate-12, #1e293b)\">t = 14</text><rect x=\"162.0\" y=\"58.0\" width=\"76\" height=\"44\" rx=\"6\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><text x=\"200\" y=\"85\" font-size=\"14\" fill=\"var(--slate-12, #1e293b)\">p = 140</text><rect x=\"162.0\" y=\"153.0\" width=\"76\" height=\"44\" rx=\"6\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><text x=\"200\" y=\"180\" font-size=\"14\" fill=\"var(--slate-12, #1e293b)\">b = -60</text><rect x=\"322.0\" y=\"103.0\" width=\"76\" height=\"44\" rx=\"6\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><text x=\"360\" y=\"130\" font-size=\"14\" fill=\"var(--slate-12, #1e293b)\">g = 80</text><rect x=\"322.0\" y=\"193.0\" width=\"76\" height=\"44\" rx=\"6\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><text x=\"360\" y=\"220\" font-size=\"14\" fill=\"var(--slate-12, #1e293b)\">s = 63</text><rect x=\"482.0\" y=\"148.0\" width=\"76\" height=\"44\" rx=\"6\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><text x=\"520\" y=\"175\" font-size=\"14\" fill=\"var(--slate-12, #1e293b)\">e = 17</text><rect x=\"622.0\" y=\"148.0\" width=\"76\" height=\"44\" rx=\"6\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><text x=\"660\" y=\"175\" font-size=\"14\" fill=\"var(--slate-12, #1e293b)\">L = 289</text><text x=\"660\" y=\"209.0\" font-size=\"13\" fill=\"var(--crimson-9, #dc2626)\">blame 1</text></svg><svg viewBox=\"0 0 907 136\" width=\"100%\" style=\"max-width:907px\" role=\"img\" aria-label=\"The book: four entries p, g, e, L, each card with its value, parents, local slopes and blame so far\" xmlns=\"http://www.w3.org/2000/svg\" font-family=\"ui-monospace, monospace\"><g><rect x=\"4.0\" y=\"4\" width=\"213.4\" height=\"128\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"4.0\" y=\"4\" width=\"213.4\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"110.7\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">entry 0: p</text><text x=\"14.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 140</text><text x=\"14.0\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = [w, t]</text><text x=\"14.0\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = [14, 10]</text><text x=\"14.0\" y=\"114\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">grad = 0</text></g><text x=\"234.4\" y=\"74.0\" font-size=\"18\" text-anchor=\"middle\" fill=\"var(--slate-9, #64748b)\">\u2192</text><g><rect x=\"251.4\" y=\"4\" width=\"197.3\" height=\"128\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"251.4\" y=\"4\" width=\"197.3\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"350.0\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">entry 1: g</text><text x=\"261.4\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 80</text><text x=\"261.4\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = [p, b]</text><text x=\"261.4\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = [1, 1]</text><text x=\"261.4\" y=\"114\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">grad = 0</text></g><text x=\"465.6\" y=\"74.0\" font-size=\"18\" text-anchor=\"middle\" fill=\"var(--slate-9, #64748b)\">\u2192</text><g><rect x=\"482.6\" y=\"4\" width=\"205.3\" height=\"128\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"482.6\" y=\"4\" width=\"205.3\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"585.3\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">entry 2: e</text><text x=\"492.6\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 17</text><text x=\"492.6\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = [g, s]</text><text x=\"492.6\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = [1, -1]</text><text x=\"492.6\" y=\"114\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">grad = 0</text></g><text x=\"705.0\" y=\"74.0\" font-size=\"18\" text-anchor=\"middle\" fill=\"var(--slate-9, #64748b)\">\u2192</text><g><rect x=\"722.0\" y=\"4\" width=\"181.1\" height=\"128\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"722.0\" y=\"4\" width=\"181.1\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"812.5\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">entry 3: L</text><text x=\"732.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 289</text><text x=\"732.0\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = [e]</text><text x=\"732.0\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = [34]</text><text x=\"732.0\" y=\"114\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">grad = 1</text></g></svg></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "xXTn",
+      "code_hash": "50f8b131f385439a98ab404eaf2531d6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">At every step, the box being read already holds its <strong>complete</strong> blame, because the only box\nthat uses it was further down the book and has been read. In the end <marimo-tex class=\"arithmatex\">||(w||)</marimo-tex> has 476 and <marimo-tex class=\"arithmatex\">||(b||)</marimo-tex>\nhas 34: chapter 03's numbers, without working out a single backward step by name.</span>\n<h3 id=\"by-hand-a-box-used-twice\">By hand: a box used twice</h3>\n<span class=\"paragraph\">In Mia's recipe every box is used once. Now one where a box is used <strong>twice</strong>. Take <marimo-tex class=\"arithmatex\">||(a = 2||)</marimo-tex>\nand <marimo-tex class=\"arithmatex\">||(b = 5||)</marimo-tex>, and the recipe <marimo-tex class=\"arithmatex\">||(u = a + b||)</marimo-tex>, then <marimo-tex class=\"arithmatex\">||(v = u \\times a||)</marimo-tex>. Recording it writes a book of two\nentries:</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "AjVT",
+      "code_hash": "0a7beaf7ded9e9154ed6b30e848f5ad7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<svg viewBox=\"0 0 635 116\" width=\"100%\" style=\"max-width:635px\" role=\"img\" aria-label=\"a holds 2, b holds 5; entry 0 is u, 7, made from a and b with local slopes 1 and 1; entry 1 is v, 14, made from u and a with local slopes 2 and 7\" xmlns=\"http://www.w3.org/2000/svg\" font-family=\"ui-monospace, monospace\"><g><rect x=\"4.0\" y=\"4\" width=\"92.5\" height=\"108\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"4.0\" y=\"4\" width=\"92.5\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"50.2\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">a</text><text x=\"14.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 2</text></g><g><rect x=\"112.5\" y=\"4\" width=\"92.5\" height=\"108\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"112.5\" y=\"4\" width=\"92.5\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"158.7\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">b</text><text x=\"122.5\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 5</text></g><g><rect x=\"221.0\" y=\"4\" width=\"197.3\" height=\"108\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"221.0\" y=\"4\" width=\"197.3\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"319.6\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">entry 0: u</text><text x=\"231.0\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 7</text><text x=\"231.0\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = [a, b]</text><text x=\"231.0\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = [1, 1]</text></g><g><rect x=\"434.2\" y=\"4\" width=\"197.3\" height=\"108\" rx=\"8\" fill=\"none\" stroke=\"var(--slate-9, #64748b)\" stroke-width=\"1.2\"/><rect x=\"434.2\" y=\"4\" width=\"197.3\" height=\"28\" rx=\"8\" fill=\"var(--blue-9, #2563eb)\" fill-opacity=\"0.12\"/><text x=\"532.9\" y=\"23\" font-size=\"14\" font-weight=\"600\" text-anchor=\"middle\" fill=\"var(--slate-12, #1e293b)\">entry 1: v</text><text x=\"444.2\" y=\"54\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">data = 14</text><text x=\"444.2\" y=\"74\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">parents = [u, a]</text><text x=\"444.2\" y=\"94\" font-size=\"13\" text-anchor=\"start\" fill=\"var(--slate-12, #1e293b)\">local_slopes = [2, 7]</text></g></svg>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "pHFh",
+      "code_hash": "a96d01b6a275da4be982baefdfbdba50",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">(<marimo-tex class=\"arithmatex\">||(v = u \\times a||)</marimo-tex>, so nudging <marimo-tex class=\"arithmatex\">||(u||)</marimo-tex> moves <marimo-tex class=\"arithmatex\">||(v||)</marimo-tex> by <marimo-tex class=\"arithmatex\">||(a = 2||)</marimo-tex> per unit, and nudging <marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> moves it by\n<marimo-tex class=\"arithmatex\">||(u = 7||)</marimo-tex> per unit.) Read the book backwards by hand, starting from <marimo-tex class=\"arithmatex\">||(v||)</marimo-tex> with blame 1, and fill in\nthe blames: first after reading entry 1, then after reading entry 0. Remember that blame is\n<strong>added</strong> to what a box already has.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "NCOB",
+      "code_hash": "716c12775daccab7ce2b67bead0d55f7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aqbW",
+      "code_hash": "f76d257743e5d0fd8c94e735ac3d71c4",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><div style='display: flex;flex: 1;flex-direction: row;justify-content: flex-start;align-items: normal;flex-wrap: wrap;gap: 0.5rem'><marimo-ui-element object-id='NCOB-4' random-id='1e87475c-824e-fbb5-7780-ff02b6abd1b3'><marimo-number data-initial-value='null' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eu.grad&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-step='1' data-debounce='false' data-full-width='false' data-disabled='false'></marimo-number></marimo-ui-element><marimo-ui-element object-id='NCOB-5' random-id='50a41409-9e1a-5274-46cc-3df92fb213fc'><marimo-number data-initial-value='null' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003ea.grad after entry 1&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-step='1' data-debounce='false' data-full-width='false' data-disabled='false'></marimo-number></marimo-ui-element><marimo-ui-element object-id='NCOB-6' random-id='4c104f68-dbc0-e3c0-4f7c-6d3c002281f2'><marimo-number data-initial-value='null' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003ea.grad at the end&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-step='1' data-debounce='false' data-full-width='false' data-disabled='false'></marimo-number></marimo-ui-element><marimo-ui-element object-id='NCOB-7' random-id='07e66663-d565-c3ee-8cb5-db55a63b3ab4'><marimo-number data-initial-value='null' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eb.grad&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-step='1' data-debounce='false' data-full-width='false' data-disabled='false'></marimo-number></marimo-ui-element></div><marimo-callout-output data-html='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cul&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c &#92;u003cstrong&#92;u003eu.grad&#92;u003c/strong&#92;u003e: entry 1, &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(v||)&#92;u003c/marimo-tex&#92;u003e, has blame 1 and passes (local slope towards &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(u||)&#92;u003c/marimo-tex&#92;u003e) &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(&#92;&#92;times 1||)&#92;u003c/marimo-tex&#92;u003e to &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(u||)&#92;u003c/marimo-tex&#92;u003e&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c &#92;u003cstrong&#92;u003ea.grad after entry 1&#92;u003c/strong&#92;u003e: &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(v||)&#92;u003c/marimo-tex&#92;u003e passes (local slope towards &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(a||)&#92;u003c/marimo-tex&#92;u003e) &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(&#92;&#92;times 1||)&#92;u003c/marimo-tex&#92;u003e to &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(a||)&#92;u003c/marimo-tex&#92;u003e&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c &#92;u003cstrong&#92;u003ea.grad at the end&#92;u003c/strong&#92;u003e: entry 0, &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(u||)&#92;u003c/marimo-tex&#92;u003e, now passes &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(1 &#92;&#92;times||)&#92;u003c/marimo-tex&#92;u003e (its blame) to &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(a||)&#92;u003c/marimo-tex&#92;u003e, &#92;u003cstrong&#92;u003eon top of&#92;u003c/strong&#92;u003e what &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(a||)&#92;u003c/marimo-tex&#92;u003e already has&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c &#92;u003cstrong&#92;u003eb.grad&#92;u003c/strong&#92;u003e: entry 0, &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(u||)&#92;u003c/marimo-tex&#92;u003e, passes &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(1 &#92;&#92;times||)&#92;u003c/marimo-tex&#92;u003e (its blame) to &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(b||)&#92;u003c/marimo-tex&#92;u003e&#92;u003c/li&#92;u003e&#92;n&#92;u003c/ul&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;'></marimo-callout-output></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TRpd",
+      "code_hash": "b45df2748ba6705b2222b0d2644e8006",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> got blame along <strong>two</strong> roads: 7 straight from <marimo-tex class=\"arithmatex\">||(v||)</marimo-tex>, and 2 more by way of <marimo-tex class=\"arithmatex\">||(u||)</marimo-tex>. Check it\nwith chapter 02's slopes: <marimo-tex class=\"arithmatex\">||(v = (a + b) \\times a = a \\times a + b \\times a||)</marimo-tex>, whose slope for <marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> is\n<marimo-tex class=\"arithmatex\">||(2 \\times a + b = 2 \\times 2 + 5 = 9||)</marimo-tex>. That's why the engine <strong>adds</strong> to a parent's blame instead\nof replacing it: replacing would forget one of the roads.</span>\n<h3 id=\"the-wrong-order\">The wrong order</h3>\n<span class=\"paragraph\">Here is what goes wrong in the other order. Take <marimo-tex class=\"arithmatex\">||(x \\times x + x||)</marimo-tex> at <marimo-tex class=\"arithmatex\">||(x = 3||)</marimo-tex>. Its slope is\n<marimo-tex class=\"arithmatex\">||(2 \\times 3 + 1 = 7||)</marimo-tex> (slope of <marimo-tex class=\"arithmatex\">||(x \\times x||)</marimo-tex> plus slope of <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex>). The cell below records it, then reads the\nbook <strong>front to back</strong> instead. (It uses your <code>add</code>, so it shows an error until Exercise 1\npasses.)</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TXez",
+      "code_hash": "f6b2f29009ae1e0233d905c3f392529b",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "not written yet",
+          "traceback": null
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">\"/tmp/marimo_638/__marimo__cell_TXez_.py\"</span>, line <span class=\"m\">4</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">total3</span> <span class=\"o\">=</span> <span class=\"n\">add</span><span class=\"p\">(</span><span class=\"n\">product</span><span class=\"p\">,</span> <span class=\"n\">x3</span><span class=\"p\">,</span> <span class=\"n\">wrong_book</span><span class=\"p\">)</span>\n<span class=\"w\">             </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">\"/tmp/marimo_638/__marimo__cell_ROlb_.py\"</span>, line <span class=\"m\">3</span>, in <span class=\"n\">add</span>\n<span class=\"w\">    </span><span class=\"n\">todo</span><span class=\"p\">()</span>\n  File <span class=\"nb\">\"/home/user/learn-llm/learn_llm/__init__.py\"</span>, line <span class=\"m\">6</span>, in <span class=\"n\">todo</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"ne\">NotImplementedError</span><span class=\"p\">(</span><span class=\"s2\">\"not written yet\"</span><span class=\"p\">)</span>\n<span class=\"gr\">NotImplementedError</span>: <span class=\"n\">not written yet</span>\n</pre></div>\n</span>",
+          "mimetype": "application/vnd.marimo+traceback"
+        }
+      ]
+    },
+    {
+      "id": "dNNg",
+      "code_hash": "8d3e4694b0607a9e5e9ae4b4544df75e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">It says <code>1</code>, not <code>7</code>. (Below, <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex> is the cell's <marimo-tex class=\"arithmatex\">||(x_3||)</marimo-tex>, the product is <code>product</code> and the total\nis <code>total3</code>.) The book holds two entries: first the product (<code>mul(x3, x3)</code>, whose parents\nlist is <code>[x3, x3]</code>: the <strong>same</strong> box twice, once per side of the <marimo-tex class=\"arithmatex\">||(\\times||)</marimo-tex>), then the total.\nFront to back:</span>\n<ol>\n<li>The product comes first. Its blame is still 0, because the total hasn't passed it any\n   yet. So <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex> gets <marimo-tex class=\"arithmatex\">||(3 \\times 0||)</marimo-tex> from the first side and <marimo-tex class=\"arithmatex\">||(3 \\times 0||)</marimo-tex> from the second: nothing.</li>\n<li>Then the total (blame 1) passes <marimo-tex class=\"arithmatex\">||(1 \\times 1||)</marimo-tex> to the product and <marimo-tex class=\"arithmatex\">||(1 \\times 1||)</marimo-tex> to <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex>. <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex> now has 1. The\n   product finally has its blame, 1, but its entry has already been read, so that blame is\n   never passed on.</li>\n</ol>\n<span class=\"paragraph\">Backwards, the total comes first: the product gets 1 and <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex> gets 1. Then the product, now\nholding its complete blame 1, passes <marimo-tex class=\"arithmatex\">||(3 \\times 1 + 3 \\times 1 = 6||)</marimo-tex> more to <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex>. Total: <marimo-tex class=\"arithmatex\">||(1 + 6 = 7||)</marimo-tex>.</span>\n<span class=\"paragraph\">To go through a list from last to first, Python has <code>reversed</code>: <code>for entry in reversed(book):</code>.</span>\n<h2 id=\"exercise-4-backward\">Exercise 4: backward</h2>\n<span class=\"paragraph\">Write <code>backward(loss, book)</code>. Your four lines replace <code>todo()</code>, so they all sit inside the\n<code>def</code>. The first two start at the same place, where <code>todo()</code> was. Each of the last two is\npushed in one more step than the line above it, because it sits inside that line's loop.\nHere is the whole function, so you can see where everything goes:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">def</span><span class=\"w\"> </span><span class=\"nf\">backward</span><span class=\"p\">(</span><span class=\"n\">loss</span><span class=\"p\">,</span> <span class=\"n\">book</span><span class=\"p\">):</span>\n    <span class=\"n\">loss</span><span class=\"o\">.</span><span class=\"n\">grad</span> <span class=\"o\">=</span> <span class=\"mi\">1</span>\n    <span class=\"k\">for</span> <span class=\"n\">entry</span> <span class=\"ow\">in</span> <span class=\"nb\">reversed</span><span class=\"p\">(</span><span class=\"n\">book</span><span class=\"p\">):</span>\n        <span class=\"k\">for</span> <span class=\"n\">parent</span><span class=\"p\">,</span> <span class=\"n\">slope</span> <span class=\"ow\">in</span> <span class=\"nb\">zip</span><span class=\"p\">(</span><span class=\"n\">entry</span><span class=\"o\">.</span><span class=\"n\">parents</span><span class=\"p\">,</span> <span class=\"n\">entry</span><span class=\"o\">.</span><span class=\"n\">local_slopes</span><span class=\"p\">):</span>\n            <span class=\"n\">parent</span><span class=\"o\">.</span><span class=\"n\">grad</span> <span class=\"o\">=</span> <span class=\"n\">parent</span><span class=\"o\">.</span><span class=\"n\">grad</span> <span class=\"o\">+</span> <span class=\"n\">slope</span> <span class=\"o\">*</span> <span class=\"n\">entry</span><span class=\"o\">.</span><span class=\"n\">grad</span>\n</code></pre></div>\n<span class=\"paragraph\">Type only the four lines under <code>def</code>: the <code>def</code> line is already there in your cell. It\ndoesn't need to <code>return</code> anything: the blames are stored in the boxes themselves.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "yCnT",
+      "code_hash": "51675fb6bfc99fbb20583a833dbb81b9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wlCL",
+      "code_hash": "7f0ea3b861f69fb8880302c7744ed2d7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-callout-output data-html='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e&#92;u003cstrong&#92;u003eNot started yet: delete the todo() line and write your code there.&#92;u003c/strong&#92;u003e&#92;u003c/span&#92;u003e&#92;n&#92;u003cul&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(x &#92;&#92;times x + x||)&#92;u003c/marimo-tex&#92;u003e at &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(x = 3||)&#92;u003c/marimo-tex&#92;u003e: blame of &#92;u003cmarimo-tex class=&#92;&quot;arithmatex&#92;&quot;&#92;u003e||(x||)&#92;u003c/marimo-tex&#92;u003e is 7: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c Mia&#x27;s day 1: blames (476, 34) for w and b, and -34 for s: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003c/ul&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;'></marimo-callout-output>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "kqZH",
+      "code_hash": "f1240abed7840c35b2302d0c22af0c0a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"mias-first-day-through-the-engine\">Mia's first day, through the engine</h2>\n<span class=\"paragraph\">Here is chapter 03's day 1 again (<code>t = 14</code>, <code>s = 63</code>, knobs <code>w = 10</code>, <code>b = -60</code>), this time\nwritten with your engine. Nobody tells it the backward steps. (This cell and the picture\nbelow it show an error until Exercises 1 to 4 all pass.)</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wAgl",
+      "code_hash": "59bec07e2d40ba054a20e76d7e540863",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "not written yet",
+          "traceback": null
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">\"/tmp/marimo_638/__marimo__cell_wAgl_.py\"</span>, line <span class=\"m\">7</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">g</span> <span class=\"o\">=</span> <span class=\"n\">add</span><span class=\"p\">(</span><span class=\"n\">p</span><span class=\"p\">,</span> <span class=\"n\">b</span><span class=\"p\">,</span> <span class=\"n\">day_book</span><span class=\"p\">)</span>\n<span class=\"w\">        </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">\"/tmp/marimo_638/__marimo__cell_ROlb_.py\"</span>, line <span class=\"m\">3</span>, in <span class=\"n\">add</span>\n<span class=\"w\">    </span><span class=\"n\">todo</span><span class=\"p\">()</span>\n  File <span class=\"nb\">\"/home/user/learn-llm/learn_llm/__init__.py\"</span>, line <span class=\"m\">6</span>, in <span class=\"n\">todo</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"ne\">NotImplementedError</span><span class=\"p\">(</span><span class=\"s2\">\"not written yet\"</span><span class=\"p\">)</span>\n<span class=\"gr\">NotImplementedError</span>: <span class=\"n\">not written yet</span>\n</pre></div>\n</span>",
+          "mimetype": "application/vnd.marimo+traceback"
+        }
+      ]
+    },
+    {
+      "id": "rEll",
+      "code_hash": "f9af772438ce30d973f0397d4e2379c8",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (NotImplementedError): ",
+          "traceback": null
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "dGlV",
+      "code_hash": "04ac442f1a0aa3aafb440402346f4635",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">476 for <code>w</code> and 34 for <code>b</code>: the same numbers you found by hand in chapter 03, and every box\nin the picture got its blame. The data boxes <code>t</code> and <code>s</code> were made with <code>Value</code> too, so they collect blame as\nwell; it's simply never used, because we can't change the data.</span>\n<h2 id=\"exercise-5-the-gradient-of-the-whole-loss\">Exercise 5: the gradient of the whole loss</h2>\n<span class=\"paragraph\">Write <code>engine_gradient(w_num, b_num, xs, ys)</code>: the slopes of Mia's <strong>mean</strong> loss for both\nknobs, computed entirely by the engine. It's chapter 03's <code>gradient</code>, but you only write the\nforward calculation:</span>\n<ol>\n<li><code>book = []</code>, then the knobs as values: <code>w = Value(w_num)</code> and <code>b = Value(b_num)</code>. (<code>w_num</code>\n   is a plain number; <code>w</code> is the box made from it.) From here on, combine boxes only with\n   <code>add</code>, <code>sub</code>, <code>mul</code> and <code>square</code>, never with <code>+</code>, <code>-</code> or <code>*</code>: only those functions write\n   the step in the book.</li>\n<li>A running total that is itself a value: <code>total = Value(0)</code>.</li>\n<li>Loop with <code>for x, y in zip(xs, ys):</code>. Inside: <code>guess = add(mul(w, Value(x), book), b, book)</code>,\n   then <code>e = sub(guess, Value(y), book)</code>, then <code>total = add(total, square(e, book), book)</code>.</li>\n<li>After the loop (these lines line up with <code>for</code>, not inside it), the mean is the total\n   times <code>1 / len(xs)</code>:\n   <code>mean = mul(total, Value(1 / len(xs)), book)</code>.</li>\n<li><code>backward(mean, book)</code>, then <code>return w.grad, b.grad</code>.</li>\n</ol></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SdmI",
+      "code_hash": "7aa64d63582707497208cc6a0b13f903",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lgWD",
+      "code_hash": "151be2a63ed85ac5dfcf74ba689b82e9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-callout-output data-html='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e&#92;u003cstrong&#92;u003eNot started yet: delete the todo() line and write your code there.&#92;u003c/strong&#92;u003e&#92;u003c/span&#92;u003e&#92;n&#92;u003cul&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c engine_gradient(1, 0, [1, 2], [2, 4]) is (-5, -3), as in chapter 03: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c Mia&#x27;s data at w = 10, b = -60: (-94, 2.5): not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003cli&#92;u003e\u2b1c calling it twice gives the same answer twice: not written yet (the todo() line is still there)&#92;u003c/li&#92;u003e&#92;n&#92;u003c/ul&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;'></marimo-callout-output>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "yOPj",
+      "code_hash": "ec79de0ad95abc68643838da67cd698c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">At <code>w = 10</code>, <code>b = -60</code> it gives <code>(-94, 2.5)</code>, exactly chapter 03's hand-built gradient.</span>\n<h2 id=\"fresh-boxes-every-time\">Fresh boxes every time</h2>\n<span class=\"paragraph\">One trap. Because <code>backward</code> <strong>adds</strong> to each blame, running it twice on the same boxes adds\nthe blame twice. The cell below records day 1 once, then reads the book backwards twice. You\nmight expect double, 952. (Like the cells above, it needs Exercises 1 to 4.)</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "fwwy",
+      "code_hash": "3aa07c8d3b246ee3ab71d77aa78b5927",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "not written yet",
+          "traceback": null
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">\"/tmp/marimo_638/__marimo__cell_fwwy_.py\"</span>, line <span class=\"m\">3</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">loss2</span> <span class=\"o\">=</span> <span class=\"n\">square</span><span class=\"p\">(</span><span class=\"n\">sub</span><span class=\"p\">(</span><span class=\"n\">add</span><span class=\"p\">(</span><span class=\"n\">mul</span><span class=\"p\">(</span><span class=\"n\">w2</span><span class=\"p\">,</span> <span class=\"n\">Value</span><span class=\"p\">(</span><span class=\"mi\">14</span><span class=\"p\">),</span> <span class=\"n\">twice_book</span><span class=\"p\">),</span> <span class=\"n\">Value</span><span class=\"p\">(</span><span class=\"o\">-</span><span class=\"mi\">60</span><span class=\"p\">),</span> <span class=\"n\">twice_book</span><span class=\"p\">),</span> <span class=\"n\">Value</span><span class=\"p\">(</span><span class=\"mi\">63</span><span class=\"p\">),</span> <span class=\"n\">twice_book</span><span class=\"p\">),</span> <span class=\"n\">twice_book</span><span class=\"p\">)</span>\n<span class=\"w\">                       </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">\"/tmp/marimo_638/__marimo__cell_ROlb_.py\"</span>, line <span class=\"m\">3</span>, in <span class=\"n\">add</span>\n<span class=\"w\">    </span><span class=\"n\">todo</span><span class=\"p\">()</span>\n  File <span class=\"nb\">\"/home/user/learn-llm/learn_llm/__init__.py\"</span>, line <span class=\"m\">6</span>, in <span class=\"n\">todo</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"ne\">NotImplementedError</span><span class=\"p\">(</span><span class=\"s2\">\"not written yet\"</span><span class=\"p\">)</span>\n<span class=\"gr\">NotImplementedError</span>: <span class=\"n\">not written yet</span>\n</pre></div>\n</span>",
+          "mimetype": "application/vnd.marimo+traceback"
+        }
+      ]
+    },
+    {
+      "id": "LJZf",
+      "code_hash": "1cbb05c3926099d896849915b82759dc",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">The second time, <code>w</code>'s blame is 2380, five times 476. On the second pass every box still\nholds its blame from the first pass, and the new shares are added on top of it, box after box\ndown the book:</span>\n<ul>\n<li><code>L</code> is set to 1 again (that line stores, it doesn't add).</li>\n<li><marimo-tex class=\"arithmatex\">||(e||)</marimo-tex> had 34 and gets <marimo-tex class=\"arithmatex\">||(34 \\times 1||)</marimo-tex> more: 68.</li>\n<li><marimo-tex class=\"arithmatex\">||(g||)</marimo-tex> had 34 and gets <marimo-tex class=\"arithmatex\">||(1 \\times 68||)</marimo-tex> more: 102.</li>\n<li><marimo-tex class=\"arithmatex\">||(p||)</marimo-tex> had 34 and gets <marimo-tex class=\"arithmatex\">||(1 \\times 102||)</marimo-tex> more: 136.</li>\n<li><marimo-tex class=\"arithmatex\">||(w||)</marimo-tex> had 476 and gets <marimo-tex class=\"arithmatex\">||(14 \\times 136 = 1904||)</marimo-tex> more: 2380.</li>\n</ul>\n<span class=\"paragraph\">Each box passes on its whole, already-wrong blame, so the mistake grows at every step. That's\nwhy <code>engine_gradient</code> makes <strong>fresh</strong> <code>Value</code> boxes, with a fresh book, every\ntime it's called: every blame starts at 0. (Real deep-learning tools have the same rule;\nyou'll meet it again later in the course.)</span>\n<h2 id=\"the-payoff-a-new-recipe-no-new-backward-steps\">The payoff: a new recipe, no new backward steps</h2>\n<span class=\"paragraph\">Mia kept selling through a heatwave. Above about 33 \u00b0C, sales started to <strong>drop</strong>: it's too hot\nto go out. Here are all 11 days:</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "urSm",
+      "code_hash": "e827b002c96d15df9d835a27bb223d2a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><code>temps</code> = [14, 17, 20, 22, 25, 28, 31, 33, 35, 37, 39]<br />\n<code>sales</code> = [63, 90, 137, 148, 193, 234, 257, 288, 280, 262, 236]</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "jxvo",
+      "code_hash": "1e39eb1fceb58d93d3fdcf27ef493781",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">A straight line can't go up and then come down. A <strong>curve</strong> can:</span>\n<blockquote><marimo-tex class=\"arithmatex\">||[\\text{guess} = a \\times x \\times x + w \\times x + b||]</marimo-tex></blockquote>\n<span class=\"paragraph\">with three knobs <code>a</code>, <code>w</code> and <code>b</code>. With <code>a</code> negative, the curve bends downwards, like a hill.</span>\n<span class=\"paragraph\">One practical detail: here <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex> is the temperature measured <strong>from 25 \u00b0C, in tens of degrees</strong>:\n<code>x = (t - 25) / 10</code>, so 14 \u00b0C becomes -1.1 and 39 \u00b0C becomes 1.4. Why? In chapter 02 you saw\n<marimo-tex class=\"arithmatex\">||(b||)</marimo-tex> creep along because the loss reacts more strongly to a knob that gets multiplied by big\nnumbers, so one learning rate was safe for <marimo-tex class=\"arithmatex\">||(w||)</marimo-tex> but timid for <marimo-tex class=\"arithmatex\">||(b||)</marimo-tex>. Here <marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> gets multiplied by\n<marimo-tex class=\"arithmatex\">||(x \\times x||)</marimo-tex>:</span>\n<table>\n<thead>\n<tr>\n<th><marimo-tex class=\"arithmatex\">||(x||)</marimo-tex></th>\n<th><marimo-tex class=\"arithmatex\">||(x \\times x||)</marimo-tex> runs from</th>\n<th>to</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>raw temperature <marimo-tex class=\"arithmatex\">||(t||)</marimo-tex></td>\n<td><marimo-tex class=\"arithmatex\">||(14 \\times 14 = 196||)</marimo-tex></td>\n<td><marimo-tex class=\"arithmatex\">||(39 \\times 39 = 1521||)</marimo-tex></td>\n</tr>\n<tr>\n<td><code>t / 10</code></td>\n<td><marimo-tex class=\"arithmatex\">||(1.4 \\times 1.4 = 1.96||)</marimo-tex></td>\n<td><marimo-tex class=\"arithmatex\">||(3.9 \\times 3.9 = 15.21||)</marimo-tex></td>\n</tr>\n<tr>\n<td><code>(t - 25) / 10</code></td>\n<td>0</td>\n<td><marimo-tex class=\"arithmatex\">||(1.4 \\times 1.4 = 1.96||)</marimo-tex></td>\n</tr>\n</tbody>\n</table>\n<span class=\"paragraph\">With raw temperatures, <marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> would be multiplied by numbers up to 1521 and <marimo-tex class=\"arithmatex\">||(b||)</marimo-tex> by 1: a learning\nrate small enough for <marimo-tex class=\"arithmatex\">||(a||)</marimo-tex> would leave <marimo-tex class=\"arithmatex\">||(b||)</marimo-tex> almost frozen. Dividing by 10 helps, but <marimo-tex class=\"arithmatex\">||(x \\times x||)</marimo-tex>\nstill reaches 15. Subtracting 25 first puts the middle of the\ntemperatures at 0, so <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex> runs from about -1 to 1.5 and <marimo-tex class=\"arithmatex\">||(x \\times x||)</marimo-tex> from 0 to 2. Now all three knobs\nare multiplied by numbers of similar size (<marimo-tex class=\"arithmatex\">||(x \\times x||)</marimo-tex>, <marimo-tex class=\"arithmatex\">||(x||)</marimo-tex>, and 1), and one learning rate suits\nall of them.</span>\n<span class=\"paragraph\">For a curve, chapter 03 would have meant working out new backward steps by hand. With your\nengine, you only write the forward recipe. Press the button to fit the curve with 500 steps of\ngradient descent, every gradient computed by your engine:</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "mWxS",
+      "code_hash": "dd7521890f654522a6fe5814d2e31ce3",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='mWxS-0' random-id='7db965b3-987d-dcfc-2966-3f874a5f36c2'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eFit the curve&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "CcZR",
+      "code_hash": "2d56696dc5bfc816bbc7a72de9446d73",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><em>Press <strong>Fit the curve</strong> to start.</em></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "YWSi",
+      "code_hash": "2270b35b5fc9a4e319b1ae9d9420407c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">The curve rises with the temperature and then turns down in the heatwave, and its loss is far\nlower than any straight line's. Because <code>x</code> is measured from 25 \u00b0C in tens of degrees, the\nknobs read differently from the line's <code>w = 10</code>, <code>b = -60</code>: <code>b</code> is the guess at 25 \u00b0C\n(where <code>x = 0</code>), about 205 ice creams; <code>w</code> is how fast sales climb there, about 101 more per\n10 degrees; and the negative <code>a</code> bends the curve back down as it gets hotter. You never worked out a backward step for it: the engine kept\nthe books and did it.</span>\n<h2 id=\"whats-next\">What's next</h2>\n<span class=\"paragraph\">Your engine handles one number at a time: every multiplication is its own box in the book.\nReal models work with thousands or millions of numbers at once, and a book entry per number\nwould be far too slow. In <strong>Chapter 05</strong> you'll learn to work with whole lists of numbers in\none go (vectors and matrices), and then teach the same backward rules to them.</span>\n<h2 id=\"what-you-can-do-now\">What you can do now</h2>\n<ul>\n<li>define a class with <code>__init__</code>, and read and store attributes with a dot</li>\n<li>add to a list with <code>append</code>, and walk it backwards with <code>reversed</code></li>\n<li>build an engine that records a calculation and backpropagates through it automatically</li>\n<li>explain why the book must be read backwards, and why each calculation needs fresh boxes</li>\n<li>fit a new model by writing only its forward recipe</li>\n</ul>\n<hr />\n<!-- go-deeper -->\n<span class=\"paragraph\"><strong>Go deeper (optional):</strong> this kind of engine is called <em>automatic differentiation</em> (reverse\nmode), or <em>autograd</em>. The order we get from the book is a <em>topological order</em>.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    }
+  ]
+}

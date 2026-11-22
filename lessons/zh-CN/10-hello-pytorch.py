@@ -15,6 +15,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
+    from learn_llm.diagrams import cards, grids, pipeline
 
     LOCALE = "zh-CN"
     laptop_speed()
@@ -34,7 +35,23 @@ def _():
     ## 张量：PyTorch 的数组
 
     PyTorch 里相当于 NumPy 数组的东西叫**张量**（tensor）。名字听着唬人，其实张量就是一个有形状的数字数组。你学过的大部分内容都能照搬：`@`、`*`、`.T`、`.shape`、索引和切片的用法都一样。
+
+    每一种你其实都见过了。单独一个数，形状是空的 `()`。一串数（向量，比如某一天的三个输入），形状里有一个数。
+    一张表（矩阵，比如第 05 章那 8 天），形状里有两个数。一叠表，形状里有三个数：第 06 章的图片是 10,000 张 $28 \times 28$ 的表，
+    形状是 `(10000, 28, 28)`，就像一本书，每一页上印着一张表。
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "()", "values": [[7]]}, "   ",
+        {"name": "(3,)", "values": [[17, 1, 0]]}, "   ",
+        {"name": "(2, 3)", "values": [[14, 0, 0], [17, 1, 0]]}, "   ",
+        {"name": "(2, 2, 3)：第 0 页", "values": [[1, 0, 1], [0, 1, 0]]}, " ",
+        {"name": "第 1 页", "values": [[0, 0, 1], [1, 1, 0]]},
+    ], "形状为空、3、2 乘 3、2 乘 2 乘 3 的张量：一个数、一行、一张表、两张叠起来的表")
     return
 
 
@@ -65,7 +82,7 @@ def _():
     ///
 
     /// admonition | 🧰 工具箱：数字有多精确？
-    计算机用固定大小的内存存每个数字，内存大小用**位**（bit）来计量。NumPy 通常每个数用 64 位，能保证大约 16 位数字是准的。PyTorch 通常用 32 位，能保证大约 7 位：内存省一半，训练也完全够用。所以同一个算式，最后几位可能不一样。下面用两种方式算 $0.1 \times 3$。（两边都不正好是 0.3。这很正常：计算机用二进制存数，0.1 没法精确存下来。）
+    计算机用固定大小的内存存每个数字，内存大小用**位**（bit）来计量。NumPy 通常每个数用 64 位，能保证大约 16 位数字是准的。PyTorch 通常用 32 位，能保证大约 7 位：内存省一半，训练也完全够用。所以同一个算式，最后几位可能不一样。下面用两种方式算 $0.1 \times 3$。（两边都不正好是 0.3。这很正常：计算机用二进制存数，0.1 没法精确存下来，就像 $1 / 3$ 没法用小数精确写出来一样：0.333… 永远写不完，总得在某处停下。）
     ///
     """)
     return
@@ -124,6 +141,34 @@ def _():
     | `v.data`、`v.grad` | `v.item()`、`v.grad` |
 
     `requires_grad=True` 的意思是“这是一个旋钮：凡是由它算出来的东西都要记账”。对这样的张量做的每一次 `+` 和 `*` 都会被记下来，连同来源和局部斜率，和你的 `mul` 做的一样。`backward()` 再倒着读账本，把 `.grad` 填好。`w.grad` 是一个只装着一个数的张量，`.item()` 把它变成普通的 Python 数字。
+
+    账本藏起来了，但它确实在。每个由旋钮算出来的结果，都带着一张“是哪一步算出了我”的便条，而那一步又指向它之前的几步。
+    从 `L` 出发，每次沿着一个来源往回找，得到的是下面这些（名字是 PyTorch 自己起的，是从这次计算里现读出来的）：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _w = torch.tensor(10.0, requires_grad=True)
+    _b = torch.tensor(-60.0, requires_grad=True)
+    _L = (_w * 14 + _b - 63) ** 2
+    _names, _step = [], _L.grad_fn
+    while _step is not None:
+        _names.append(type(_step).__name__)
+        _step = _step.next_functions[0][0] if _step.next_functions else None
+    _meaning = [["L = e × e", "你的 square"], ["e = g − 63", "你的 sub"], ["g = p + b", "你的 add"],
+                ["p = w × 14", "你的 mul"], ["把责任加进", "w.grad"]]
+    cards([{"title": name, "lines": lines} for name, lines in zip(_names, _meaning)],
+          "PyTorch 为米娅这一天藏起来的账本，从 L 倒着读：乘方、减法、加法、乘法，最后一步把责任加进旋钮 w", arrows="→")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    这就是第 04 章的账本，从末尾读起：`backward()` 走的正是这条链。（`PowBackward0` 是把 `e * e` 写成乘方时的那一步；
+    最后一张卡片 `AccumulateGrad`，就是把到达的责任**加**进 `w.grad` 的那一步。记住这个“加”字。）
 
     你的引擎有一个坑：责任是**累加**到框上的，所以必须从 0 开始。PyTorch 也一样，而且是有意这样设计的。下面我们重新算一遍损失，再走一次反向，但不清空 `.grad`：
     """)
@@ -364,7 +409,28 @@ def _():
 
     `nn.Linear(784, 64)` 造出一个 784 个输入、64 个输出的层，里面装着一个权重矩阵和一个偏置向量。它们已经是随机的，并且带着 `requires_grad=True`。（`torch.manual_seed(0)` 让随机数可以重现，相当于 `default_rng(0)`。）
 
-    有一点和我们的习惯相反：我们的 `W1` 是 `(784, 64)`，每个探测器占一列；PyTorch 存的是 `(64, 784)`，每个探测器占一行。数字是一样的，只是转置了。调用 `layer(X)` 算的是 `X @ layer.weight.T + layer.bias`，也就是我们的 `Z`。把对象当函数来调用，看起来有点怪，其实只是运行它内部计算的简写。
+    有一点和我们的习惯相反：我们的 `W1` 是 `(784, 64)`，每个探测器占一列；PyTorch 存的是 `(64, 784)`，每个探测器占一行。数字是一样的，只是转置了。
+    3 个输入、2 个探测器时是这样的，标出的是探测器 1 的旋钮：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "我们的 W  (3, 2)", "values": [[1, 4], [2, 5], [3, 6]], "rows": ["输入 0", "输入 1", "输入 2"],
+         "cols": ["探测器 0", "探测器 1"], "marks": {(r, 1): "blue" for r in range(3)}},
+        "   ",
+        {"name": "layer.weight  (2, 3)", "values": [[1, 2, 3], [4, 5, 6]], "rows": ["探测器 0", "探测器 1"],
+         "cols": ["输入 0", "输入 1", "输入 2"], "marks": {(1, c): "blue" for c in range(3)}},
+    ], "我们的 W 把每个探测器的旋钮放在一列里；layer.weight 把它们放在一行里：同样的数，转置了一下")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    所以 `layer.weight.T` 就是我们的 `W`。调用 `layer(X)` 算的是 `X @ layer.weight.T + layer.bias`，也就是我们的 `Z`。把对象当函数来调用，看起来有点怪，其实只是运行它内部计算的简写。
 
     `nn.Sequential(...)` 把层串起来：每一层的输出是下一层的输入。`nn.ReLU()` 就是弯折，一个没有旋钮的层。
     """)
@@ -521,6 +587,23 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    pipeline([("zero_grad()", ".grad 归零"), ("model(X)", "分数、损失"),
+              ("backward()", "填好 .grad"), ("step()", "挪动旋钮")],
+             ["然后", "然后", "然后"],
+             "训练的一步：清空责任，算出损失，填好责任，挪动旋钮；下一批再从清空开始")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    然后下一批又从最左边开始。本课程里的每一个训练循环，直到最后的语言模型，都是把这张图放进一个 `for` 循环里。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## 找出错误
 
@@ -557,6 +640,42 @@ def _(bug_boxes):
 def _():
     mo.md(r"""
     从第二步开始，每个旋钮的 `.grad` 里装的是新的责任**加上**前面几步剩下的全部，就像上面翻倍成 952 那样。旋钮在动，但方向不对，也走得太远。
+
+    用数字来看，还是米娅的第 1 天：走八个普通的步子（`torch.optim.SGD` 就是第 02 章的步进规则：旋钮减去学习率乘以斜率），
+    一次每步都清空，一次从不清空。表里是每一步的 `w`、`w.grad` 里装的数，以及损失：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _rows = {}
+    for _clear in (True, False):
+        _w = torch.tensor(10.0, requires_grad=True)
+        _b = torch.tensor(-60.0, requires_grad=True)
+        _opt = torch.optim.SGD([_w, _b], lr=0.001)
+        _rows[_clear] = []
+        for _step in range(8):
+            if _clear:
+                _opt.zero_grad()
+            _loss = (_w * 14 + _b - 63) ** 2
+            _loss.backward()
+            _rows[_clear].append(f"{_w.item():.2f} | {_w.grad.item():.0f} | {_loss.item():.1f}")
+            _opt.step()
+    _lines = ["| 步 | `w`（每步清空） | `w.grad`（每步清空） | 损失（每步清空） "
+              "| `w`（从不清空） | `w.grad`（从不清空） | 损失（从不清空） |",
+              "|---|---|---|---|---|---|---|"]
+    for _i, (_a, _c) in enumerate(zip(_rows[True], _rows[False])):
+        _lines.append(f"| {_i + 1} | {_a} | {_c} |")
+    mo.md("\n".join(_lines))
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    每步都清空时，损失每一步都在下降，从 289 降到几乎为 0。从不清空时，每一步的责任都堆在旧的上面。一开始这一堆还指着对的方向，损失甚至降得更快。
+    可到了第 3 步，`w` 已经很好了，这一堆却还在说“往下走”，于是 `w` 冲了过头，损失又爬回将近 300，这一堆才掉过头来。旋钮来回摆动，停不下来。
 
     ## 练习 4：train_step
 
@@ -651,7 +770,8 @@ def _():
 
     ## GPU 是什么？
 
-    到现在为止，所有数字都是电脑的主处理器 **CPU** 算出来的。CPU 里有几个能力很强的工人。**GPU**（图形处理器，本来是为同时给屏幕上几百万个点上色而造的）里有成千上万个简单的工人，这正适合我们的工作：矩阵乘法就是成千上万个相同的小求和。对大模型来说，GPU 可能快 10 到 100 倍。
+    到现在为止，所有数字都是电脑的主处理器 **CPU** 算出来的。CPU 里有几个能力很强的工人。**GPU**（图形处理器，本来是为同时给屏幕上几百万个点上色而造的）里有成千上万个简单的工人，这正适合我们的工作：矩阵乘法就是成千上万个相同的小求和。
+    想象要批改一万道一行的加法题：几位教授每个人都算得很快，但一千个小学生坐满一个礼堂，每人做十道，会比他们早得多做完。对大模型来说，GPU 可能快 10 到 100 倍。
 
     这门课安装的是小巧的纯 CPU 版 PyTorch，这样每一章都能在任何笔记本上运行。课程里没有哪一章必须用 GPU；能从 GPU 受益的章节会特别说明。下面的单元格问问 PyTorch 在这里看到了什么：
     """)

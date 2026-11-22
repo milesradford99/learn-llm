@@ -12,6 +12,8 @@ with app.setup(hide_code=True):
     from learn_llm import hand, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
+    from learn_llm.diagrams import grids
+    from learn_llm.plot import chart
 
     LOCALE = "zh-CN"
     temps = [14, 17, 20, 22, 25, 28, 31, 33]
@@ -88,6 +90,28 @@ def _():
 
     对 `[1, 3]`：均值是 2，距离是 −1 和 1，平方后是 1 和 1，所以方差是 1。方差的平方根就是这些距离的**典型大小**（typical size）。NumPy 里用 `np.sqrt`
     求平方根：9 的平方根是 3，因为 $3 \times 3 = 9$。对以 0 为中心的数，均值是 0，方差就是平方的均值。
+
+    为什么要算这个？因为只看均值会漏掉很多东西。两个班的一次小测平均分都是 4 分（满分 8 分）：A 班的分数是 `[3, 4, 4, 5]`，B 班是 `[1, 4, 4, 7]`。
+    把它们画在数轴上，每个分数都用虚线连到均值：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _a, _b = [3, 4, 4, 5], [1, 4, 4, 7]
+    _dots = [(x, 2 + 0.15 * (i == 2)) for i, x in enumerate(_a)] + [(x, 1 + 0.15 * (i == 2)) for i, x in enumerate(_b)]
+    _segs = [(x, 2, 4, 2) for x in _a] + [(x, 1, 4, 1) for x in _b]
+    chart((0, 8), (0.5, 2.5), "分数（上面一行是 A 班，下面一行是 B 班）", "班级",
+          dots=_dots, segments=_segs + [(4, 0.5, 4, 2.5)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    均值一样，分散程度却差得很远。A 班离 4 的距离是 $-1, 0, 0, 1$，平方后是 $1, 0, 0, 1$，方差 $2 / 4 = 0.5$。
+    B 班是 $-3, 0, 0, 3$，平方后是 $9, 0, 0, 9$，方差 $18 / 4 = 4.5$。图里看到的东西，方差用一个数就说出来了。
     """)
     return
 
@@ -157,6 +181,7 @@ def _():
 
     **为什么不从 0 开始？** 如果每个旋钮都从 0 开始，每个隐藏的探测器算出的东西完全一样（全是 0），得到的责任完全一样，更新也完全一样。
     它们会永远一模一样。更糟的是：`W2` 也是 0 时，第 08 章的 `dH = G @ W2.T` 全是 0，所以根本没有责任能传到 `W1`。
+    想象 64 个工人站在同一个地方出发，拿到同样的指令，又挨同样的批评改正：他们永远不会分头去干不同的活。
     下面的单元格把一个从 0 开始的网络训练 100 步：
     """)
     return
@@ -182,7 +207,51 @@ def _():
     **该多大？** 看一个探测器对一张图片的加权和：$z = w_0 \times x_0 + w_1 \times x_1 + \ldots$，共 $n$ 个输入，旋钮是典型大小为 $s$ 的随机数（所以方差是 $s^2$；
     `rng.normal(0, 0.05, …)` 给出的数典型大小是 0.05，方差是 $0.05^2$）。这些旋钮是**互相独立**的：每个都是单独抽出来的，不看其他旋钮。
     一个很有用的事实：互相独立的随机数相加，**和的方差等于各自方差之和**。每一部分 $w \times x$（图片是固定的，只有旋钮是随机的）的方差是 $s^2 \times x^2$
-    （把一个随机数乘以 $x$，它的分散程度也乘以 $x$，方差就乘以 $x^2$）。把 $n$ 部分加起来得到 $s^2 \times (x_0^2 + x_1^2 + \ldots)$，
+    （把一个随机数乘以 $x$，它的分散程度也乘以 $x$，方差就乘以 $x^2$）。
+
+    “方差相加”听起来很抽象，那就用最小的例子来验证：硬币。一枚硬币正面算 $+1$，反面算 $-1$。一枚硬币的均值是 0，方差是 $(1^2 + (-1)^2) / 2 = 1$。
+    两枚硬币加起来，有四种可能性一样大的结果：
+
+    | 第一枚 | 第二枚 | 和 | 和的平方 |
+    |---|---|---|---|
+    | +1 | +1 | +2 | 4 |
+    | +1 | −1 | 0 | 0 |
+    | −1 | +1 | 0 | 0 |
+    | −1 | −1 | −2 | 4 |
+
+    和的均值是 0，所以方差就是平方的均值：$8 / 4 = 2$，正好是 $1 + 1$。分散程度既不会互相抵消，也不会相乘：它们是相加的。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### 手算：三枚硬币
+
+    三枚硬币有 8 种可能性一样大的结果。其中两种的和是 $+3$ 或 $-3$；另外六种的和是 $+1$ 或 $-1$。和的方差是多少？
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    coin_boxes = hand.boxes(["三枚硬币的方差"])
+    return (coin_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(coin_boxes):
+    hand.marked(coin_boxes, {"三枚硬币的方差": 3}, {
+        "三枚硬币的方差": r"""均值是 0，所以求平方的均值：两种结果的平方是 9，六种的平方是 1，一共 8 种结果""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    三枚硬币，方差是 3：每枚贡献 1。回到探测器：把 $n$ 部分加起来得到 $s^2 \times (x_0^2 + x_1^2 + \ldots)$，
     而这 $n$ 个平方的和等于 $n$ 乘以它们的均值：
 
     > $$z \text{ 的方差} \approx n \times s^2 \times (x^2 \text{ 的均值})$$
@@ -288,6 +357,9 @@ def _():
     起点太小，数值几层之后就缩小到几乎为 0：没有信号，而且（反向时责任也要乘以同样小的旋钮）也没有责任。起点太大，数值就一层比一层大（从第 1 层之后的 1.8 涨到第 6 层之后的 24，大了约 13 倍）。
     $\sqrt{2 / n}$ 让它们保持稳定。所以，深度网络的起点必须有讲究。
 
+    这就像一排人传话。要是每个人说得都比听到的小声一点，传到第六个人就只剩谁也听不清的耳语；要是每个人都大声一点，最后就成了吼叫。
+    合适的起点大小，让每一层都用它听到的音量把话传下去。
+
     ## 小批量
 
     第 08 章的每一步都用全部 10,000 张图片来算一个斜率。可斜率是对所有图片求出的**均值**，而随机挑 100 张图片的均值，已经是全部 10,000 张的均值的
@@ -298,6 +370,34 @@ def _():
     3. 每批走一步，只用这 100 张图片的斜率。
 
     把所有批次都走一遍叫作一个**轮次**（epoch）：10,000 张图片、每批 100 张，一个轮次就是 100 步，花的却是一步全量计算的代价。
+
+    这就像民意调查：不用问遍全国，随机问一千个人，答案就差不多了。下面是一个刚开始的网络里某个旋钮的斜率（`W2` 里斜率最大的那个），
+    先用全部 10,000 张图片算，再分别用五个随机的 100 张小批量算：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(X, Y):
+    _r = np.random.default_rng(3)
+    _k = [_r.normal(0, np.sqrt(2 / 784), (784, 64)), np.zeros(64), _r.normal(0, np.sqrt(2 / 64), (64, 10)), np.zeros(10)]
+    _Z, _H, _S = forward(X, *_k)
+    _full = backward(X, Y, _Z, _H, _S, _k[2])[2]
+    _j, _c = np.unravel_index(np.argmax(np.abs(_full)), _full.shape)
+    _rows = ["| 用了哪些图片 | 这个旋钮的斜率 |", "|---|---|", f"| 全部 10,000 张 | **{_full[_j, _c]:.4f}** |"]
+    for _i in range(5):
+        _pick = _r.permutation(10000)[:100]
+        _Zb, _Hb, _Sb = forward(X[_pick], *_k)
+        _rows.append(f"| 随机小批量 {_i + 1}（100 张） | {backward(X[_pick], Y[_pick], _Zb, _Hb, _Sb, _k[2])[2][_j, _c]:.4f} |")
+    mo.md("\n".join(_rows))
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    每个小批量都有偏差，有的偏得还不少，偶尔甚至会指错方向（这里的第 5 个）。但平均起来它们指向对的方向，工作量却只有百分之一：
+    走很多步之后，误差一会儿偏这边，一会儿偏那边，大体上互相抵消了。
     """)
     return
 
@@ -334,6 +434,30 @@ def _(cut_boxes):
         '批数': r"""切片分别从位置 0、4、8 开始""",
         '最后一批的张数': r"""只剩下位置 8 和 9""",
     }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    画出来是这样。假设打乱之后，十张图片的顺序如下。这个顺序的切片 `[0:4]`、`[4:8]` 和 `[8:12]` 就是三个批次；最后一个切片要到位置 12，
+    可顺序到 10 就结束了，所以它就停在那里：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _order = [7, 2, 9, 0, 5, 1, 8, 3, 6, 4]
+    grids([
+        {"name": "打乱后的顺序：rng.permutation(10)", "values": [_order], "cols": [str(i) for i in range(10)],
+         "marks": {**{(0, c): "blue" for c in range(4)}, **{(0, c): "box" for c in range(4, 8)},
+                   **{(0, c): "red" for c in range(8, 10)}}},
+        "→",
+        {"name": "第 0 批", "values": [_order[0:4]], "marks": {(0, c): "blue" for c in range(4)}},
+        {"name": "第 1 批", "values": [_order[4:8]], "marks": {(0, c): "box" for c in range(4)}},
+        {"name": "第 2 批", "values": [_order[8:10]], "marks": {(0, c): "red" for c in range(2)}},
+    ], "十个位置打乱后的顺序，切成 4、4、2 个一批")
     return
 
 
@@ -519,7 +643,26 @@ def _(momentum_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    它朝着 10 爬上去，也就是上面算出的稳定值：一开始很快，然后越来越慢。
+    它朝着 10 爬上去，也就是上面算出的稳定值：一开始很快，然后越来越慢：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _v, _points = 0.0, [(0, 0.0)]
+    for _step in range(1, 61):
+        _v = 0.9 * _v + 1
+        _points.append((_step, _v))
+    chart((0, 60), (0, 11), "斜率一直是 1 的步数", "速度", curve=_points, dots=_points[1:4],
+          segments=[(0, 10, 60, 10)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    就像一个球沿着一段很长的缓坡往下滚：每次推一下都不大，但它保留着前面几次推出来的速度，所以越滚越快，直到一个最高速度（这里是推一下的 10 倍）。
 
     ## 练习 3：momentum_step
 
@@ -674,6 +817,39 @@ def _():
     同样走 500 步，Adam 就停在了最好的那条直线上：`w` 约 11.9，`b` 约 −107，损失约 26.8，用的是原始气温，没有做任何换算。
     如今几乎所有大模型都是用 Adam（稍加改动）训练的，包括本课程后面的 Transformer。
 
+    下面是三种规则一路走来时旋钮 `b` 的变化（每种都用它在这里能承受的最大学习率）。最好的直线上，`b` 约为 −107：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    try:
+        _paths = {"普通步子": [], "动量": [], "Adam": []}
+        _k = np.array([6.0, 0.0])
+        for _step in range(500):
+            _k = _k - 0.0016 * mia_gradient(_k)
+            _paths["普通步子"].append((_step + 1, _k[1]))
+        _k, _vel = np.array([6.0, 0.0]), np.zeros(2)
+        for _step in range(500):
+            _k, _vel = momentum_step(_k, _vel, mia_gradient(_k), 0.003)
+            _paths["动量"].append((_step + 1, _k[1]))
+        _k, _m, _v = np.array([6.0, 0.0]), np.zeros(2), np.zeros(2)
+        for _t in range(1, 501):
+            _k, _m, _v = adam_step(_k, _m, _v, mia_gradient(_k), _t, 1.0)
+            _paths["Adam"].append((_t, _k[1]))
+        _out = chart((0, 500), (-130, 10), "步数", "b", series=list(_paths.items()), segments=[(0, -107, 500, -107)])
+    except Exception:
+        _out = mo.md("*完成练习 3 和 4 后，这里会画出三条路径。*")
+    _out
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    普通步子慢慢爬，走了 500 步，`b` 的路才刚开个头。动量越走越快，走完了大部分路。Adam 直奔虚线而去，因为它从不让 `w` 那个巨大的斜率来决定 `b` 的步子该有多小。
+
     ## 是学会了，还是背下来了？
 
     最后一个遗留问题。让同一个网络只用 **500** 张图片训练 200 个轮次，然后比较它在这 500 张上的准确率和在 2,000 张测试图片上的准确率。
@@ -700,6 +876,39 @@ def _():
     在自己的 500 张训练图片上 100% 正确，在新图片上却只有大约 87%。网络的旋钮多到足以把这 500 张图片**背下来**，连划痕和污渍一起，
     而背下来的细节到了新的笔迹上就派不上用场。这叫作**过拟合**（overfitting）：训练成绩看起来完美，却说明不了模型在新数据上的表现。
     这就是我们总要留出测试数据的原因。
+
+    这就像一个学生不去学解题方法，而是把去年考卷的答案背了下来：去年的卷子考满分，今年的卷子就卡住了。
+    下面是一次和上面类似的训练（同样的 500 张图片，100 个轮次），每个轮次结束后都量一下两个成绩：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(X, X_test, Y, test_labels, train_labels):
+    try:
+        _r = np.random.default_rng(0)
+        _k = [_r.normal(0, np.sqrt(2 / 784), (784, 64)), np.zeros(64), _r.normal(0, np.sqrt(2 / 64), (64, 10)), np.zeros(10)]
+        _seen, _new = [], []
+        for _epoch in range(1, 101):
+            for _batch in batches(500, 50, _r):
+                _Z, _H, _S = forward(X[_batch], *_k)
+                _g = backward(X[_batch], Y[_batch], _Z, _H, _S, _k[2])
+                _k = [_w - 0.5 * _d for _w, _d in zip(_k, _g)]
+            _seen.append((_epoch, accuracy(forward(X[:500], *_k)[2], train_labels[:500])))
+            _new.append((_epoch, accuracy(forward(X_test, *_k)[2], test_labels)))
+        _out = chart((0, 100), (0.6, 1.0), "轮次", "准确率",
+                     series=[("用来学习的 500 张", _seen), ("2,000 张新图片", _new)])
+    except Exception:
+        _out = mo.md("*完成练习 2 后，这里会画出两条曲线。*")
+    _out
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    最初几个轮次，两条曲线一起往上爬：网络学到的是所有笔迹共有的东西。然后它们分开了。训练曲线一直往上，直到 100%；测试曲线却在 90% 以下变平了。
+    从那以后学到的东西，都只关于这 500 张特定的图片，对新图片没有帮助。
     """)
     return
 

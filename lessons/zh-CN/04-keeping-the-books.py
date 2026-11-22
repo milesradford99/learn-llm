@@ -6,9 +6,9 @@ app = marimo.App(width="medium", app_title="04 · 记账")
 with app.setup(hide_code=True):
     import marimo as mo
 
-    from learn_llm import todo
+    from learn_llm import hand, todo
     from learn_llm.checks import check
-    from learn_llm.diagrams import one_day
+    from learn_llm.diagrams import cards, one_day
     from learn_llm.plot import chart
 
     LOCALE = "zh-CN"
@@ -46,7 +46,11 @@ def _():
     ## 一种新的值：类
 
     到目前为止，你用过数字、列表和函数。Python 允许你自己发明一种新的值，里面有带名字的格子，用来存它需要记住的东西。
-    制造一种新值的配方叫作**类**（class）。这是我们的类：
+    制造一种新值的配方叫作**类**（class）。
+
+    想想医院里的登记表。空白表格只印一种样子，上面有带标签的格子：姓名、年龄、电话。每个病人都拿到**自己的一份**，填上自己的内容。
+    类就是那张空白表格；用它做出来的每个值，就是一份填好的表。我们这张表有四个格子：这个数本身、它的责任、它由哪些框算出来、通往它们的局部斜率。
+    这是我们的类：
     """)
     return
 
@@ -89,6 +93,22 @@ def _():
     v = Value(3)
     u = Value(10)
     v.data, u.data, v.grad, v.parents
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    画成卡片，`v` 和 `u` 就是同一张表格的两份，填的内容不同。它们的 `parents` 列表是空的：它们不是由别的框算出来的，是你直接写进去的。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cards([{"title": "v", "lines": ["data = 3", "grad = 0", "parents = []", "local_slopes = []"]},
+           {"title": "u", "lines": ["data = 10", "grad = 0", "parents = []", "local_slopes = []"]}],
+          "两张有同样四个格子的卡片：v 装着 3，u 装着 10；两者的责任都是 0，都没有来源")
     return
 
 
@@ -161,7 +181,26 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `z` 装着 12；它的局部斜率是 4（通往 `x`）和 3（通往 `y`）；账本里有一条记录。
+    `z` 装着 12；它的局部斜率是 4（通往 `x`）和 3（通往 `y`）；账本里有一条记录。画成卡片：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cards([{"title": "x", "lines": ["data = 3", "parents = []", "local_slopes = []"]},
+           {"title": "y", "lines": ["data = 4", "parents = []", "local_slopes = []"]},
+           {"title": "z（账本第 0 条）", "lines": ["data = 12", "parents = [x, y]", "local_slopes = [4, 3]"],
+            "mark": "now"}],
+          "卡片 x 装着 3，y 装着 4；卡片 z 装着 12，来源是 x 和 y，局部斜率是 4 和 3")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    把 `z` 的卡片当成一句话来读：“我是 12。我由 `x` 和 `y` 算出来。`x` 轻轻动一点，我就动它的 4 倍；`y` 动一点，我就动它的 3 倍。”
+    反向计算需要知道的关于这一步的一切，都在这里了。注意只有 `z` 进了账本：`x` 和 `y` 不是由哪一步算出来的，是你直接写进去的。
 
     ## 练习 1：加法
 
@@ -246,15 +285,109 @@ def _():
     它的责任已经齐了，可以放心往下传。
 
     拿第 03 章米娅的第 1 天来看。依次记下 $p = w \times t$、$g = p + b$、$e = g - s$、$L = e \times e$，账本的顺序就是：第 0 条是 $p$，然后是 $g$、$e$、$L$。
-    用第 1 天的数，$p = 140$，$g = 80$，$e = 17$，$L = 289$，所以 $e \times e$ 的局部斜率是 $2 \times 17 = 34$。倒着读账本：
+    用第 1 天的数，$p = 140$，$g = 80$，$e = 17$，$L = 289$，所以 $e \times e$ 的局部斜率是 $2 \times 17 = 34$。
 
-    | 步骤 | 记录 | 它的责任为什么已经齐了 | 它传出去的 |
-    |---|---|---|---|
-    | 开始 | `L` | 它就是损失：责任 1 | |
-    | 1 | $L$ | | $e$ 得到 $34 \times 1 = 34$ |
-    | 2 | $e$ | 唯一用到它的 $L$ 已经处理完 | $g$ 得到 $1 \times 34$，$s$ 得到 $-1 \times 34$ |
-    | 3 | $g$ | 唯一用到它的 $e$ 已经处理完 | $p$ 得到 $1 \times 34$，$b$ 得到 $1 \times 34$ |
-    | 4 | $p$ | 唯一用到它的 $g$ 已经处理完 | $w$ 得到 $14 \times 34 = 476$，$t$ 得到 $10 \times 34$ |
+    拖动滑块，从末尾开始一次读一条记录。蓝色框出的是正在读的那一条；责任到达时，会出现在各个框的下方。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    read_step = mo.ui.slider(0, 4, value=0, label="已读的记录数", show_value=True)
+    read_step
+    return (read_step,)
+
+
+@app.cell(hide_code=True)
+def _(read_step):
+    _says = [
+        r"""**开始。** 损失对自己的责任是 1：$L$ 得到责任 1。还没有读任何记录。""",
+        r"""**读第 3 条，$L$。** 它的责任是 1。它唯一的来源是 $e$，局部斜率是 34：$e$ 得到 $34 \times 1 = 34$。""",
+        r"""**读第 2 条，$e$。** 唯一用到它的 $L$ 已经读过了，所以它的责任 34 已经齐了。$g$ 得到 $1 \times 34 = 34$，$s$ 得到 $-1 \times 34 = -34$。""",
+        r"""**读第 1 条，$g$。** 唯一用到它的 $e$ 已经处理完：责任 34。$p$ 得到 $1 \times 34$，$b$ 得到 $1 \times 34$。""",
+        r"""**读第 0 条，$p$。** 唯一用到它的 $g$ 已经处理完：责任 34。$w$ 得到 $14 \times 34 = 476$，$t$ 得到 $10 \times 34 = 340$。
+        账本读完了：每个框都拿到了自己的责任。""",
+    ]
+    _arrive = [{"L": 1}, {"e": 34}, {"g": 34, "s": -34}, {"p": 34, "b": 34}, {"w": 476, "t": 340}]
+    _k = read_step.value
+    _blames = {name: blame for step in _arrive[:_k + 1] for name, blame in step.items()}
+    _book = [("p", 140, "[w, t]", "[14, 10]"), ("g", 80, "[p, b]", "[1, 1]"),
+             ("e", 17, "[g, s]", "[1, -1]"), ("L", 289, "[e]", "[34]")]
+    _now = 4 - _k  # 正在读的记录：第 1 到 4 步依次是 3、2、1、0
+    mo.vstack([
+        mo.md(_says[_k]),
+        one_day({"w": 10, "t": 14, "p": 140, "b": -60, "g": 80, "s": 63, "e": 17, "L": 289},
+                {name: f"责任 {blame:g}" for name, blame in _blames.items()},
+                highlight=_book[_now][0] if _k else ""),
+        cards([{"title": f"第 {i} 条：{name}",
+                "lines": [f"data = {data}", f"parents = {parents}", f"local_slopes = {slopes}",
+                          f"grad = {_blames.get(name, 0):g}"],
+                "mark": "now" if _k and i == _now else "done" if _k and i > _now else ""}
+               for i, (name, data, parents, slopes) in enumerate(_book)],
+              "账本：p、g、e、L 四条记录，每张卡片写着它的值、来源、局部斜率和目前的责任",
+              arrows="→"),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    每一步里，正在读的那个框都已经拿到了**完整**的责任：唯一用到它的框在账本里排在更后面，已经读过了。
+    最后 $w$ 是 476，$b$ 是 34：和第 03 章的数一样，而我们一个反向步骤都没有单独去推。
+
+    ### 手算：一个框被用了两次
+
+    米娅的算式里，每个框只被用一次。现在换一个有框被用了**两次**的。取 $a = 2$、$b = 5$，算式是先 $u = a + b$，再 $v = u \times a$。
+    记下来，账本里有两条记录：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cards([{"title": "a", "lines": ["data = 2"]}, {"title": "b", "lines": ["data = 5"]},
+           {"title": "第 0 条：u", "lines": ["data = 7", "parents = [a, b]", "local_slopes = [1, 1]"]},
+           {"title": "第 1 条：v", "lines": ["data = 14", "parents = [u, a]", "local_slopes = [2, 7]"]}],
+          "a 装着 2，b 装着 5；第 0 条是 u，等于 7，由 a 和 b 算出，局部斜率 1 和 1；"
+          "第 1 条是 v，等于 14，由 u 和 a 算出，局部斜率 2 和 7")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    （$v = u \times a$，所以 $u$ 每变 1，$v$ 变 $a = 2$；$a$ 每变 1，$v$ 变 $u = 7$。）从 $v$ 开始，责任为 1，
+    手工倒着读账本，填出各个责任：先填读完第 1 条之后的，再填读完第 0 条之后的。记住：责任是**加**到一个框已有的责任上的。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    two_users = hand.boxes(["u.grad", "读完第 1 条后的 a.grad", "最后的 a.grad", "b.grad"])
+    return (two_users,)
+
+
+@app.cell(hide_code=True)
+def _(two_users):
+    hand.marked(two_users, {"u.grad": 2, "读完第 1 条后的 a.grad": 7, "最后的 a.grad": 9, "b.grad": 2}, {
+        "u.grad": r"""第 1 条 $v$ 的责任是 1，它把（通往 $u$ 的局部斜率）$\times 1$ 传给 $u$""",
+        "读完第 1 条后的 a.grad": r"""$v$ 把（通往 $a$ 的局部斜率）$\times 1$ 传给 $a$""",
+        "最后的 a.grad": r"""第 0 条 $u$ 现在把 $1 \times$（它的责任）传给 $a$，**加在** $a$ 已有的责任上""",
+        "b.grad": r"""第 0 条 $u$ 把 $1 \times$（它的责任）传给 $b$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    $a$ 的责任来自**两条**路：直接从 $v$ 来的 7，以及经过 $u$ 来的 2。用第 02 章的斜率验算一下：$v = (a + b) \times a = a \times a + b \times a$，
+    它对 $a$ 的斜率是 $2 \times a + b = 2 \times 2 + 5 = 9$。这就是引擎要把责任**加**到来源上、而不是替换掉的原因：替换会把其中一条路忘掉。
+
+    ### 顺序反了
 
     看看顺序反了会出什么错。取 $x \times x + x$，$x = 3$。它的斜率是 $2 \times 3 + 1 = 7$（$x \times x$ 的斜率加上 $x$ 的斜率）。
     下面的单元格把它记下来，然后**从前往后**读账本。（它用到了你的 `add`，所以在练习 1 通过之前会报错。`entry` 的意思是“一条记录”。）
@@ -374,6 +507,17 @@ def _():
     4. 循环结束后（这几行和 `for` 对齐，不在循环里面），均值就是总和乘以 `1 / len(xs)`：
        `mean = mul(total, Value(1 / len(xs)), book)`。
     5. `backward(mean, book)`，然后 `return w.grad, b.grad`。
+
+    为了看清这个循环往账本里写了什么，只取两天。每一天往账本里加五条记录，最后求平均再加一条：
+
+    | 记录 | 由谁写下 | 内容 |
+    |---|---|---|
+    | 第 0 到 4 条 | 第 1 天 | $w \times x_1$，然后 $+ b$，然后 $- y_1$，然后平方，然后加到总和上 |
+    | 第 5 到 9 条 | 第 2 天 | 第 2 天同样的五步 |
+    | 第 10 条 | 循环之后 | 总和 $\times \frac{1}{2}$：平均值，也就是最后一条 |
+
+    `total = add(total, ..., book)` 这一行并没有改动旧的总和框：它做出一个**新**框（旧总和加上今天的平方），再把 `total` 这个名字挪到新框上，
+    就像 `n = n + 1` 把名字 `n` 挪到一个新的数上。旧框还留在账本里，是新框的来源。
     """)
     return
 

@@ -267,3 +267,4 @@ chapter, write the English in brackets: 梯度（gradient）. Add terms as chapt
 | draft model | 草稿模型 | 30 |
 | prompt lookup | 提示查找 | 30 |
 | mixture of experts / expert | 混合专家 / 专家 | 30 |
+| stencil (knobs as a 0/1 grid) | 镂空板 | 06 |

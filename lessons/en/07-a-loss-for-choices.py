@@ -10,7 +10,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
-    from learn_llm.diagrams import grids, pipeline
+    from learn_llm.diagrams import bars, grids, network, pipeline
     from learn_llm.plot import chart
 
     LOCALE = "en"
@@ -64,6 +64,35 @@ def _():
     biggest score almost always stays the biggest. No guess changes, so the accuracy doesn't move
     at all: its slope is 0 almost everywhere, and the step rule never changes the knobs.
 
+    See it on one picture, a 1, with only two digits. The score for digit 0 stays at 1. Turn the
+    knob that sets the score for digit 1 slowly from -1 to 3. On the left, the accuracy on this
+    picture; on the right, a smooth measure of how sure the model is that it's a 1 (built in the
+    next section):
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _xs = [x / 50 for x in range(-50, 151)]
+    mo.hstack([
+        chart((-1, 3), (0, 1), "score for digit 1", "accuracy",
+              curve=[(x, 1.0 if x > 1 else 0.0) for x in _xs]),
+        chart((-1, 3), (0, 1), "score for digit 1", "share for digit 1",
+              curve=[(x, float(np.exp(x) / (np.exp(x) + np.exp(1)))) for x in _xs]),
+    ], widths="equal")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The accuracy is a **light switch**: flat at 0, a sudden jump where the score for 1 passes the
+    score for 0, then flat at 1. On a flat stretch, a tiny nudge changes nothing, so the slope is
+    0 and gradient descent has no hint which way to go. The curve on the right is a **dimmer**:
+    every nudge of the knob moves it a little, so at every point it has a slope that says "this
+    way is better".
+
     We need a smooth measure instead: not just *which* digit wins, but **how sure** the model
     is of each. If scores could be turned into shares that add up to 1, like "0.7 for 3, 0.2
     for 8, 0.1 for the rest", a tiny nudge would change the shares a tiny bit, and that gives
@@ -97,6 +126,15 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    A few values, to make it concrete:
+
+    | score $s$ | −2 | −1 | 0 | 1 | 2 | 3 |
+    |---|---|---|---|---|---|---|
+    | $e^s$ | 0.14 | 0.37 | 1 | 2.72 | 7.39 | 20.09 |
+
+    Each step to the right multiplies by 2.718; each step to the left divides by it. However
+    negative the score, $e^s$ only gets closer to 0, never reaching it or going below.
+
     Three things to notice: $e^s$ is always positive; a higher score always gives a higher
     $e^s$; and every +1 in the score multiplies $e^s$ by about 2.718. (Why e and not 2? Because
     with e the slopes come out simplest; you'll see exactly why below.)
@@ -107,6 +145,42 @@ def _():
     is called **softmax**. Its shares are the model's **probabilities**: how sure it is of each
     digit.
 
+    Try it. Drag the three scores and watch the $e^s$ values and the shares:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    play_scores = mo.ui.array([mo.ui.slider(-3, 3, step=0.5, value=v, label=f"score for digit {i}", show_value=True)
+                               for i, v in enumerate([2, 1, 0])])
+    play_scores.vstack()
+    return (play_scores,)
+
+
+@app.cell(hide_code=True)
+def _(play_scores):
+    _s = np.array(play_scores.value, dtype=float)
+    _e = np.exp(_s)
+    mo.hstack([
+        mo.vstack([mo.md(r"$e^s$"), bars([(f"digit {i}", v) for i, v in enumerate(_e)], "e to the power of each score", digits=2)]),
+        mo.vstack([mo.md(r"shares: each $e^s$ divided by the total, " + f"{_e.sum():.2f}"),
+                   bars([(f"digit {i}", v) for i, v in enumerate(_e / _e.sum())], "the share of each digit", top=1.0)]),
+    ], widths="equal")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Things to try:
+
+    - Make all three scores equal. Every share is $1/3$: the model can't decide.
+    - Push one score up by 1. Its $e^s$ is multiplied by 2.72, and it takes share from the others.
+    - Set the scores to 2, 1, 0, note the shares, then to 3, 2, 1. The shares don't change at all:
+      adding the same number to every score multiplies every $e^s$ by the same amount, and the
+      division by the total cancels it. Only the **differences** between scores matter.
+
     One practical problem: `np.exp(1000)` is far too big for the computer, so it gives `inf`
     (infinity), and `inf / inf` is not a number (NumPy shows that as `nan`, short for "not a
     number"). The fix: before $e^{\square}$, subtract the largest score $m$ from every score. This doesn't
@@ -116,6 +190,10 @@ def _():
     big for the computer. (If you leave this step out, NumPy also prints a warning saying
     "overflow": that's this problem.)
 
+    It's the last thing you tried above, the other way round. The scores `[1000, 999, 998]` minus
+    their largest, 1000, are `[0, -1, -2]`: the same differences as `[2, 1, 0]`, so the same shares,
+    0.67, 0.24 and 0.09. And $e^0 = 1$, $e^{-1} = 0.37$, $e^{-2} = 0.14$ are small, friendly numbers.
+
     ### Rows, columns and `keepdims`
 
     For a matrix of scores we do this row by row: each picture gets its own shares.
@@ -124,7 +202,34 @@ def _():
     `(10000, 1)` instead of `(10000,)`. A column like that broadcasts across each row: with
     `m = np.max(S, axis=1, keepdims=True)`, `S - m` subtracts each picture's own largest score
     from all ten of its scores (chapter 05 used a row
-    against every row; this is a column against every column).
+    against every row; this is a column against every column). With two pictures and three
+    digits:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "S  (2, 3)", "values": [[2, 1, 0], [5, 7, 6]], "rows": ["picture 0", "picture 1"],
+         "marks": {(0, 0): "box", (1, 1): "box"}},
+        "−",
+        {"name": "m  (2, 1)", "values": [[2], [7]], "marks": {(0, 0): "blue", (1, 0): "red"}},
+        "=",
+        {"name": "S − m  (2, 3)", "values": [[0, -1, -2], [-2, 0, -1]],
+         "marks": {**{(0, c): "blue" for c in range(3)}, **{(1, c): "red" for c in range(3)}}},
+    ], "Each row's largest score, kept as a column m, is subtracted from every score in its own row")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    `m` holds each row's largest score (outlined in `S`), standing as a column. Picture 0's 2 is
+    used against all of row 0 (blue), picture 1's 7 against all of row 1 (red). Without
+    `keepdims=True`, `m` would be the vector `[2, 7]` of shape `(2,)`; NumPy would treat it as a
+    **row** and try to use it against every row of `S`, whose rows have 3 numbers, not 2: an error
+    (or, with as many pictures as digits, a silently wrong answer).
     """)
     return
 
@@ -239,7 +344,33 @@ def _():
     To pick out the right digit's share in a matrix of shares, we use a matrix `Y` of the same
     shape with a 1 in the right digit's column and 0 everywhere else (a **one-hot** row). Then
     `Y * P` keeps only the right digit's share in each row, and `np.sum(Y * P, axis=1)` gives
-    one share per picture. Here is a helper that builds `Y` from the labels: a matrix of zeros,
+    one share per picture. With three digits, a picture of a 0 and a picture of a 2:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "P", "values": [[0.7, 0.2, 0.1], [0.3, 0.3, 0.4]], "rows": ["picture 0", "picture 1"],
+         "cols": ["0", "1", "2"]},
+        "×",
+        {"name": "Y", "values": [[1, 0, 0], [0, 0, 1]], "cols": ["0", "1", "2"],
+         "marks": {(0, 0): "blue", (1, 2): "blue"}},
+        "=",
+        {"name": "Y × P", "values": [[0.7, 0, 0], [0, 0, 0.4]], "cols": ["0", "1", "2"],
+         "marks": {(0, 0): "blue", (1, 2): "blue"}},
+        "→",
+        {"name": "row sums", "values": [[0.7], [0.4]], "marks": {(0, 0): "box", (1, 0): "box"}},
+    ], "Multiplying the shares P by the one-hot rows Y position by position keeps only the right digit's share in each row; adding along each row gives 0.7 and 0.4")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The 0s in `Y` wipe out every wrong digit's share, so adding along a row just picks out the one
+    that's left. Here is a helper that builds `Y` from the labels: a matrix of zeros,
     then a 1 at row `i`, column `labels[i]`, for each picture.
     """)
     return
@@ -371,6 +502,27 @@ def _():
 
     > the slope of $e^x$ is $e^x$ itself.
 
+    In a picture: wherever you stand on the curve, its height and its steepness are the same
+    number. The two straight lines touch the curve at $x = 1$ and $x = 2$ and go in its direction
+    there. At $x = 1$ the curve is 2.72 high and the line climbs 2.72 per unit; at $x = 2$ it is
+    7.39 high and the line climbs 7.39 per unit.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _e = float(np.exp(1))
+    chart((-1, 2.6), (0, 14), "x", "eˣ",
+          curve=[(x / 50, float(np.exp(x / 50))) for x in range(-50, 131)],
+          lines=[(_e, 0.0), (_e ** 2, -(_e ** 2))],
+          dots=[(1, _e), (2, _e ** 2)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     **$\log x$.** Say $y = \log x$, which means $x = e^y$. Nudge $y$ by a tiny $k$: by the slope
     we just found (change $\approx$ slope $\times$ nudge), $x$ grows by about $e^y \times k = x \times k$. So when $x$ grows by $x \times k$, $\log x$
     grows by $k$. Change of $\log x$ per unit change of $x$:
@@ -468,6 +620,45 @@ def _(slope_boxes):
 def _():
     mo.md(r"""
     The biggest slope, in size, belongs to the right digit: gradient descent will push its score up hard. And the wrong digit that got 0.7 will be pushed down much harder than the one that got 0.1.
+
+    Think of it as a tug of war. The right digit is pulled up by $1 - p$, what it's still missing.
+    Every wrong digit is pushed down by its share $p$, what it wrongly took. The pulls stop when
+    the right digit has everything. Watch it happen to this picture: each step moves every score
+    against its slope (learning rate 1), and the shares are worked out again.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pull_steps = mo.ui.slider(0, 6, value=0, label="steps taken", show_value=True)
+    pull_steps
+    return (pull_steps,)
+
+
+@app.cell(hide_code=True)
+def _(pull_steps):
+    _s = np.log(np.array([0.7, 0.2, 0.1]))
+    _y = np.array([0.0, 1.0, 0.0])
+    for _ in range(pull_steps.value):
+        _p = np.exp(_s) / np.exp(_s).sum()
+        _s = _s - (_p - _y)
+    _p = np.exp(_s) / np.exp(_s).sum()
+    mo.hstack([
+        mo.vstack([mo.md("shares"), bars([(f"digit {i}", v) for i, v in enumerate(_p)], "shares", top=1.0)]),
+        mo.vstack([mo.md("slopes, share minus one-hot"),
+                   bars([(f"digit {i}", v) for i, v in enumerate(_p - _y)], "slopes", top=1.0)]),
+        mo.md(rf"surprise: **{-np.log(_p[1]):.3f}**"),
+    ], widths=[2, 2, 1])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    After one step, digit 1's share jumps from 0.2 to about 0.5; after six, it's over 0.9, and the
+    surprise has fallen from 1.609 towards 0. As the right share grows, every slope shrinks:
+    the closer the model is to right, the gentler the pull.
     """)
     return
 
@@ -495,29 +686,146 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Blame flows backwards, as in chapter 03. The last section took it from $L$ back to the
-    scores. One step is left: from the scores back to the knobs. We'll take it first in a world
-    small enough to see every number; the real pictures then do exactly the same, only bigger.
+    Blame flows backwards, as in chapter 03. The last section took it from **one** picture's
+    surprise back to that picture's scores. Two steps are still missing: the loss $L$ is the
+    **mean** of all the pictures' surprises, not one surprise; and gradient descent moves knobs,
+    not scores. We'll fill in both on a world small enough to see every number, with nothing but
+    chapter 03's rules.
 
-    ### The blame of every score
+    ### A reminder: the two rules of blame
 
-    For the mean loss over $n$ pictures, each picture's slopes are divided by $n$. So the slopes
-    of the loss for all the scores at once are
+    Draw the calculation as boxes and arrows. Each arrow has a **local slope**: how much the box
+    at its end moves, per unit, when the box at its start is nudged a tiny bit. The loss has
+    blame 1. Walking backwards:
 
-    > $$G = (P - Y) / n$$
+    - **Along a road, multiply.** If $u$ feeds $v$ with local slope 3, and $v$'s blame is 2,
+      then $u$ gets $3 \times 2 = 6$ along that arrow.
+    - **Where roads split, add.** If $u$ feeds several boxes, its blame is the sum of what it
+      gets along each arrow. (In chapter 04, $a$ in $v = (a + b) \times a$ got 7 along one road and
+      2 along the other: 9.)
 
-    a matrix of shape `(n, 10)`, one row per picture, one column per digit: `G[i, c]` is the blame
-    of score `S[i, c]`.
+    That's all this section uses.
 
     ### A world small enough to see
 
     Two pictures of only 3 pixels each, and only two digits, 0 and 1. A pixel is 1 where there's
     ink and 0 where there isn't. Picture 0 is a 0, with ink in pixels 0 and 2; picture 1 is a 1,
     with ink in pixels 1 and 2. The model gives picture 0 the shares `[0.6, 0.4]` (right, but
-    not sure) and picture 1 the shares `[0.8, 0.2]` (sure, and wrong). Share minus one-hot,
-    divided by $n = 2$, gives each picture's row of blames:
+    not sure) and picture 1 the shares `[0.8, 0.2]` (sure, and wrong).
 
-    > $$([0.6, 0.4] - [1, 0]) / 2 = [-0.2, 0.2] \qquad ([0.8, 0.2] - [0, 1]) / 2 = [0.4, -0.4]$$
+    Here is the end of the calculation as a graph: four scores, two surprises, one loss. Score
+    `S[i, c]` is picture $i$'s score for digit $c$. The loss is the mean of the two surprises,
+    $L = (\text{surprise}_0 + \text{surprise}_1) / 2$. Local slopes are on the arrows; blames are in red.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    blame_edges = [(0, 0, 0, "-0.4"), (0, 1, 0, "0.4"), (0, 2, 1, "0.8"), (0, 3, 1, "-0.8"),
+                   (1, 0, 0, "1/2"), (1, 1, 0, "1/2")]
+    blame_heads = ["scores", "surprises", "loss"]
+    network([[["S[0,0]", "blame -0.2"], ["S[0,1]", "blame 0.2"], ["S[1,0]", "blame ?"], ["S[1,1]", "blame ?"]],
+             [["surprise 0", "blame 1/2"], ["surprise 1", "blame 1/2"]], [["L", "blame 1"]]],
+            blame_edges, "Four scores feed two surprises, which feed the loss L. Each arrow into L has local slope one half; "
+            "the arrows from picture 0's scores have local slopes -0.4 and 0.4, from picture 1's 0.8 and -0.8",
+            blame_heads)
+    return blame_edges, blame_heads
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### Step 1: from the loss to each surprise
+
+    $L = (\text{surprise}_0 + \text{surprise}_1) / 2$. Nudge surprise 0 by a tiny $h$ and $L$ moves by
+    $h / 2$: the local slope of each arrow into $L$ is $\frac{1}{2}$. $L$'s blame is 1, so along a road,
+    each surprise gets $\frac{1}{2} \times 1 = \frac{1}{2}$. With $n$ pictures, $L$ is a sum divided by $n$,
+    and each surprise gets $\frac{1}{n}$.
+
+    ### Step 2: from each surprise to its scores
+
+    The last section found the local slopes from one picture's surprise to its own scores:
+    share minus one-hot, $p - y$. Picture 0 is a 0, with shares `[0.6, 0.4]`, so its one-hot
+    row is `[1, 0]` and the slopes are $0.6 - 1 = -0.4$ towards `S[0,0]` and $0.4 - 0 = 0.4$
+    towards `S[0,1]`: the numbers on its two arrows. Along a road, multiply by the blame at the
+    arrow's end, $\frac{1}{2}$:
+
+    > $$\text{blame of } S[0, 0] = -0.4 \times \tfrac{1}{2} = -0.2 \qquad \text{blame of } S[0, 1] = 0.4 \times \tfrac{1}{2} = 0.2$$
+
+    Each score feeds only its own picture's surprise, so there's nothing to add. Your turn:
+    picture 1's two scores.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    score_blame_boxes = hand.boxes(["S[1, 0]", "S[1, 1]"], step=0.1)
+    return (score_blame_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(score_blame_boxes):
+    hand.marked(score_blame_boxes, {"S[1, 0]": 0.4, "S[1, 1]": -0.4}, {
+        "S[1, 0]": r"""picture 1 is a 1, so its one-hot row is `[0, 1]`: the local slope is $0.8 - 0$, then multiply by its surprise's blame""",
+        "S[1, 1]": r"""the local slope is $0.2 - 1$, then multiply by its surprise's blame""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _(blame_edges, blame_heads, score_blame_boxes):
+    mo.stop(not hand.done(score_blame_boxes, {"S[1, 0]": 0.4, "S[1, 1]": -0.4}),
+            mo.md("*When both boxes are right, the graph fills in here.*"))
+    network([[["S[0,0]", "blame -0.2"], ["S[0,1]", "blame 0.2"], ["S[1,0]", "blame 0.4"], ["S[1,1]", "blame -0.4"]],
+             [["surprise 0", "blame 1/2"], ["surprise 1", "blame 1/2"]], [["L", "blame 1"]]],
+            blame_edges, "The same graph with every score's blame filled in", blame_heads)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### The blame of every score, as one table
+
+    Every score got the same treatment: (share minus one-hot), times $\frac{1}{n}$. So put the four
+    blames in a table shaped like the scores, one row per picture and one column per digit. With
+    `P` the table of shares and `Y` the one-hot rows, the whole table is
+
+    > $$G = (P - Y) / n$$
+
+    `G[i, c]` is the blame of score `S[i, c]`. In our world:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _cols = ["digit 0", "digit 1"]
+    grids([
+        {"name": "P", "values": [[0.6, 0.4], [0.8, 0.2]], "rows": ["picture 0", "picture 1"], "cols": _cols},
+        "−",
+        {"name": "Y", "values": [[1, 0], [0, 1]], "cols": _cols},
+        "=",
+        {"name": "P − Y", "values": [[-0.4, 0.4], [0.8, -0.8]], "cols": _cols},
+        "÷ 2 =",
+        {"name": "G", "values": [[-0.2, 0.2], [0.4, -0.4]], "cols": _cols,
+         "marks": {(r, c): "red" for r in range(2) for c in range(2)}},
+    ], "The shares P minus the one-hot rows Y, divided by the number of pictures, 2, give the blames G of the four scores")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    That's the blame of every score, and it's where the hard part ends: from here to the knobs
+    is one more step of the same two rules.
+
+    ### Step 3: from the scores to one knob
+
+    Each digit has one knob per pixel: `W[j, c]` is the knob for pixel $j$ and digit $c$, so
+    here `W` has shape `(3, 2)`. Here are the pictures' pixels again, `X`, one row per picture:
     """)
     return
 
@@ -527,25 +835,62 @@ def _():
     grids([
         {"name": "X", "values": [[1, 0, 1], [0, 1, 1]],
          "rows": ["picture 0", "picture 1"], "cols": ["pixel 0", "pixel 1", "pixel 2"]},
-        "   ",
-        {"name": "G", "values": [[-0.2, 0.2], [0.4, -0.4]], "cols": ["digit 0", "digit 1"]},
-    ], "The pixels X, one row per picture, and the blames G of their scores, one column per digit")
+    ], "The pixels X: picture 0 has ink in pixels 0 and 2, picture 1 in pixels 1 and 2")
     return
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### Which scores does one knob touch?
-
-    Each digit has one knob per pixel: `W[j, c]` is the knob for pixel $j$ and digit $c$, so
-    here `W` has shape `(3, 2)`. Take the knob `W[2, 0]`. The score of picture $i$ for digit 0 is
+    Take the knob `W[2, 0]`. The score of picture $i$ for digit 0 is
 
     > $$S[i, 0] = X[i, 0] \times W[0, 0] + X[i, 1] \times W[1, 0] + X[i, 2] \times W[2, 0] + b[0]$$
 
-    So `W[2, 0]` is in the digit-0 score of **every** picture, each time multiplied by that
-    picture's pixel 2. In the picture below: the knob is outlined, the pixel it multiplies is
-    blue, and the scores it touches, with their blames, are red.
+    So `W[2, 0]` is in the digit-0 score of **both** pictures: one box with two arrows leaving
+    it. The local slope of each arrow is the pixel the knob multiplies there, `X[i, 2]` (in
+    $x \times w$, nudging $w$ moves the result by $x$ per unit). Both pictures have ink in pixel 2,
+    so both slopes are 1. As a graph, with the score blames you just found:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    network([[["W[2,0]", "blame ?"]], [["S[0,0]", "blame -0.2"], ["S[1,0]", "blame 0.4"]]],
+            [(0, 0, 0, "X[0,2] = 1"), (0, 0, 1, "X[1,2] = 1")],
+            "The knob W[2,0] feeds the digit-0 score of both pictures, each arrow with local slope 1",
+            ["knob", "scores"], at=0.55)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Roads split, so add; along each road, multiply:
+
+    > $$\text{slope of } W[2, 0] = 1 \times (-0.2) + 1 \times 0.4 = 0.2$$
+
+    And a pixel without ink? Take `W[1, 0]`. Picture 0 has no ink in pixel 1, so its arrow has
+    local slope 0 and carries no blame at all; only picture 1 counts: $0 \times (-0.2) + 1 \times 0.4 = 0.4$.
+    A knob only learns from the pictures that have ink where it looks.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    network([[["W[1,0]", "blame 0.4"]], [["S[0,0]", "blame -0.2"], ["S[1,0]", "blame 0.4"]]],
+            [(0, 0, 0, "X[0,1] = 0"), (0, 0, 1, "X[1,1] = 1")],
+            "The knob W[1,0]: its arrow to picture 0's score has local slope 0, its arrow to picture 1's has 1",
+            ["knob", "scores"], at=0.55)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    In the matrices, the same knob `W[2, 0]` looks like this: the knob is outlined, the pixel it
+    multiplies is blue, and the scores it touches, with their blames, are red.
     """)
     return
 
@@ -571,31 +916,26 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Its slope adds up, for each score it touches, the score's blame times the local slope (in
-    $X[i, 2] \times W[2, 0]$, nudging `W[2, 0]` moves the score by `X[i, 2]` per unit). They add
-    because blames add (chapter 03):
-
-    > $$\text{slope of } W[2, 0] = G[0, 0] \times X[0, 2] + G[1, 0] \times X[1, 2] = -0.2 \times 1 + 0.4 \times 1 = 0.2$$
-
     ## By hand: three more knobs
 
-    Work out the slopes of three more knobs the same way: find the pixel column and the digit
-    column, then multiply in pairs and add.
+    Work out the slopes of three more knobs the same way. For the knob `W[j, c]`: the arrows go
+    to the digit-$c$ score of each picture; each arrow's local slope is that picture's pixel $j$;
+    multiply each by that score's blame, and add.
     """)
     return
 
 
 @app.cell(hide_code=True)
 def _():
-    knob_boxes = hand.boxes(["W[0, 0]", "W[1, 0]", "W[2, 1]"], step=0.1)
+    knob_boxes = hand.boxes(["W[0, 0]", "W[1, 1]", "W[2, 1]"], step=0.1)
     return (knob_boxes,)
 
 
 @app.cell(hide_code=True)
 def _(knob_boxes):
-    hand.marked(knob_boxes, {"W[0, 0]": -0.2, "W[1, 0]": 0.4, "W[2, 1]": -0.2}, {
-        "W[0, 0]": r"""pixel 0 and digit 0: $G[0, 0] \times X[0, 0] + G[1, 0] \times X[1, 0]$""",
-        "W[1, 0]": r"""pixel 1 and digit 0: only picture 1 has ink in pixel 1""",
+    hand.marked(knob_boxes, {"W[0, 0]": -0.2, "W[1, 1]": -0.4, "W[2, 1]": -0.2}, {
+        "W[0, 0]": r"""pixel 0 and digit 0: $X[0, 0] \times G[0, 0] + X[1, 0] \times G[1, 0]$, and only picture 0 has ink in pixel 0""",
+        "W[1, 1]": r"""pixel 1 and digit 1: only picture 1 has ink in pixel 1, so only the blame of `S[1, 1]` counts""",
         "W[2, 1]": r"""pixel 2 and digit 1: both pictures have ink in pixel 2, so add both blames of digit 1""",
     }, LOCALE)
     return
@@ -608,8 +948,10 @@ def _():
 
     - `W[0, 0]` goes **up**. Only picture 0 has ink in pixel 0, and picture 0 is a 0: from now
       on, ink there counts more for a 0.
-    - `W[1, 0]` goes **down**. Only picture 1 has ink in pixel 1, and the model gave that 1 a
-      share of 0.8 for being a 0: ink there will count less for a 0.
+    - `W[1, 0]` (the worked example, slope 0.4) goes **down**. Only picture 1 has ink in pixel 1,
+      and the model gave that 1 a share of 0.8 for being a 0: ink there will count less for a 0.
+    - `W[1, 1]` goes **up**: the same pixel, and the same picture, which got only 0.2 for being
+      the 1 it is: ink there will count more for a 1.
     - `W[2, 1]` goes up a little. Both pictures have ink in pixel 2, so both their blames
       count, $0.2 + (-0.4)$, and they partly cancel.
 
@@ -618,7 +960,13 @@ def _():
     Look at what you multiplied for the knob `W[j, c]`. Going down the pictures, you took
     pixel $j$ of each one, which is **column $j$ of $X$**, and the blame of digit $c$ for each
     one, which is **column $c$ of $G$**. You multiplied them in pairs and added up: that is the
-    dot product of the two columns.
+    dot product of the two columns. For `W[2, 1]`:
+
+    | picture | pixel 2 (column 2 of `X`) | blame of digit 1 (column 1 of `G`) | product |
+    |---|---|---|---|
+    | 0 | 1 | 0.2 | 0.2 |
+    | 1 | 1 | −0.4 | −0.4 |
+    | **sum** | | | **−0.2** |
     """)
     return
 
@@ -699,7 +1047,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Your three answers are in it, at `[0, 0]`, `[1, 0]` and `[2, 1]`. In NumPy:
+    Your three answers are in it, at `[0, 0]`, `[1, 1]` and `[2, 1]`, and the worked ones at `[2, 0]` and `[1, 0]`. In NumPy:
     """)
     return
 

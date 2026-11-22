@@ -278,3 +278,138 @@ def grids(parts: list, label: str):
             f'aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
             'font-family="ui-monospace, monospace" text-anchor="middle">')
     return mo.Html(head + "".join(body) + "</svg>")
+
+
+def cards(entries: list[dict], label: str, arrows: str = ""):
+    """Record cards in a row: one per box, or one per entry of the engine's book.
+
+    Each entry is a dict with `title` (written on the card's top band) and `lines` (one slot
+    per line, such as "data = 140"). `mark` set to "now" outlines the card in blue (the one
+    being read); "done" greys it out. `arrows` is drawn between neighbouring cards (for
+    example "→"), or nothing. `label` describes the picture for screen readers, in the
+    lesson's language.
+    """
+    import marimo as mo
+
+    size, line_h, band, pad, gap = 13, 20, 28, 10, 34 if arrows else 16
+    widths = [max([_width(e["title"], 14)] + [_width(s, size) for s in e["lines"]]) + 2 * pad + 8
+              for e in entries]
+    height = band + line_h * max(len(e["lines"]) for e in entries) + 2 * pad + 8
+    x, body = 4.0, []
+    for i, (entry, w) in enumerate(zip(entries, widths)):
+        mark = entry.get("mark", "")
+        stroke, sw = (DOT, 3) if mark == "now" else (AXIS, 1.2)
+        opacity = ' opacity="0.45"' if mark == "done" else ""
+        body.append(f'<g{opacity}>')
+        body.append(f'<rect x="{x:.1f}" y="4" width="{w:.1f}" height="{height - 8}" rx="8" fill="none" '
+                    f'stroke="{stroke}" stroke-width="{sw}"/>')
+        body.append(f'<rect x="{x:.1f}" y="4" width="{w:.1f}" height="{band}" rx="8" fill="{DOT}" fill-opacity="0.12"/>')
+        body.append(f'<text x="{x + w / 2:.1f}" y="{4 + band - 9}" font-size="14" font-weight="600" '
+                    f'text-anchor="middle" fill="{TEXT}">{escape(entry["title"])}</text>')
+        for j, text in enumerate(entry["lines"]):
+            body.append(f'<text x="{x + pad:.1f}" y="{4 + band + pad + line_h * j + 12}" font-size="{size}" '
+                        f'text-anchor="start" fill="{TEXT}">{escape(text)}</text>')
+        body.append('</g>')
+        x += w
+        if i < len(entries) - 1:
+            if arrows:
+                body.append(f'<text x="{x + gap / 2:.1f}" y="{height / 2 + 6:.1f}" font-size="18" '
+                            f'text-anchor="middle" fill="{AXIS}">{escape(arrows)}</text>')
+            x += gap
+    width = x + 4
+    head = (f'<svg viewBox="0 0 {width:.0f} {height}" width="100%" style="max-width:{width:.0f}px" role="img" '
+            f'aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
+            'font-family="ui-monospace, monospace">')
+    return mo.Html(head + "".join(body) + "</svg>")
+
+
+def bars(items: list[tuple[str, float]], label: str, top: float | None = None, digits: int = 2):
+    """Horizontal bars, one per (name, value): blue to the right for positive, red to the left
+    for negative, each with its value written beside it. `top` is the value of a full bar
+    (by default the biggest size). `label` describes the picture for screen readers, in the
+    lesson's language.
+    """
+    import marimo as mo
+
+    top = top or max(abs(v) for _, v in items) or 1.0
+    negative = any(v < 0 for _, v in items)
+    name_w = max(_width(n, 14) for n, _ in items) + 16
+    half = 200 if negative else 0
+    span = 200 if negative else 360
+    zero = name_w + (half + 50 if negative else 0)  # room for a negative bar's value
+    row_h, width = 30, zero + span + 70
+    parts = [f'<svg viewBox="0 0 {width:.0f} {row_h * len(items) + 8}" width="100%" style="max-width:{width:.0f}px" '
+             f'role="img" aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
+             'font-family="ui-monospace, monospace">']
+    for i, (name, value) in enumerate(items):
+        y = 4 + row_h * i
+        size = min(abs(value) / top, 1.0) * span
+        x = zero if value >= 0 else zero - size
+        color = DOT if value >= 0 else LINE
+        parts.append(f'<text x="{name_w - 10:.1f}" y="{y + 19}" font-size="14" text-anchor="end" fill="{TEXT}">'
+                     f'{escape(name)}</text>')
+        parts.append(f'<rect x="{x:.1f}" y="{y + 4}" width="{max(size, 1):.1f}" height="{row_h - 10}" rx="3" '
+                     f'fill="{color}" fill-opacity="0.75"/>')
+        tx, anchor = (zero + size + 6, "start") if value >= 0 else (zero - size - 6, "end")
+        parts.append(f'<text x="{tx:.1f}" y="{y + 19}" font-size="13" text-anchor="{anchor}" fill="{TEXT}">'
+                     f'{value:.{digits}f}</text>')
+    parts.append(f'<line x1="{zero:.1f}" y1="2" x2="{zero:.1f}" y2="{row_h * len(items) + 6}" stroke="{AXIS}"/>')
+    parts.append("</svg>")
+    return mo.Html("".join(parts))
+
+
+def network(layers: list[list], edges: list[tuple], label: str, heads: list[str] = (), at: float = 0.3):
+    """A small network drawn as columns of nodes joined by arrows.
+
+    `layers` is a list of columns, top to bottom; a node is a string or a list of lines (for
+    example a value and, under it, a blame). `edges` are (column, from, to, text): an arrow from
+    node `from` of that column to node `to` of the next, with `text` written on it near its
+    start (`at` of the way along). `heads` names each column above it. `label` describes the picture for screen
+    readers, in the lesson's language.
+    """
+    import marimo as mo
+
+    layers = [[[n] if isinstance(n, str) else list(n) for n in col] for col in layers]
+    node_w = max(_width(line, 14) for col in layers for n in col for line in n) + 22
+    node_h = 18 * max(len(n) for col in layers for n in col) + 14
+    gap_x, gap_y, top = node_w + 120, node_h + 46, 34 if heads else 8
+    rows = max(len(col) for col in layers)
+    height = top + gap_y * (rows - 1) + node_h + 10
+    width = gap_x * (len(layers) - 1) + node_w + 20
+
+    def spot(c, r):
+        offset = (rows - len(layers[c])) * gap_y / 2
+        return 10 + c * gap_x, top + offset + r * gap_y
+
+    parts = [f'<svg viewBox="0 0 {width:.0f} {height:.0f}" width="100%" style="max-width:{width:.0f}px" role="img" '
+             f'aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
+             'font-family="ui-monospace, monospace" text-anchor="middle">',
+             f'<defs><marker id="net" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+             f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{AXIS}"/></marker></defs>']
+    for c, text in enumerate(heads):
+        x, _ = spot(c, 0)
+        parts.append(f'<text x="{x + node_w / 2:.1f}" y="18" font-size="13" font-weight="600" fill="{AXIS}">'
+                     f'{escape(text)}</text>')
+    for c, a, b, text in edges:
+        (xa, ya), (xb, yb) = spot(c, a), spot(c + 1, b)
+        x1, y1, x2, y2 = xa + node_w, ya + node_h / 2, xb - 4, yb + node_h / 2
+        parts.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{AXIS}" '
+                     f'marker-end="url(#net)"/>')
+        if text:
+            tx, ty = x1 + (x2 - x1) * at, y1 + (y2 - y1) * at
+            w = _width(text, 13) + 8
+            parts.append(f'<rect x="{tx - w / 2:.1f}" y="{ty - 10:.1f}" width="{w:.1f}" height="18" rx="4" '
+                         f'fill="var(--background, white)" stroke="{GRID}"/>')
+            parts.append(f'<text x="{tx:.1f}" y="{ty + 4:.1f}" font-size="13" fill="{DOT}">{escape(text)}</text>')
+    for c, col in enumerate(layers):
+        for r, lines in enumerate(col):
+            x, y = spot(c, r)
+            parts.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{node_w:.1f}" height="{node_h}" rx="8" fill="none" '
+                         f'stroke="{AXIS}" stroke-width="1.2"/>')
+            for i, line in enumerate(lines):
+                color = TEXT if i == 0 else LINE
+                ty = y + node_h / 2 + 5 + 18 * (i - (len(lines) - 1) / 2)
+                parts.append(f'<text x="{x + node_w / 2:.1f}" y="{ty:.1f}" font-size="14" '
+                             f'fill="{color}">{escape(line)}</text>')
+    parts.append("</svg>")
+    return mo.Html("".join(parts))

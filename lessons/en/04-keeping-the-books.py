@@ -6,9 +6,9 @@ app = marimo.App(width="medium", app_title="04 · Keeping the books")
 with app.setup(hide_code=True):
     import marimo as mo
 
-    from learn_llm import todo
+    from learn_llm import hand, todo
     from learn_llm.checks import check
-    from learn_llm.diagrams import one_day
+    from learn_llm.diagrams import cards, one_day
     from learn_llm.plot import chart
 
     LOCALE = "en"
@@ -53,7 +53,13 @@ def _():
 
     So far you've used numbers, lists and functions. Python lets you invent your own kind of
     value, with named slots for whatever it needs to remember. The recipe for a new kind of value
-    is called a **class**. Here is ours:
+    is called a **class**.
+
+    Think of a form at a doctor's office. The blank form is printed once, with labelled boxes:
+    name, age, phone. Every patient gets their **own copy** and fills in their own answers. A
+    class is the blank form; each value made from it is one filled-in copy. Our form has four
+    boxes: the number itself, its blame, the boxes it was made from, and the local slopes
+    towards them. Here is the class:
     """)
     return
 
@@ -106,6 +112,23 @@ def _():
     v = Value(3)
     u = Value(10)
     v.data, u.data, v.grad, v.parents
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Drawn as cards, `v` and `u` are two copies of the same form, filled in differently. Their
+    `parents` lists are empty: nobody worked them out from other boxes, you typed them in.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cards([{"title": "v", "lines": ["data = 3", "grad = 0", "parents = []", "local_slopes = []"]},
+           {"title": "u", "lines": ["data = 10", "grad = 0", "parents = []", "local_slopes = []"]}],
+          "Two cards with the same four slots: v holds 3 and u holds 10; both have blame 0 and no parents")
     return
 
 
@@ -182,6 +205,28 @@ def _():
 def _():
     mo.md(r"""
     `z` holds 12; its local slopes are 4 (towards `x`) and 3 (towards `y`); the book has one entry.
+    As cards:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cards([{"title": "x", "lines": ["data = 3", "parents = []", "local_slopes = []"]},
+           {"title": "y", "lines": ["data = 4", "parents = []", "local_slopes = []"]},
+           {"title": "z (book entry 0)", "lines": ["data = 12", "parents = [x, y]", "local_slopes = [4, 3]"],
+            "mark": "now"}],
+          "Cards x holding 3 and y holding 4, and the card z holding 12 with parents x and y and local slopes 4 and 3")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Read `z`'s card as a sentence: "I am 12. I was made from `x` and `y`. If `x` moves by a tiny
+    amount, I move 4 times as much; if `y` moves, I move 3 times as much." That is everything the
+    backward pass will need to know about this step. Notice that only `z` went into the book:
+    `x` and `y` weren't made by a step, you typed them in.
 
     ## Exercise 1: add
 
@@ -274,15 +319,120 @@ def _():
     Here it is on Mia's day 1 from chapter 03. Recording $p = w \times t$, $g = p + b$, $e = g - s$,
     $L = e \times e$ writes the book in this order: entry 0 is $p$, then $g$, then $e$, then $L$. With
     day 1's numbers, $p = 140$, $g = 80$, $e = 17$ and $L = 289$, so the local slope of $e \times e$
-    is $2 \times 17 = 34$. Reading the book backwards:
+    is $2 \times 17 = 34$.
 
-    | step | entry | its blame is complete because… | it passes on |
-    |---|---|---|---|
-    | start | `L` | it is the loss: blame 1 | |
-    | 1 | $L$ | | $e$ gets $34 \times 1 = 34$ |
-    | 2 | $e$ | its only user, $L$, is done | $g$ gets $1 \times 34$, $s$ gets $-1 \times 34$ |
-    | 3 | $g$ | its only user, $e$, is done | $p$ gets $1 \times 34$, $b$ gets $1 \times 34$ |
-    | 4 | $p$ | its only user, $g$, is done | $w$ gets $14 \times 34 = 476$, $t$ gets $10 \times 34$ |
+    Drag the slider to read the book one entry at a time, from the end. The blue outline shows
+    the entry being read; the blames grow under the boxes as they arrive.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    read_step = mo.ui.slider(0, 4, value=0, label="entries read", show_value=True)
+    read_step
+    return (read_step,)
+
+
+@app.cell(hide_code=True)
+def _(read_step):
+    _says = [
+        r"""**Start.** The loss blames itself 1: $L$ gets blame 1. Nothing has been read yet.""",
+        r"""**Read entry 3, $L$.** Its blame is 1. Its one parent is $e$, with local slope 34:
+        $e$ gets $34 \times 1 = 34$.""",
+        r"""**Read entry 2, $e$.** Its only user, $L$, has already been read, so its blame, 34, is
+        complete. $g$ gets $1 \times 34 = 34$ and $s$ gets $-1 \times 34 = -34$.""",
+        r"""**Read entry 1, $g$.** Its only user, $e$, is done: blame 34. $p$ gets $1 \times 34$ and
+        $b$ gets $1 \times 34$.""",
+        r"""**Read entry 0, $p$.** Its only user, $g$, is done: blame 34. $w$ gets
+        $14 \times 34 = 476$ and $t$ gets $10 \times 34 = 340$. The book is finished: every box has
+        its blame.""",
+    ]
+    _arrive = [{"L": 1}, {"e": 34}, {"g": 34, "s": -34}, {"p": 34, "b": 34}, {"w": 476, "t": 340}]
+    _k = read_step.value
+    _blames = {name: blame for step in _arrive[:_k + 1] for name, blame in step.items()}
+    _book = [("p", 140, "[w, t]", "[14, 10]"), ("g", 80, "[p, b]", "[1, 1]"),
+             ("e", 17, "[g, s]", "[1, -1]"), ("L", 289, "[e]", "[34]")]
+    _now = 4 - _k  # the entry being read: 3, 2, 1, 0 for steps 1 to 4
+    mo.vstack([
+        mo.md(_says[_k]),
+        one_day({"w": 10, "t": 14, "p": 140, "b": -60, "g": 80, "s": 63, "e": 17, "L": 289},
+                {name: f"blame {blame:g}" for name, blame in _blames.items()},
+                highlight=_book[_now][0] if _k else ""),
+        cards([{"title": f"entry {i}: {name}",
+                "lines": [f"data = {data}", f"parents = {parents}", f"local_slopes = {slopes}",
+                          f"grad = {_blames.get(name, 0):g}"],
+                "mark": "now" if _k and i == _now else "done" if _k and i > _now else ""}
+               for i, (name, data, parents, slopes) in enumerate(_book)],
+              "The book: four entries p, g, e, L, each card with its value, parents, local slopes and blame so far",
+              arrows="→"),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    At every step, the box being read already holds its **complete** blame, because the only box
+    that uses it was further down the book and has been read. In the end $w$ has 476 and $b$
+    has 34: chapter 03's numbers, without working out a single backward step by name.
+
+    ### By hand: a box used twice
+
+    In Mia's recipe every box is used once. Now one where a box is used **twice**. Take $a = 2$
+    and $b = 5$, and the recipe $u = a + b$, then $v = u \times a$. Recording it writes a book of two
+    entries:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    cards([{"title": "a", "lines": ["data = 2"]}, {"title": "b", "lines": ["data = 5"]},
+           {"title": "entry 0: u", "lines": ["data = 7", "parents = [a, b]", "local_slopes = [1, 1]"]},
+           {"title": "entry 1: v", "lines": ["data = 14", "parents = [u, a]", "local_slopes = [2, 7]"]}],
+          "a holds 2, b holds 5; entry 0 is u, 7, made from a and b with local slopes 1 and 1; "
+          "entry 1 is v, 14, made from u and a with local slopes 2 and 7")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ($v = u \times a$, so nudging $u$ moves $v$ by $a = 2$ per unit, and nudging $a$ moves it by
+    $u = 7$ per unit.) Read the book backwards by hand, starting from $v$ with blame 1, and fill in
+    the blames: first after reading entry 1, then after reading entry 0. Remember that blame is
+    **added** to what a box already has.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    two_users = hand.boxes(["u.grad", "a.grad after entry 1", "a.grad at the end", "b.grad"])
+    return (two_users,)
+
+
+@app.cell(hide_code=True)
+def _(two_users):
+    hand.marked(two_users, {"u.grad": 2, "a.grad after entry 1": 7, "a.grad at the end": 9, "b.grad": 2}, {
+        "u.grad": r"""entry 1, $v$, has blame 1 and passes (local slope towards $u$) $\times 1$ to $u$""",
+        "a.grad after entry 1": r"""$v$ passes (local slope towards $a$) $\times 1$ to $a$""",
+        "a.grad at the end": r"""entry 0, $u$, now passes $1 \times$ (its blame) to $a$, **on top of** what $a$ already has""",
+        "b.grad": r"""entry 0, $u$, passes $1 \times$ (its blame) to $b$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    $a$ got blame along **two** roads: 7 straight from $v$, and 2 more by way of $u$. Check it
+    with chapter 02's slopes: $v = (a + b) \times a = a \times a + b \times a$, whose slope for $a$ is
+    $2 \times a + b = 2 \times 2 + 5 = 9$. That's why the engine **adds** to a parent's blame instead
+    of replacing it: replacing would forget one of the roads.
+
+    ### The wrong order
 
     Here is what goes wrong in the other order. Take $x \times x + x$ at $x = 3$. Its slope is
     $2 \times 3 + 1 = 7$ (slope of $x \times x$ plus slope of $x$). The cell below records it, then reads the
@@ -418,6 +568,20 @@ def _():
        times `1 / len(xs)`:
        `mean = mul(total, Value(1 / len(xs)), book)`.
     5. `backward(mean, book)`, then `return w.grad, b.grad`.
+
+    To picture what the loop writes, take only two days. Each day adds five entries to the book,
+    and the mean adds one at the end:
+
+    | entries | written by | holds |
+    |---|---|---|
+    | 0 to 4 | day 1 | $w \times x_1$, then $+ b$, then $- y_1$, then squared, then added to the total |
+    | 5 to 9 | day 2 | the same five steps for day 2 |
+    | 10 | after the loop | the total $\times \frac{1}{2}$: the mean, the last entry |
+
+    The line `total = add(total, ..., book)` doesn't change the old total box: it makes a **new**
+    box (the old total plus today's square) and moves the name `total` onto it, just as
+    `n = n + 1` moves the name `n` onto a new number. The old box stays in the book, as the
+    parent of the new one.
     """)
     return
 

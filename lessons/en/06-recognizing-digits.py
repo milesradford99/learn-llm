@@ -10,6 +10,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
+    from learn_llm.diagrams import grids
 
     LOCALE = "en"
 
@@ -84,6 +85,27 @@ def _(train_images, train_labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    To the computer, though, a picture is only numbers. Here is a small patch of the first picture,
+    6 rows by 12 columns from the bottom of the 6, where the pen draws its loop. Every cell is one
+    pixel with its number; the cells over 128 (more ink than paper) are shaded blue. Squint and
+    you can see the curve of the loop in the numbers.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(train_images):
+    _patch = train_images[0][15:21, 9:21]
+    grids([{"name": "picture 0, rows 15 to 20, columns 9 to 20", "values": _patch.tolist(),
+            "rows": [f"row {r}" for r in range(15, 21)], "cols": [str(c) for c in range(9, 21)],
+            "marks": {(r, c): "blue" for r in range(6) for c in range(12) if _patch[r, c] > 128}}],
+          "A 6 by 12 patch of the first picture: pixel numbers from 0 to 255, the dark ones shaded, tracing the bottom of the loop of a 6")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## One long row per picture
 
     Our models work on vectors, so we unroll each $28 \times 28$ grid into one row of 784 numbers
@@ -92,6 +114,33 @@ def _():
     255, so every pixel is between 0 (white) and 1 (black), for the same reason we rescaled
     temperatures in chapters 04 and 05: small numbers of similar size suit one learning rate.
     The shapes below are `(10000, 784)` and `(2000, 784)`: one row of 784 numbers per picture.
+
+    Here is the unrolling on a tiny $3 \times 3$ picture of a "7" (1 for ink, 0 for paper). Its three
+    rows are laid end to end: row 0 (blue) first, then row 1, then row 2 (red), 9 numbers in all.
+    Nothing is lost: knowing the width is 3, you could fold the 9 numbers back into the grid.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "a 3 × 3 picture", "values": [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
+         "rows": ["row 0", "row 1", "row 2"],
+         "marks": {**{(0, c): "blue" for c in range(3)}, **{(2, c): "red" for c in range(3)}}},
+        "→",
+        {"name": "the same picture as one row of 9", "values": [[1, 1, 1, 0, 0, 1, 0, 0, 1]],
+         "cols": [str(i) for i in range(9)],
+         "marks": {**{(0, c): "blue" for c in range(3)}, **{(0, c): "red" for c in range(6, 9)}}},
+    ], "A 3 by 3 picture of a 7 unrolled into one row of 9 numbers: row 0, then row 1, then row 2")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The real pictures do the same with 28 rows of 28: positions 0 to 27 of the long row are the
+    picture's top row, 28 to 55 its second row, and so on.
     """)
     return
 
@@ -107,6 +156,112 @@ def _(test_images, train_images):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    ## A score is a stencil
+
+    Before the real pictures, a tiny world: $3 \times 3$ pictures and only two "digits", a
+    standing bar **|** and a lying bar **—**. Give each digit a grid of knobs the size of a
+    picture, like a stencil: 1 where that digit puts ink, 0 elsewhere.
+
+    A picture's **score** for a digit is: multiply each pixel by the knob at the same place, and
+    add everything up. Because the knobs are 1 or 0, the score simply counts the inked pixels that
+    fall on the stencil. Here is a standing bar scored against both stencils:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _bar = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
+    _stand = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
+    _lie = [[0, 0, 0], [1, 1, 1], [0, 0, 0]]
+    _ink = {(r, 1): "blue" for r in range(3)}
+    mo.vstack([
+        grids([
+            {"name": "picture", "values": _bar, "marks": _ink}, "×",
+            {"name": "knobs of |", "values": _stand, "marks": {(r, 1): "red" for r in range(3)}}, "→",
+            {"name": "score of |", "values": [[3]], "marks": {(0, 0): "box"}},
+        ], "The standing bar against the knobs of |: all three inked pixels fall on the stencil, score 3"),
+        grids([
+            {"name": "picture", "values": _bar, "marks": _ink}, "×",
+            {"name": "knobs of —", "values": _lie, "marks": {(1, c): "red" for c in range(3)}}, "→",
+            {"name": "score of —", "values": [[1]], "marks": {(0, 0): "box"}},
+        ], "The standing bar against the knobs of —: only the middle pixel falls on the stencil, score 1"),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Score 3 for **|** and 1 for **—**: the model says "|". Where the ink (blue) and the
+    stencil (red) overlap, the score goes up.
+
+    ### By hand: a T
+
+    Now a picture of a **T**: ink along the whole top row, and down the middle column. Count its
+    score for each stencil.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([{"name": "a T", "values": [[1, 1, 1], [0, 1, 0], [0, 1, 0]],
+            "marks": {(0, 0): "blue", (0, 1): "blue", (0, 2): "blue", (1, 1): "blue", (2, 1): "blue"}}],
+          "A 3 by 3 picture of a T: the top row and the middle column are inked")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    t_boxes = hand.boxes(["score of |", "score of —"])
+    return (t_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(t_boxes):
+    hand.marked(t_boxes, {"score of |": 3, "score of —": 1}, {
+        "score of |": r"""the stencil of | is the middle column: which of its three pixels have ink in the T?""",
+        "score of —": r"""the stencil of — is the middle row: which of its three pixels have ink in the T?""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    "Multiply place by place and add up" is a dot product (chapter 05). Unroll the picture and
+    the stencil into rows of 9, and the score is their dot product. With two digits, stand the
+    two unrolled stencils side by side as the two **columns** of a matrix $W$ of shape `(9, 2)`.
+    Stack the pictures as the rows of $X$. Then each picture's row, dotted with each digit's
+    column, gives one score: that is `X @ W`. Here are the bar and the T:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _cols = [str(i) for i in range(9)]
+    grids([
+        {"name": "X  (2, 9)", "values": [[0, 1, 0, 0, 1, 0, 0, 1, 0], [1, 1, 1, 0, 1, 0, 0, 1, 0]],
+         "rows": ["bar", "T"], "cols": _cols, "marks": {(1, c): "blue" for c in range(9)}},
+        "@",
+        {"name": "W  (9, 2)", "values": [[0, 0], [1, 0], [0, 0], [0, 1], [1, 1], [0, 1], [0, 0], [1, 0], [0, 0]],
+         "rows": _cols, "cols": ["|", "—"], "marks": {(r, 1): "red" for r in range(9)}},
+        "=",
+        {"name": "S  (2, 2)", "values": [[3, 1], [3, 1]], "rows": ["bar", "T"], "cols": ["|", "—"],
+         "marks": {(1, 1): "box"}},
+    ], "X holds the bar and the T as rows of 9; W holds the stencils of | and — as columns; S = X @ W holds one score per picture and digit. Row T dotted with column — gives 1")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The marked score is row "T" of $X$ (blue) dotted with column "—" of $W$ (red): the T's score
+    for —, the 1 you counted. The real thing is the same with bigger numbers: 784 pixels instead
+    of 9, ten digits instead of two, and knobs that can be any number, not just 0 or 1.
+
     ## Ten scores, one per digit
 
     In chapter 05 one vector of knobs turned a day's inputs into one guess. Now we want ten
@@ -402,7 +557,38 @@ def _(W_hand, X, b_hand):
 def _():
     mo.md(r"""
     The model says 8 for about 2,750 pictures and 0 for about 2,100, but 5 only once. The templates of 0 and 8 hold the most ink, spread wide, so they give a high score to almost anything.
-    Most of the 5s end up as 0s and 8s: the fainter template of the 5 is outscored nearly every time. Averaging looks at each digit on its own. It never asks the question that matters:
+    Most of the 5s end up as 0s and 8s: the fainter template of the 5 is outscored nearly every time.
+
+    The tiny world shows why. Add a third digit, a **+**, whose stencil has both bars: 5 pixels
+    instead of 3. A neat standing bar now scores 3 for **|** and 3 for **+**: a tie. Draw the bar
+    a little sloppily, with one extra inked pixel just left of its middle, and it scores 3 for
+    **|**, 2 for **—** and 4 for **+**: it's called a **+**. A stencil with more ink catches more
+    of *any* picture's ink, so it scores high on almost everything. That's what the 0 and the 8
+    do among the real digits.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _sloppy = [[0, 1, 0], [1, 1, 0], [0, 1, 0]]
+    _ink = {(0, 1): "blue", (1, 0): "blue", (1, 1): "blue", (2, 1): "blue"}
+    grids([
+        {"name": "a sloppy |", "values": _sloppy, "marks": _ink}, "×",
+        {"name": "knobs of |", "values": [[0, 1, 0], [0, 1, 0], [0, 1, 0]], "marks": {(r, 1): "red" for r in range(3)}},
+        "→", {"name": "score", "values": [[3]]}, "    ",
+        {"name": "a sloppy |", "values": _sloppy, "marks": _ink}, "×",
+        {"name": "knobs of +", "values": [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+         "marks": {(0, 1): "red", (1, 0): "red", (1, 1): "red", (1, 2): "red", (2, 1): "red"}},
+        "→", {"name": "score", "values": [[4]], "marks": {(0, 0): "box"}},
+    ], "A standing bar with one extra pixel scores 3 against the stencil of | but 4 against the inkier stencil of +")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Averaging looks at each digit on its own. It never asks the question that matters:
     which knobs tell a 5 *apart from* an 8?
 
     ## What's next
