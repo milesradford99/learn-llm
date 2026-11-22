@@ -10,7 +10,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
-    from learn_llm.diagrams import pipeline
+    from learn_llm.diagrams import grids, network, pipeline
     from learn_llm.plot import chart
 
     LOCALE = "zh-CN"
@@ -34,7 +34,21 @@ def _():
 
     > $z$ 为正数时 $\operatorname{relu}(z) = z$，否则为 $0$
 
-    比如 $\operatorname{relu}(-3) = 0$，$\operatorname{relu}(0) = 0$，$\operatorname{relu}(2) = 2$。它先是平的（等于 0），在 $z = 0$ 处拐一个角，然后像直线一样上升。单独看它没什么意思。但把它**加**到一条直线上，就得到一条在你选定的地方拐弯的线。
+    比如 $\operatorname{relu}(-3) = 0$，$\operatorname{relu}(0) = 0$，$\operatorname{relu}(2) = 2$。它先是平的（等于 0），在 $z = 0$ 处拐一个角，然后像直线一样上升：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    chart((-4, 4), (-1, 4), "z", "relu(z)", curve=[(-4, 0), (0, 0), (4, 4)], dots=[(-3, 0), (0, 0), (2, 2)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    可以把它想成一面墙脚下的坡道：墙左边的都贴在地上，墙右边的才开始往上爬。单独看它没什么意思。但把它**加**到一条直线上，就得到一条在你选定的地方拐弯的线。
     下面是一条在 33 °C 处拐弯的线（−105、12 和 −20 这几个数是手工挑的）：
 
     > $$\text{猜测} = -105 + 12 \times t - 20 \times \operatorname{relu}(t - 33)$$
@@ -63,7 +77,41 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    一个弯折就已经胜过第 04 章的曲线了。弯折越多（每个都在自己的位置、有自己的大小），就能一段一段地跟上任何形状。
+    一个弯折就已经胜过第 04 章的曲线了。你自己来挪一挪这个弯折：放在哪里，以及在那里斜率改变多少。损失会告诉你每种选择拟合得有多好。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    bend_at = mo.ui.slider(24, 39, value=33, label="弯折的位置（°C）", show_value=True)
+    bend_turn = mo.ui.slider(-30, 0, step=2, value=-20, label="弯折之后斜率的变化", show_value=True)
+    mo.vstack([bend_at, bend_turn])
+    return bend_at, bend_turn
+
+
+@app.cell(hide_code=True)
+def _(bend_at, bend_turn):
+    _temps = [14, 17, 20, 22, 25, 28, 31, 33, 35, 37, 39]
+    _sales = [63, 90, 137, 148, 193, 234, 257, 288, 280, 262, 236]
+    _a, _k = bend_at.value, bend_turn.value
+    _loss = np.mean([(-105 + 12 * t + _k * max(0, t - _a) - s) ** 2 for t, s in zip(_temps, _sales)])
+    mo.vstack([
+        chart((10, 42), (0, 320), "气温（°C）", "卖出的冰淇淋（个）", dots=list(zip(_temps, _sales)),
+              curve=[(t / 10, -105 + 12 * t / 10 + _k * max(0, t / 10 - _a)) for t in range(120, 411)]),
+        mo.md(r"猜测 $= -105 + 12 \times t {sign} {size} \times \operatorname{{relu}}(t - {at})$，损失 **{loss:.0f}**".format(
+            sign="-" if _k < 0 else "+", size=abs(_k), at=_a, loss=_loss)),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    把斜率变化设成 0，弯折就消失了：又是一条直线。把弯折放到 24 °C，线就拐得太早了。在所有滑块位置里，33 °C、变化 −20 的损失最低，大约是 37。
+    梯度下降会替我们做这种搜索，而且是同时为每一个弯折搜索。
+
+    弯折越多（每个都在自己的位置、有自己的大小），就能一段一段地跟上任何形状。
     这就是神经网络的核心想法：许多简单的部件，每个带一个弯折，加在一起。
     """)
     return
@@ -167,6 +215,53 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    ### 小世界里的“这个或那个”
+
+    把开头的问题放到 $3 \times 3$ 的图片上看。假设一根“杠”既可以画在**左边**一列，也可以画在**右边**一列：两种形状，同一个答案。
+    两列**都**有墨的图片不算一根杠。
+
+    用取均值做出的单个模板（第 06 章）在左右两列上都是 0.5。每根杠有 3 个有墨的像素落在模板的一半上：得 1.5 分。
+    可两列都有墨的那张图片落上了 6 个：得 3 分，是最高分。加权和只会把墨加起来，所以在对的地方墨越多，分数就一定越高。
+
+    现在换成两个探测器。探测器 A 的旋钮在左列是 $+1$，在右列是 $-1$，$b = -2$；探测器 B 和它左右对调：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _a = [[1, 0, -1]] * 3
+    _b = [[-1, 0, 1]] * 3
+    _marks = lambda grid: {(r, c): "blue" if v > 0 else "red" for r in range(3) for c, v in enumerate(grid[r]) if v}
+    mo.vstack([
+        grids([
+            {"name": "左边的杠", "values": [[1, 0, 0]] * 3, "marks": {(r, 0): "blue" for r in range(3)}}, "   ",
+            {"name": "右边的杠", "values": [[0, 0, 1]] * 3, "marks": {(r, 2): "blue" for r in range(3)}}, "   ",
+            {"name": "两列都有（不是杠）", "values": [[1, 0, 1]] * 3,
+             "marks": {(r, c): "blue" for r in range(3) for c in (0, 2)}},
+        ], "三张图片：左列一根杠，右列一根杠，两列都有墨"),
+        grids([
+            {"name": "探测器 A 的旋钮", "values": _a, "marks": _marks(_a)}, "   ",
+            {"name": "探测器 B 的旋钮", "values": _b, "marks": _marks(_b)},
+        ], "探测器 A：左列加 1，右列减 1；探测器 B 反过来"),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    “杠”的分数是 $\operatorname{relu}(z_A) + \operatorname{relu}(z_B)$。对每张图片算一遍：
+
+    | 图片 | $z_A$ | $z_B$ | $h_A$ | $h_B$ | 网络的分数 | 模板的分数 |
+    |---|---|---|---|---|---|---|
+    | 左边的杠 | $3 - 0 - 2 = 1$ | $0 - 3 - 2 = -5$ | 1 | 0 | **1** | 1.5 |
+    | 右边的杠 | $-5$ | $1$ | 0 | 1 | **1** | 1.5 |
+    | 两列都有 | $3 - 3 - 2 = -2$ | $-2$ | 0 | 0 | **0** | 3 |
+
+    每个探测器只对自己的形状有反应，其他时候保持沉默；ReLU 把“沉默”变成干净的 0，而不是一个会把分数拖来拖去的负数。
+    网络说的是“左边**或**右边，但不能两边都有”，这是任何单个模板都说不出来的。这就是隐藏层带来的东西。
+
     分数接下来照样经过第 07 章的 softmax 和交叉熵。下面把它们再写一遍，还有第 06 章的 `accuracy` 和第 07 章的 `one_hot`。它们都已经写好了，不要改动：
     """)
     return
@@ -207,8 +302,21 @@ def _():
     > $$W_1 = \begin{bmatrix} 1 & -3 \\ 1 & 1 \end{bmatrix} \qquad W_2 = \begin{bmatrix} 1 & 0 \\ 2 & 1 \end{bmatrix}$$
 
     $W_1$ 的第 0 列是探测器 0 的旋钮，所以 $z_0 = 1 \times 1 + 2 \times 1 = 3$。把其余的算出来：另一个加权和、两个隐藏值、两个分数。
+
+    下面把同一个网络画成图。每个箭头带着一个旋钮：箭头上的数乘以箭头起点的值，方框把所有到达它的东西加起来。顺着箭头进入一个方框，就得到它的加权和。
     """)
     return
+
+
+@app.cell(hide_code=True)
+def _():
+    tiny_edges = [(0, 0, 0, "1"), (0, 0, 1, "-3"), (0, 1, 0, "1"), (0, 1, 1, "1"),
+                  (1, 0, 0, "relu"), (1, 1, 1, "relu"),
+                  (2, 0, 0, "1"), (2, 0, 1, "0"), (2, 1, 0, "2"), (2, 1, 1, "1")]
+    tiny_heads = ["像素 x", "加权和 z", "探测器 h", "分数 s"]
+    network([["x0 = 1", "x1 = 2"], ["z0 = 3", "z1 = ?"], ["h0 = ?", "h1 = ?"], ["s0 = ?", "s1 = ?"]],
+            tiny_edges, "一个有 2 个像素、2 个探测器、2 个分数的网络；旋钮写在箭头上", tiny_heads)
+    return tiny_edges, tiny_heads
 
 
 @app.cell(hide_code=True)
@@ -226,6 +334,15 @@ def _(forward_boxes):
         's0': r"""`h` 和 $W_2$ 第 0 列的点积：$h_0 \times 1 + h_1 \times 2$""",
         's1': r"""`h` 和 $W_2$ 第 1 列的点积：$h_0 \times 0 + h_1 \times 1$""",
     }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _(forward_boxes, tiny_edges, tiny_heads):
+    mo.stop(not hand.done(forward_boxes, {'z1': -1, 'h0': 3, 'h1': 0, 's0': 3, 's1': 0}),
+            mo.md("*五个格子都填对之后，这里的图会把数填上。*"))
+    network([["x0 = 1", "x1 = 2"], ["z0 = 3", "z1 = -1"], ["h0 = 3", "h1 = 0"], ["s0 = 3", "s1 = 0"]],
+            tiny_edges, "同一个网络，每个值都填上了", tiny_heads)
     return
 
 
@@ -354,7 +471,35 @@ def _():
     > `dZ = dH * (Z > 0)`
 
     $Z > 0$ 对每个位置给出 `True`/`False`，乘上它时，`True` 算 1，`False` 算 0。像这样用来放行一些值、挡住另一些值的数组，叫作**掩码**（mask）。一个对某张图片保持沉默的探测器，对这张图片不承担责任：
-    把它的旋钮轻推一点点，什么也不会改变。
+    把它的旋钮轻推一点点，什么也不会改变。两张图片、三个探测器时：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _z = [[2.0, -1.0, 0.5], [-0.3, 1.2, -2.0]]
+    _m = [[1 if v > 0 else 0 for v in row] for row in _z]
+    _dh = [[0.4, -0.6, 0.1], [0.3, -0.2, 0.5]]
+    _blocked = {(r, c): "red" for r in range(2) for c in range(3) if not _m[r][c]}
+    grids([
+        {"name": "Z", "values": _z, "rows": ["第 0 张", "第 1 张"], "marks": _blocked},
+        "→",
+        {"name": "掩码 Z > 0", "values": _m, "marks": _blocked},
+        "   ",
+        {"name": "dH", "values": _dh},
+        "×",
+        {"name": "掩码", "values": _m, "marks": _blocked},
+        "=",
+        {"name": "dZ", "values": [[d if m else 0 for d, m in zip(dr, mr)] for dr, mr in zip(_dh, _m)], "marks": _blocked},
+    ], "Z 为负的地方掩码是 0（红），dH 乘以掩码后，那里的责任就被挡住了")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    `Z` 里为负的加权和（红）对应的探测器保持沉默，掩码在那里是 0，`dH` 里的责任就停在那里。其他地方原样通过。
 
     **`W1` 和 `b1`。** `Z = X @ W1 + b1` 又是第 07 章的那一步，责任换成 `dZ`：$dW_1 = X^\top dZ$，$db_1$ 是 $dZ$ 每一列往下的和。
 
@@ -396,6 +541,16 @@ def _(backward_boxes):
         'dZ[1]': r"""$Z[1]$ 是负的，所以责任被挡住""",
         'dW1[1, 0]': r"""$x[1] \times dZ[0]$""",
     }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _(backward_boxes, tiny_edges, tiny_heads):
+    mo.stop(not hand.done(backward_boxes, {'dW2[0, 0]': 3, 'dW2[1, 0]': 0, 'dH[0]': 1, 'dH[1]': 1, 'dZ[0]': 1, 'dZ[1]': 0, 'dW1[1, 0]': 2}),
+            mo.md("*七个格子都填对之后，这里的图上会出现各个责任。*"))
+    network([["x0 = 1", "x1 = 2"], [["z0 = 3", "责任 1"], ["z1 = -1", "责任 0"]],
+             [["h0 = 3", "责任 1"], ["h1 = 0", "责任 1"]], [["s0 = 3", "责任 1"], ["s1 = 0", "责任 -1"]]],
+            tiny_edges, "小网络，每个值下面用红字写着它的责任", tiny_heads)
     return
 
 

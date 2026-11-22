@@ -10,7 +10,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
-    from learn_llm.diagrams import pipeline
+    from learn_llm.diagrams import grids, network, pipeline
     from learn_llm.plot import chart
 
     LOCALE = "en"
@@ -40,7 +40,22 @@ def _():
     > $\operatorname{relu}(z) = z$ when $z$ is positive, and $0$ otherwise
 
     For example $\operatorname{relu}(-3) = 0$, $\operatorname{relu}(0) = 0$ and $\operatorname{relu}(2) = 2$. It's flat at 0, then turns a
-    corner at $z = 0$ and rises like a line. On its own that's
+    corner at $z = 0$ and rises like a line:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    chart((-4, 4), (-1, 4), "z", "relu(z)", curve=[(-4, 0), (0, 0), (4, 4)], dots=[(-3, 0), (0, 0), (2, 2)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Think of a ramp that starts at a wall: anything left of the wall is on the floor, anything right
+    of it climbs. On its own that's
     dull. But **add** it to a line and you get a line that changes direction at a point you
     choose. Here is a line with one bend at 33 °C (the numbers −105, 12 and −20 are picked by
     hand):
@@ -72,7 +87,44 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    One bend already beats chapter 04's curve. With more bends, each at its own place and with
+    One bend already beats chapter 04's curve. Move the bend yourself: where it sits, and how
+    much the slope changes there. The loss tells you how well each choice fits.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    bend_at = mo.ui.slider(24, 39, value=33, label="bend at (°C)", show_value=True)
+    bend_turn = mo.ui.slider(-30, 0, step=2, value=-20, label="slope change after the bend", show_value=True)
+    mo.vstack([bend_at, bend_turn])
+    return bend_at, bend_turn
+
+
+@app.cell(hide_code=True)
+def _(bend_at, bend_turn):
+    _temps = [14, 17, 20, 22, 25, 28, 31, 33, 35, 37, 39]
+    _sales = [63, 90, 137, 148, 193, 234, 257, 288, 280, 262, 236]
+    _a, _k = bend_at.value, bend_turn.value
+    _loss = np.mean([(-105 + 12 * t + _k * max(0, t - _a) - s) ** 2 for t, s in zip(_temps, _sales)])
+    mo.vstack([
+        chart((10, 42), (0, 320), "temperature (°C)", "ice creams sold", dots=list(zip(_temps, _sales)),
+              curve=[(t / 10, -105 + 12 * t / 10 + _k * max(0, t / 10 - _a)) for t in range(120, 411)]),
+        mo.md(r"guess $= -105 + 12 \times t {sign} {size} \times \operatorname{{relu}}(t - {at})$, loss **{loss:.0f}**".format(
+            sign="-" if _k < 0 else "+", size=abs(_k), at=_a, loss=_loss)),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Set the slope change to 0 and the bend disappears: a straight line again. Put the bend at
+    24 °C and the line turns down far too early. Of all the slider settings, 33 °C with a change
+    of −20 gives the lowest loss, about 37. Gradient descent will do this search for us, for
+    every bend at once.
+
+    With more bends, each at its own place and with
     its own size, you can follow any shape, one straight piece at a time. That's the whole idea
     of a neural network: many simple pieces, each with a bend, added up.
     """)
@@ -182,6 +234,59 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    ### "This or that" in a tiny world
+
+    Here is the opening problem on $3 \times 3$ pictures. Say a "bar" can be drawn in the **left**
+    column or in the **right** column: two shapes, one answer. A picture with ink in **both**
+    columns is not a bar.
+
+    A single template, made by averaging (chapter 06), puts 0.5 on both outer columns. Each bar
+    lands 3 inked pixels on its half of the template: score 1.5. But the picture with both
+    columns lands 6: score 3, the highest of all. A weighted sum can only add up ink, so more ink
+    in the right places always means a higher score.
+
+    Now two detectors. Detector A has knobs $+1$ on the left column, $-1$ on the right column
+    and $b = -2$; detector B is its mirror image:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _a = [[1, 0, -1]] * 3
+    _b = [[-1, 0, 1]] * 3
+    _marks = lambda grid: {(r, c): "blue" if v > 0 else "red" for r in range(3) for c, v in enumerate(grid[r]) if v}
+    mo.vstack([
+        grids([
+            {"name": "left bar", "values": [[1, 0, 0]] * 3, "marks": {(r, 0): "blue" for r in range(3)}}, "   ",
+            {"name": "right bar", "values": [[0, 0, 1]] * 3, "marks": {(r, 2): "blue" for r in range(3)}}, "   ",
+            {"name": "both (not a bar)", "values": [[1, 0, 1]] * 3,
+             "marks": {(r, c): "blue" for r in range(3) for c in (0, 2)}},
+        ], "Three pictures: a bar in the left column, a bar in the right column, and ink in both columns"),
+        grids([
+            {"name": "knobs of detector A", "values": _a, "marks": _marks(_a)}, "   ",
+            {"name": "knobs of detector B", "values": _b, "marks": _marks(_b)},
+        ], "Detector A: plus 1 on the left column, minus 1 on the right; detector B the other way round"),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The bar's score is $\operatorname{relu}(z_A) + \operatorname{relu}(z_B)$. Work it through for each picture:
+
+    | picture | $z_A$ | $z_B$ | $h_A$ | $h_B$ | network's score | template's score |
+    |---|---|---|---|---|---|---|
+    | left bar | $3 - 0 - 2 = 1$ | $0 - 3 - 2 = -5$ | 1 | 0 | **1** | 1.5 |
+    | right bar | $-5$ | $1$ | 0 | 1 | **1** | 1.5 |
+    | both | $3 - 3 - 2 = -2$ | $-2$ | 0 | 0 | **0** | 3 |
+
+    Each detector fires for its own shape and stays silent otherwise, and the ReLU turns
+    "silent" into a clean 0 instead of a negative number that would drag the score around. The
+    network says "left **or** right, but not both", which no single template can say. That's what
+    the hidden layer buys.
+
     The scores then go through chapter 07's softmax and cross-entropy, unchanged. Here they are
     again, with `accuracy` from chapter 06 and `one_hot` from chapter 07. They are finished; don't change them:
     """)
@@ -223,8 +328,23 @@ def _():
     > $$W_1 = \begin{bmatrix} 1 & -3 \\ 1 & 1 \end{bmatrix} \qquad W_2 = \begin{bmatrix} 1 & 0 \\ 2 & 1 \end{bmatrix}$$
 
     Column 0 of $W_1$ holds the knobs of detector 0, so $z_0 = 1 \times 1 + 2 \times 1 = 3$. Work out the rest: the other weighted sum, both hidden values, and both scores.
+
+    Here is the same network as a picture. Each arrow carries one knob: the number on it
+    multiplies the value at the arrow's start, and a box adds up everything arriving. Follow the
+    arrows into a box and you have its weighted sum.
     """)
     return
+
+
+@app.cell(hide_code=True)
+def _():
+    tiny_edges = [(0, 0, 0, "1"), (0, 0, 1, "-3"), (0, 1, 0, "1"), (0, 1, 1, "1"),
+                  (1, 0, 0, "relu"), (1, 1, 1, "relu"),
+                  (2, 0, 0, "1"), (2, 0, 1, "0"), (2, 1, 0, "2"), (2, 1, 1, "1")]
+    tiny_heads = ["pixels x", "sums z", "detectors h", "scores s"]
+    network([["x0 = 1", "x1 = 2"], ["z0 = 3", "z1 = ?"], ["h0 = ?", "h1 = ?"], ["s0 = ?", "s1 = ?"]],
+            tiny_edges, "A network with 2 pixels, 2 detectors and 2 scores; the knobs are written on the arrows", tiny_heads)
+    return tiny_edges, tiny_heads
 
 
 @app.cell(hide_code=True)
@@ -242,6 +362,15 @@ def _(forward_boxes):
         's0': r"""`h` dotted with column 0 of $W_2$: $h_0 \times 1 + h_1 \times 2$""",
         's1': r"""`h` dotted with column 1 of $W_2$: $h_0 \times 0 + h_1 \times 1$""",
     }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _(forward_boxes, tiny_edges, tiny_heads):
+    mo.stop(not hand.done(forward_boxes, {'z1': -1, 'h0': 3, 'h1': 0, 's0': 3, 's1': 0}),
+            mo.md("*When all five boxes are right, the picture fills in here.*"))
+    network([["x0 = 1", "x1 = 2"], ["z0 = 3", "z1 = -1"], ["h0 = 3", "h1 = 0"], ["s0 = 3", "s1 = 0"]],
+            tiny_edges, "The same network with every value filled in", tiny_heads)
     return
 
 
@@ -390,7 +519,36 @@ def _():
     $Z > 0$ gives `True`/`False` for each position, and multiplying by it counts `True` as 1 and
     `False` as 0. An array like this, used to let some values through and block others, is called
     a **mask**. A detector that was silent for a picture takes no blame for it: nudging its
-    knobs a tiny bit wouldn't change anything.
+    knobs a tiny bit wouldn't change anything. For two pictures and three detectors:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _z = [[2.0, -1.0, 0.5], [-0.3, 1.2, -2.0]]
+    _m = [[1 if v > 0 else 0 for v in row] for row in _z]
+    _dh = [[0.4, -0.6, 0.1], [0.3, -0.2, 0.5]]
+    _blocked = {(r, c): "red" for r in range(2) for c in range(3) if not _m[r][c]}
+    grids([
+        {"name": "Z", "values": _z, "rows": ["picture 0", "picture 1"], "marks": _blocked},
+        "→",
+        {"name": "mask Z > 0", "values": _m, "marks": _blocked},
+        "   ",
+        {"name": "dH", "values": _dh},
+        "×",
+        {"name": "mask", "values": _m, "marks": _blocked},
+        "=",
+        {"name": "dZ", "values": [[d if m else 0 for d, m in zip(dr, mr)] for dr, mr in zip(_dh, _m)], "marks": _blocked},
+    ], "Where Z is negative the mask is 0 (red), and multiplying dH by the mask blocks the blame there")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Where a sum in `Z` was negative (red), its detector was silent, the mask holds 0, and the
+    blame in `dH` stops there. Everywhere else it passes through unchanged.
 
     **`W1` and `b1`.** `Z = X @ W1 + b1` is chapter 07's step once more, with `dZ` as the blame:
     $dW_1 = X^\top dZ$, and $db_1$ is the sum down each column of $dZ$.
@@ -434,6 +592,16 @@ def _(backward_boxes):
         'dZ[1]': r"""$Z[1]$ is negative, so the blame is blocked""",
         'dW1[1, 0]': r"""$x[1] \times dZ[0]$""",
     }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _(backward_boxes, tiny_edges, tiny_heads):
+    mo.stop(not hand.done(backward_boxes, {'dW2[0, 0]': 3, 'dW2[1, 0]': 0, 'dH[0]': 1, 'dH[1]': 1, 'dZ[0]': 1, 'dZ[1]': 0, 'dW1[1, 0]': 2}),
+            mo.md("*When all seven boxes are right, the blames appear on the picture here.*"))
+    network([["x0 = 1", "x1 = 2"], [["z0 = 3", "blame 1"], ["z1 = -1", "blame 0"]],
+             [["h0 = 3", "blame 1"], ["h1 = 0", "blame 1"]], [["s0 = 3", "blame 1"], ["s1 = 0", "blame -1"]]],
+            tiny_edges, "The tiny network with each value's blame under it, in red", tiny_heads)
     return
 
 
