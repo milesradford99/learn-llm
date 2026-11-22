@@ -9,8 +9,9 @@ with app.setup(hide_code=True):
     import marimo as mo
     import numpy as np
 
-    from learn_llm import todo
+    from learn_llm import hand, todo
     from learn_llm.checks import check
+    from learn_llm.diagrams import grids
 
     LOCALE = "en"
     temps = [14, 17, 20, 22, 25, 28, 31, 33]
@@ -84,6 +85,37 @@ def _():
     apples, 1 bread and 2 milks, the bill is the dot product of prices and amounts:
     $2 \times 4 + 3 \times 1 + 1 \times 2 = 13$. A model's guess works the same way: each knob is a "price" per
     unit of its input.
+
+    ### By hand: two more days
+
+    With the same knobs, $w_t = 12$, $w_r = -8$, $w_k = 4$ and $b = -105$, work out the guess for
+    two more days: day 3 (22 °C, rain, not a weekend) and day 5 (28 °C, no rain, a weekend).
+    Write each day as a vector of three inputs first, dot it with `[12, -8, 4]`, then add $b$.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    day_guesses = hand.boxes(["day 3", "day 5"])
+    return (day_guesses,)
+
+
+@app.cell(hide_code=True)
+def _(day_guesses):
+    hand.marked(day_guesses, {"day 3": 151, "day 5": 235}, {
+        "day 3": r"""the inputs are `[22, 1, 0]`: $12 \times 22 + (-8) \times 1 + 4 \times 0$, then $- 105$""",
+        "day 5": r"""the inputs are `[28, 0, 1]`: $12 \times 28 + (-8) \times 0 + 4 \times 1$, then $- 105$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    She sold 148 and 234. Notice what the 0s and 1s do: on a dry day, $w_r$ is multiplied by 0
+    and drops out; on a rainy day it counts once. The rain input works like a **switch** that
+    turns the rain knob on or off.
 
     ## Exercise 1: dot
 
@@ -283,13 +315,52 @@ def _(X):
 def _():
     mo.md(r"""
     The same 8 guesses, in one line: `X @ w` gives one dot product per day, and `- 105` works
-    against every one of them.
+    against every one of them. Here is what `@` did, drawn out. Each row of `X` is dotted with
+    the knobs and gives one number; the picture marks row 1 (day 1), whose dot product is
+    $17 \times 12 + 1 \times (-8) + 0 \times 4 = 196$:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _rows = [[14, 0, 0], [17, 1, 0], [20, 0, 1], [22, 1, 0], [25, 0, 0], [28, 0, 1], [31, 1, 0], [33, 0, 0]]
+    _w = [12, -8, 4]
+    grids([
+        {"name": "X  (8, 3)", "values": _rows, "rows": [f"day {i}" for i in range(8)],
+         "cols": ["temp", "rain", "weekend"], "marks": {(1, c): "blue" for c in range(3)}},
+        "@",
+        {"name": "w  (3,)", "values": [[v] for v in _w], "marks": {(r, 0): "red" for r in range(3)}},
+        "=",
+        {"name": "X @ w  (8,)", "values": [[sum(a * b for a, b in zip(r, _w))] for r in _rows],
+         "marks": {(1, 0): "box"}},
+    ], "X has 8 rows of 3 inputs; w has 3 knobs; X @ w has 8 numbers, one dot product per row. Row 1, 17, 1, 0, dotted with 12, -8, 4 gives 196")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The knobs are drawn standing up, as a column, so you can see them lie along each row in turn:
+    first number with first number, second with second, third with third. Subtract 105 from
+    each result and you have the 8 guesses.
 
     ### Shapes must fit
 
     For `matrix @ vector`, each row must be as long as the vector: here, 3 inputs and 3 knobs.
     In shapes: `(8, 3) @ (3,)` gives `(8,)`. The two numbers **in the middle** (3 and 3) must
-    match, and they disappear; the number on the outside (8) is what's left. If they don't match, NumPy stops with an
+    match, and they disappear; the number on the outside (8) is what's left.
+
+    Think of the shapes as two dominoes laid end to end. The ends that touch must show the same
+    number, and once they're joined you only see the outer ends:
+
+    | left | @ | right | touching ends | result |
+    |---|---|---|---|---|
+    | `(8, 3)` | @ | `(3,)` | 3 and 3: they match | `(8,)`, the 8 left on the outside |
+    | `(2, 3)` | @ | `(3,)` | 3 and 3: they match | `(2,)` |
+    | `(8, 3)` | @ | `(2,)` | 3 and 2: they don't | an error |
+
+    If they don't match, NumPy stops with an
     error. The next cell does this on purpose, with 2 knobs for 3 inputs, so you know what that
     error looks like:
     """)
@@ -390,6 +461,36 @@ def _():
     column, add up, divide by 8. "Multiply in pairs and add up" is a dot product: the dot
     product of $2 \times e$ with the **rain column**.
 
+    Here it is with real numbers, at chapter 01's line ($w_t = 10$, $w_r = 0$, $w_k = 0$,
+    $b = -60$), day by day:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _lines = ["| day | temp | rain | weekend | miss $e$ | $2 \\times e$ | $2 \\times e \\times \\text{rain}$ | $2 \\times e \\times \\text{weekend}$ |",
+              "|---|---|---|---|---|---|---|---|"]
+    _sum_r = _sum_k = 0
+    for _i, (_t, _r, _k, _s) in enumerate(zip(temps, rain, weekend, sales)):
+        _e = 10 * _t - 60 - _s
+        _sum_r, _sum_k = _sum_r + 2 * _e * _r, _sum_k + 2 * _e * _k
+        _lines.append(f"| {_i} | {_t} | {_r} | {_k} | {_e} | {2 * _e} | {2 * _e * _r} | {2 * _e * _k} |")
+    _lines.append(f"| **sum** | | | | | | **{_sum_r}** | **{_sum_k}** |")
+    _lines.append(f"| **mean** ($\\div 8$) | | | | | | **{_sum_r / 8:g}** | **{_sum_k / 8:g}** |")
+    mo.md("\n".join(_lines))
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The switch again. In the rain column only the rainy days (1, 3 and 6) have a 1, so only
+    their blames count: $40 + 24 + (-14) = 50$, and $50 / 8 = 6.25$. The other days multiply
+    their blame by 0 and have no say on $w_r$. It makes sense: whether the rain knob should move
+    can only be judged from days when it rained. In the weekend column only days 2 and 5 count:
+    $6 + (-28) = -22$, and $-22 / 8 = -2.75$.
+
     ### `vector @ matrix`: one dot product per column
 
     `@` also works the other way round. `vector @ matrix` takes the dot product of the vector with
@@ -410,6 +511,57 @@ def _():
     The columns of `[[1, 2, 3], [4, 5, 6]]` are `[1, 4]`, `[2, 5]` and `[3, 6]`. Dotted with
     `[1, 1]` they give 5, 7 and 9. In shapes: `(2,) @ (2, 3)` gives `(3,)`; again the two numbers in
     the middle match and disappear.
+
+    This time the vector lies down, as a row, and runs down each column in turn. The picture
+    marks column 1: $1 \times 2 + 1 \times 5 = 7$.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "v  (2,)", "values": [[1, 1]], "marks": {(0, 0): "blue", (0, 1): "blue"}},
+        "@",
+        {"name": "M  (2, 3)", "values": [[1, 2, 3], [4, 5, 6]], "marks": {(0, 1): "red", (1, 1): "red"}},
+        "=",
+        {"name": "v @ M  (3,)", "values": [[5, 7, 9]], "marks": {(0, 1): "box"}},
+    ], "The vector 1, 1 dotted with each column of the matrix: column 1 holds 2 and 5, giving 7")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### By hand: `vector @ matrix`
+
+    Work out `[2, -1] @ [[1, 0, 3], [2, 1, 0]]`. The matrix has shape `(2, 3)`, so the answer has
+    3 numbers, one per column.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    by_column = hand.boxes(["column 0", "column 1", "column 2"])
+    return (by_column,)
+
+
+@app.cell(hide_code=True)
+def _(by_column):
+    hand.marked(by_column, {"column 0": 0, "column 1": -1, "column 2": 6}, {
+        "column 0": r"""column 0 is `[1, 2]`: $2 \times 1 + (-1) \times 2$""",
+        "column 1": r"""column 1 is `[0, 1]`: $2 \times 0 + (-1) \times 1$""",
+        "column 2": r"""column 2 is `[3, 0]`: $2 \times 3 + (-1) \times 0$""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Back to the ice creams. `X` has one column per input: temperature, rain, weekend. The
+    vector $2 \times e$ has one number per day.
 
     So `(2 * e) @ X` gives, in one go, the three dot products we need: $2 \times e$ with the
     temperature column, with the rain column and with the weekend column. Shapes: `(8,) @ (8, 3)`
@@ -532,7 +684,42 @@ def _():
     `(3,)`: a single row. NumPy uses that row against **every** row of `X`: from each day it
     subtracts 25 from the temperature and 0 from the rest. Then `/ np.array([10, 1, 1])` divides
     each day's temperature by 10 and the rest by 1. Using a smaller array against every row (or
-    a single number against every position) is called **broadcasting**.
+    a single number against every position) is called **broadcasting**. On the first three days:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _dots = ["⋮", "⋮", "⋮"]
+    _blue = {(r, c): "blue" for r in range(3) for c in range(3)}
+    _red = {(r, c): "red" for r in range(3) for c in range(3)}
+    mo.vstack([
+        grids([
+            {"name": "X", "values": [[14, 0, 0], [17, 1, 0], [20, 0, 1], _dots], "rows": ["day 0", "day 1", "day 2", ""]},
+            "−",
+            {"name": "[25, 0, 0] on every row", "values": [[25, 0, 0]] * 3 + [_dots], "marks": _blue},
+            "=",
+            {"name": "X − [25, 0, 0]", "values": [[-11, 0, 0], [-8, 1, 0], [-5, 0, 1], _dots]},
+        ], "First the row 25, 0, 0 is subtracted from every row of X: day 0, 14, 0, 0, becomes -11, 0, 0"),
+        grids([
+            {"name": "X − [25, 0, 0]", "values": [[-11, 0, 0], [-8, 1, 0], [-5, 0, 1], _dots],
+             "rows": ["day 0", "day 1", "day 2", ""]},
+            "÷",
+            {"name": "[10, 1, 1] on every row", "values": [[10, 1, 1]] * 3 + [_dots], "marks": _red},
+            "=",
+            {"name": "Xs", "values": [[-1.1, 0, 0], [-0.8, 1, 0], [-0.5, 0, 1], _dots]},
+        ], "Then every row is divided by 10, 1, 1: day 0 becomes -1.1, 0, 0"),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    NumPy doesn't actually make copies of the small row: it just uses the same row again for each
+    day, as if it had been copied. The rain and weekend columns come out unchanged, because
+    subtracting 0 and dividing by 1 leave a number as it is.
 
     The cell below starts all knobs at 0 and takes 500 steps of the step rule. `w - 0.1 * grad_w`
     updates all three `w` knobs at once, position by position. (It uses your `gradient_np` and

@@ -278,3 +278,46 @@ def grids(parts: list, label: str):
             f'aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
             'font-family="ui-monospace, monospace" text-anchor="middle">')
     return mo.Html(head + "".join(body) + "</svg>")
+
+
+def cards(entries: list[dict], label: str, arrows: str = ""):
+    """Record cards in a row: one per box, or one per entry of the engine's book.
+
+    Each entry is a dict with `title` (written on the card's top band) and `lines` (one slot
+    per line, such as "data = 140"). `mark` set to "now" outlines the card in blue (the one
+    being read); "done" greys it out. `arrows` is drawn between neighbouring cards (for
+    example "→"), or nothing. `label` describes the picture for screen readers, in the
+    lesson's language.
+    """
+    import marimo as mo
+
+    size, line_h, band, pad, gap = 13, 20, 28, 10, 34 if arrows else 16
+    widths = [max([_width(e["title"], 14)] + [_width(s, size) for s in e["lines"]]) + 2 * pad + 8
+              for e in entries]
+    height = band + line_h * max(len(e["lines"]) for e in entries) + 2 * pad + 8
+    x, body = 4.0, []
+    for i, (entry, w) in enumerate(zip(entries, widths)):
+        mark = entry.get("mark", "")
+        stroke, sw = (DOT, 3) if mark == "now" else (AXIS, 1.2)
+        opacity = ' opacity="0.45"' if mark == "done" else ""
+        body.append(f'<g{opacity}>')
+        body.append(f'<rect x="{x:.1f}" y="4" width="{w:.1f}" height="{height - 8}" rx="8" fill="none" '
+                    f'stroke="{stroke}" stroke-width="{sw}"/>')
+        body.append(f'<rect x="{x:.1f}" y="4" width="{w:.1f}" height="{band}" rx="8" fill="{DOT}" fill-opacity="0.12"/>')
+        body.append(f'<text x="{x + w / 2:.1f}" y="{4 + band - 9}" font-size="14" font-weight="600" '
+                    f'text-anchor="middle" fill="{TEXT}">{escape(entry["title"])}</text>')
+        for j, text in enumerate(entry["lines"]):
+            body.append(f'<text x="{x + pad:.1f}" y="{4 + band + pad + line_h * j + 12}" font-size="{size}" '
+                        f'text-anchor="start" fill="{TEXT}">{escape(text)}</text>')
+        body.append('</g>')
+        x += w
+        if i < len(entries) - 1:
+            if arrows:
+                body.append(f'<text x="{x + gap / 2:.1f}" y="{height / 2 + 6:.1f}" font-size="18" '
+                            f'text-anchor="middle" fill="{AXIS}">{escape(arrows)}</text>')
+            x += gap
+    width = x + 4
+    head = (f'<svg viewBox="0 0 {width:.0f} {height}" width="100%" style="max-width:{width:.0f}px" role="img" '
+            f'aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
+            'font-family="ui-monospace, monospace">')
+    return mo.Html(head + "".join(body) + "</svg>")
