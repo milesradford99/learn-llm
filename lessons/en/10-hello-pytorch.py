@@ -15,6 +15,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, laptop_speed, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
+    from learn_llm.diagrams import cards, grids, pipeline
 
     LOCALE = "en"
     laptop_speed()
@@ -42,7 +43,24 @@ def _():
     PyTorch's version of a NumPy array is called a **tensor**. The word sounds grand, but a tensor
     is just an array of numbers with a shape. Most of what you know carries over: `@`, `*`, `.T`,
     `.shape`, indexing and slices all work the same.
+
+    You've met every kind already. A single number has the empty shape `()`. A list of numbers
+    (a vector, like a day's three inputs) has one number in its shape. A table (a matrix, like
+    chapter 05's 8 days) has two. A stack of tables has three: chapter 06's pictures were 10,000
+    tables of $28 \times 28$, shape `(10000, 28, 28)`, like a book with one table on each page.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "()", "values": [[7]]}, "   ",
+        {"name": "(3,)", "values": [[17, 1, 0]]}, "   ",
+        {"name": "(2, 3)", "values": [[14, 0, 0], [17, 1, 0]]}, "   ",
+        {"name": "(2, 2, 3): page 0", "values": [[1, 0, 1], [0, 1, 0]]}, " ",
+        {"name": "page 1", "values": [[0, 0, 1], [1, 1, 0]]},
+    ], "Tensors of shape empty, 3, 2 by 3, and 2 by 2 by 3: a number, a row, a table, and two tables stacked")
     return
 
 
@@ -79,7 +97,9 @@ def _():
     **bits**. NumPy normally uses 64 bits per number, which keeps about 16 digits correct.
     PyTorch normally uses 32, which keeps about 7: half the memory, and plenty for training. So
     the same sum can differ in its last digits. Here's $0.1 \times 3$ both ways. (Neither is exactly 0.3.
-    That's normal: computers store numbers in binary, and 0.1 can't be stored exactly.)
+    That's normal: computers store numbers in binary, and 0.1 can't be stored exactly, just as
+    $1 / 3$ can't be written exactly in decimals: 0.333… goes on for ever, and you have to stop
+    somewhere.)
     ///
     """)
     return
@@ -145,6 +165,38 @@ def _():
     Every `+` and `*` on such a tensor is written down, with its parents and local slopes, just as
     your `mul` did. `backward()` then reads the book in reverse order and fills in `.grad`.
     `w.grad` is a tensor holding a single number, and `.item()` turns it into a plain Python number.
+
+    The book is hidden, but it's there. Every result made from a knob carries a note of the step
+    that made it, and that step points to the steps before it. Following those notes back from
+    `L`, one parent at a time, gives this (the names are PyTorch's own, read live from the
+    calculation):
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _w = torch.tensor(10.0, requires_grad=True)
+    _b = torch.tensor(-60.0, requires_grad=True)
+    _L = (_w * 14 + _b - 63) ** 2
+    _names, _step = [], _L.grad_fn
+    while _step is not None:
+        _names.append(type(_step).__name__)
+        _step = _step.next_functions[0][0] if _step.next_functions else None
+    _meaning = [["L = e × e", "your square"], ["e = g − 63", "your sub"], ["g = p + b", "your add"],
+                ["p = w × 14", "your mul"], ["adds blame", "into w.grad"]]
+    cards([{"title": name, "lines": lines} for name, lines in zip(_names, _meaning)],
+          "PyTorch's hidden book for Mia's day, read backwards from L: a power, a subtraction, an addition, "
+          "a multiplication, then the step that adds blame into the knob w", arrows="→")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Chapter 04's book, read from the end: `backward()` walks exactly this chain. (`PowBackward0`
+    is the step for `e * e` written as a power; the last card, `AccumulateGrad`, is the step that
+    **adds** the arriving blame into `w.grad`. Keep that word "adds" in mind.)
 
     Your engine had one trap: blame is *added* to a box, so it must start at 0. PyTorch does the
     same thing, on purpose. Below, we build the loss again and go backward a second time, without
@@ -413,7 +465,27 @@ def _():
 
     One thing is the other way round from our habit: our `W1` was `(784, 64)`, with a column for each
     detector, while PyTorch stores `(64, 784)`, with a row for each detector. It's the same numbers on
-    their side. Calling `layer(X)` computes `X @ layer.weight.T + layer.bias`, our `Z`. Calling
+    their side. With 3 inputs and 2 detectors it looks like this; detector 1's knobs are marked:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "our W  (3, 2)", "values": [[1, 4], [2, 5], [3, 6]], "rows": ["input 0", "input 1", "input 2"],
+         "cols": ["det 0", "det 1"], "marks": {(r, 1): "blue" for r in range(3)}},
+        "   ",
+        {"name": "layer.weight  (2, 3)", "values": [[1, 2, 3], [4, 5, 6]], "rows": ["det 0", "det 1"],
+         "cols": ["input 0", "input 1", "input 2"], "marks": {(1, c): "blue" for c in range(3)}},
+    ], "Our W keeps each detector's knobs in a column; layer.weight keeps them in a row: the same numbers, transposed")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    So `layer.weight.T` is our `W`. Calling `layer(X)` computes `X @ layer.weight.T + layer.bias`, our `Z`. Calling
     an object like a function looks odd, but it's only a shortcut for running its calculation.
 
     `nn.Sequential(...)` chains layers: each one's output is the next one's input.
@@ -579,6 +651,24 @@ def _():
 
 @app.cell(hide_code=True)
 def _():
+    pipeline([("zero_grad()", ".grad back to 0"), ("model(X)", "scores, loss"),
+              ("backward()", ".grad filled in"), ("step()", "knobs moved")],
+             ["then", "then", "then"],
+             "One training step: clear the blame, compute the loss, fill in the blame, move the knobs; then the next batch starts again from clearing")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Then the next batch starts again from the left. Every training loop in this course, up to
+    the language models at the end, is this picture inside a `for` loop.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     mo.md(r"""
     ## Find the mistake
 
@@ -615,6 +705,46 @@ def _(bug_boxes):
 def _():
     mo.md(r"""
     From the second step on, each knob's `.grad` holds the new blame *plus* everything left from earlier steps, as in the doubled 952 above. The knobs move, but in the wrong direction and too far.
+
+    Here it is with numbers, on Mia's day 1 again: eight plain steps (`torch.optim.SGD` is chapter
+    02's step rule, knob minus rate times slope), once with the clearing call and once without.
+    The table shows `w`, what `w.grad` holds, and the loss at each step:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _rows = {}
+    for _clear in (True, False):
+        _w = torch.tensor(10.0, requires_grad=True)
+        _b = torch.tensor(-60.0, requires_grad=True)
+        _opt = torch.optim.SGD([_w, _b], lr=0.001)
+        _rows[_clear] = []
+        for _step in range(8):
+            if _clear:
+                _opt.zero_grad()
+            _loss = (_w * 14 + _b - 63) ** 2
+            _loss.backward()
+            _rows[_clear].append(f"{_w.item():.2f} | {_w.grad.item():.0f} | {_loss.item():.1f}")
+            _opt.step()
+    _lines = ["| step | `w` (cleared) | `w.grad` (cleared) | loss (cleared) "
+              "| `w` (never cleared) | `w.grad` (never cleared) | loss (never cleared) |",
+              "|---|---|---|---|---|---|---|"]
+    for _i, (_a, _c) in enumerate(zip(_rows[True], _rows[False])):
+        _lines.append(f"| {_i + 1} | {_a} | {_c} |")
+    mo.md("\n".join(_lines))
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    With clearing, the loss falls at every step, from 289 to almost 0. Without it, every step's
+    blame piles on top of the old ones. At first the pile still points the right way, and the loss
+    even drops faster. But by step 3 `w` is already good, and the pile still says "go down", so
+    `w` sails past and the loss climbs back to nearly 300 before the pile turns round. The
+    knob swings back and forth instead of settling.
 
     ## Exercise 4: train_step
 
@@ -719,7 +849,8 @@ def _():
     Every number so far was computed on your computer's main processor, the **CPU**. A CPU has a
     few very capable workers. A **GPU** (graphics processor, built to colour millions of screen dots at
     once) has thousands of simple ones, and that suits our work: a matrix product is thousands of
-    identical small sums. For large models, a GPU can be 10 to 100 times faster.
+    identical small sums. Think of marking a stack of 10,000 one-line sums: a few professors would
+    each be fast, but a hall of a thousand pupils, each doing ten, finishes long before them. For large models, a GPU can be 10 to 100 times faster.
 
     This course installs the small, CPU-only version of PyTorch, so that every chapter runs on any
     laptop. Nothing in the course needs a GPU; chapters that would benefit from one say so.
