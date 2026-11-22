@@ -10,6 +10,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
+    from learn_llm.diagrams import grids
 
     LOCALE = "zh-CN"
 
@@ -74,11 +75,55 @@ def _(train_images, train_labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    不过对计算机来说，图片只是一堆数。下面是第一张图片里的一小块：6 行 12 列，取自 6 的下半部分，也就是笔画绕圈的地方。
+    每一格是一个像素和它的数；超过 128 的格子（墨比纸多）涂成了蓝色。眯起眼睛看，能从这些数里看出那个圈的弧线。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(train_images):
+    _patch = train_images[0][15:21, 9:21]
+    grids([{"name": "第 0 张图片，第 15 到 20 行，第 9 到 20 列", "values": _patch.tolist(),
+            "rows": [f"第 {r} 行" for r in range(15, 21)], "cols": [str(c) for c in range(9, 21)],
+            "marks": {(r, c): "blue" for r in range(6) for c in range(12) if _patch[r, c] > 128}}],
+          "第一张图片里 6 行 12 列的一小块：像素值从 0 到 255，深色的涂了颜色，描出 6 下方那个圈")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## 每张图片展开成一长行
 
     我们的模型处理的是向量，所以把每个 $28 \times 28$ 的方格展开成一行 784 个数（$28 \times 28 = 784$）：先是图片的第 0 行，接着第 1 行，依此类推。
     `reshape` 做的就是这件事：数还是那些数，顺序也不变，只改变形状。我们还把它们都除以 255，让每个像素都在 0（白）到 1（黑）之间，
     理由和第 04、05 章换算气温一样：数值小、大小又相近，才适合用同一个学习率。下面的形状是 `(10000, 784)` 和 `(2000, 784)`：每张图片一行 784 个数。
+
+    拿一张 $3 \times 3$ 的“7”的小图片来看展开（1 是墨，0 是纸）。它的三行首尾相接：先是第 0 行（蓝），再是第 1 行，最后是第 2 行（红），一共 9 个数。
+    什么也没丢：只要知道宽度是 3，就能把这 9 个数再折回方格。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "一张 3 × 3 的图片", "values": [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
+         "rows": ["第 0 行", "第 1 行", "第 2 行"],
+         "marks": {**{(0, c): "blue" for c in range(3)}, **{(2, c): "red" for c in range(3)}}},
+        "→",
+        {"name": "同一张图片，展开成一行 9 个数", "values": [[1, 1, 1, 0, 0, 1, 0, 0, 1]],
+         "cols": [str(i) for i in range(9)],
+         "marks": {**{(0, c): "blue" for c in range(3)}, **{(0, c): "red" for c in range(6, 9)}}},
+    ], "一张 3 × 3 的“7”展开成一行 9 个数：第 0 行、第 1 行、第 2 行依次排开")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    真正的图片也是这样，只是 28 行、每行 28 个：长行里第 0 到 27 个位置是图片最上面一行，第 28 到 55 个是第二行，依此类推。
     """)
     return
 
@@ -94,6 +139,105 @@ def _(test_images, train_images):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    ## 分数就是一张镂空板
+
+    先不看真图片，来看一个小小的世界：图片是 $3 \times 3$ 的，“数字”只有两个：竖杠 **|** 和横杠 **—**。
+    给每个数字一格旋钮，大小和图片一样，就像一张镂空板（stencil）：这个数字有墨的地方是 1，其他地方是 0。
+
+    一张图片对某个数字的**分数**是：每个像素乘以同一位置上的旋钮，再全部加起来。因为旋钮只有 1 和 0，分数其实就是数一数：
+    有多少个有墨的像素正好落在镂空板的孔上。下面是一根竖杠分别对两张镂空板打分：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _bar = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
+    _stand = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
+    _lie = [[0, 0, 0], [1, 1, 1], [0, 0, 0]]
+    _ink = {(r, 1): "blue" for r in range(3)}
+    mo.vstack([
+        grids([
+            {"name": "图片", "values": _bar, "marks": _ink}, "×",
+            {"name": "| 的旋钮", "values": _stand, "marks": {(r, 1): "red" for r in range(3)}}, "→",
+            {"name": "| 的分数", "values": [[3]], "marks": {(0, 0): "box"}},
+        ], "竖杠对 | 的旋钮：三个有墨的像素都落在孔上，分数 3"),
+        grids([
+            {"name": "图片", "values": _bar, "marks": _ink}, "×",
+            {"name": "— 的旋钮", "values": _lie, "marks": {(1, c): "red" for c in range(3)}}, "→",
+            {"name": "— 的分数", "values": [[1]], "marks": {(0, 0): "box"}},
+        ], "竖杠对 — 的旋钮：只有中间那个像素落在孔上，分数 1"),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    **|** 得 3 分，**—** 得 1 分：模型说“|”。墨（蓝）和孔（红）重叠的地方，分数就往上加。
+
+    ### 手算：一个 T
+
+    现在是一张 **T** 的图片：最上面一整行有墨，中间一列也有墨。数一数它对每张镂空板的分数。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([{"name": "一个 T", "values": [[1, 1, 1], [0, 1, 0], [0, 1, 0]],
+            "marks": {(0, 0): "blue", (0, 1): "blue", (0, 2): "blue", (1, 1): "blue", (2, 1): "blue"}}],
+          "一张 3 × 3 的 T：最上面一行和中间一列有墨")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    t_boxes = hand.boxes(["| 的分数", "— 的分数"])
+    return (t_boxes,)
+
+
+@app.cell(hide_code=True)
+def _(t_boxes):
+    hand.marked(t_boxes, {"| 的分数": 3, "— 的分数": 1}, {
+        "| 的分数": r"""| 的孔在中间一列：T 在这三个像素里，哪些有墨？""",
+        "— 的分数": r"""— 的孔在中间一行：T 在这三个像素里，哪些有墨？""",
+    }, LOCALE)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    “同一位置相乘再加起来”就是点积（第 05 章）。把图片和镂空板都展开成一行 9 个数，分数就是它们的点积。
+    有两个数字时，把两张展开后的镂空板并排立起来，作为矩阵 $W$ 的两**列**，形状是 `(9, 2)`。把图片一行一行叠成 $X$。
+    于是每张图片的那一行和每个数字的那一列做点积，得到一个分数：这就是 `X @ W`。下面是竖杠和 T：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _cols = [str(i) for i in range(9)]
+    grids([
+        {"name": "X  (2, 9)", "values": [[0, 1, 0, 0, 1, 0, 0, 1, 0], [1, 1, 1, 0, 1, 0, 0, 1, 0]],
+         "rows": ["竖杠", "T"], "cols": _cols, "marks": {(1, c): "blue" for c in range(9)}},
+        "@",
+        {"name": "W  (9, 2)", "values": [[0, 0], [1, 0], [0, 0], [0, 1], [1, 1], [0, 1], [0, 0], [1, 0], [0, 0]],
+         "rows": _cols, "cols": ["|", "—"], "marks": {(r, 1): "red" for r in range(9)}},
+        "=",
+        {"name": "S  (2, 2)", "values": [[3, 1], [3, 1]], "rows": ["竖杠", "T"], "cols": ["|", "—"],
+         "marks": {(1, 1): "box"}},
+    ], "X 的两行是展开的竖杠和 T；W 的两列是 | 和 — 的镂空板；S = X @ W 每张图片、每个数字一个分数。T 那一行和 — 那一列的点积是 1")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    框出的分数是 $X$ 的“T”那一行（蓝）和 $W$ 的“—”那一列（红）的点积：T 对 — 的分数，也就是你数出来的 1。
+    真正的情况一模一样，只是数更大：784 个像素而不是 9 个，十个数字而不是两个，旋钮可以是任意数，而不只是 0 或 1。
+
     ## 十个分数，每个数字一个
 
     在第 05 章里，一组旋钮把一天的输入变成一个猜测。现在我们要十个数，每个数字一个**分数**（score），所以给每个数字配一组自己的 784 个旋钮
@@ -381,7 +525,35 @@ def _(W_hand, X, b_hand):
 def _():
     mo.md(r"""
     模型把大约 2,750 张图片猜成 8，把大约 2,100 张猜成 0，而 5 只猜了一次。0 和 8 的模板墨水最多，铺得又开，所以几乎给什么都打高分。
-    大多数 5 最后被猜成了 0 和 8：5 的模板比较淡，几乎每次都被它们比下去。取均值是把每个数字单独拿出来看，它从来不问真正要紧的问题：
+    大多数 5 最后被猜成了 0 和 8：5 的模板比较淡，几乎每次都被它们比下去。
+
+    小世界能说明原因。加上第三个数字 **+**，它的镂空板两根杠都有：5 个孔，而不是 3 个。一根工整的竖杠现在对 **|** 得 3 分，对 **+** 也得 3 分：平局。
+    竖杠要是写得稍微潦草一点，中间偏左多了一个有墨的像素，它就对 **|** 得 3 分，对 **—** 得 2 分，对 **+** 得 4 分：被认成了 **+**。
+    墨多的镂空板，不管什么图片的墨都能多接住一些，所以几乎给什么都打高分。真实数字里的 0 和 8 就是这样。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _sloppy = [[0, 1, 0], [1, 1, 0], [0, 1, 0]]
+    _ink = {(0, 1): "blue", (1, 0): "blue", (1, 1): "blue", (2, 1): "blue"}
+    grids([
+        {"name": "潦草的 |", "values": _sloppy, "marks": _ink}, "×",
+        {"name": "| 的旋钮", "values": [[0, 1, 0], [0, 1, 0], [0, 1, 0]], "marks": {(r, 1): "red" for r in range(3)}},
+        "→", {"name": "分数", "values": [[3]]}, "    ",
+        {"name": "潦草的 |", "values": _sloppy, "marks": _ink}, "×",
+        {"name": "+ 的旋钮", "values": [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+         "marks": {(0, 1): "red", (1, 0): "red", (1, 1): "red", (1, 2): "red", (2, 1): "red"}},
+        "→", {"name": "分数", "values": [[4]], "marks": {(0, 0): "box"}},
+    ], "多了一个像素的竖杠，对 | 的镂空板得 3 分，对墨更多的 + 的镂空板却得 4 分")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    取均值是把每个数字单独拿出来看，它从来不问真正要紧的问题：
     哪些旋钮能把 5 和 8 **区分开**？
 
     ## 下一步
