@@ -10,7 +10,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
-    from learn_llm.diagrams import grids, pipeline
+    from learn_llm.diagrams import bars, grids, pipeline
     from learn_llm.plot import chart
 
     LOCALE = "en"
@@ -64,6 +64,35 @@ def _():
     biggest score almost always stays the biggest. No guess changes, so the accuracy doesn't move
     at all: its slope is 0 almost everywhere, and the step rule never changes the knobs.
 
+    See it on one picture, a 1, with only two digits. The score for digit 0 stays at 1. Turn the
+    knob that sets the score for digit 1 slowly from -1 to 3. On the left, the accuracy on this
+    picture; on the right, a smooth measure of how sure the model is that it's a 1 (built in the
+    next section):
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _xs = [x / 50 for x in range(-50, 151)]
+    mo.hstack([
+        chart((-1, 3), (0, 1), "score for digit 1", "accuracy",
+              curve=[(x, 1.0 if x > 1 else 0.0) for x in _xs]),
+        chart((-1, 3), (0, 1), "score for digit 1", "share for digit 1",
+              curve=[(x, float(np.exp(x) / (np.exp(x) + np.exp(1)))) for x in _xs]),
+    ], widths="equal")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The accuracy is a **light switch**: flat at 0, a sudden jump where the score for 1 passes the
+    score for 0, then flat at 1. On a flat stretch, a tiny nudge changes nothing, so the slope is
+    0 and gradient descent has no hint which way to go. The curve on the right is a **dimmer**:
+    every nudge of the knob moves it a little, so at every point it has a slope that says "this
+    way is better".
+
     We need a smooth measure instead: not just *which* digit wins, but **how sure** the model
     is of each. If scores could be turned into shares that add up to 1, like "0.7 for 3, 0.2
     for 8, 0.1 for the rest", a tiny nudge would change the shares a tiny bit, and that gives
@@ -97,6 +126,15 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    A few values, to make it concrete:
+
+    | score $s$ | −2 | −1 | 0 | 1 | 2 | 3 |
+    |---|---|---|---|---|---|---|
+    | $e^s$ | 0.14 | 0.37 | 1 | 2.72 | 7.39 | 20.09 |
+
+    Each step to the right multiplies by 2.718; each step to the left divides by it. However
+    negative the score, $e^s$ only gets closer to 0, never reaching it or going below.
+
     Three things to notice: $e^s$ is always positive; a higher score always gives a higher
     $e^s$; and every +1 in the score multiplies $e^s$ by about 2.718. (Why e and not 2? Because
     with e the slopes come out simplest; you'll see exactly why below.)
@@ -107,6 +145,42 @@ def _():
     is called **softmax**. Its shares are the model's **probabilities**: how sure it is of each
     digit.
 
+    Try it. Drag the three scores and watch the $e^s$ values and the shares:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    play_scores = mo.ui.array([mo.ui.slider(-3, 3, step=0.5, value=v, label=f"score for digit {i}", show_value=True)
+                               for i, v in enumerate([2, 1, 0])])
+    play_scores.vstack()
+    return (play_scores,)
+
+
+@app.cell(hide_code=True)
+def _(play_scores):
+    _s = np.array(play_scores.value, dtype=float)
+    _e = np.exp(_s)
+    mo.hstack([
+        mo.vstack([mo.md(r"$e^s$"), bars([(f"digit {i}", v) for i, v in enumerate(_e)], "e to the power of each score", digits=2)]),
+        mo.vstack([mo.md(r"shares: each $e^s$ divided by the total, " + f"{_e.sum():.2f}"),
+                   bars([(f"digit {i}", v) for i, v in enumerate(_e / _e.sum())], "the share of each digit", top=1.0)]),
+    ], widths="equal")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Things to try:
+
+    - Make all three scores equal. Every share is $1/3$: the model can't decide.
+    - Push one score up by 1. Its $e^s$ is multiplied by 2.72, and it takes share from the others.
+    - Set the scores to 2, 1, 0, note the shares, then to 3, 2, 1. The shares don't change at all:
+      adding the same number to every score multiplies every $e^s$ by the same amount, and the
+      division by the total cancels it. Only the **differences** between scores matter.
+
     One practical problem: `np.exp(1000)` is far too big for the computer, so it gives `inf`
     (infinity), and `inf / inf` is not a number (NumPy shows that as `nan`, short for "not a
     number"). The fix: before $e^{\square}$, subtract the largest score $m$ from every score. This doesn't
@@ -116,6 +190,10 @@ def _():
     big for the computer. (If you leave this step out, NumPy also prints a warning saying
     "overflow": that's this problem.)
 
+    It's the last thing you tried above, the other way round. The scores `[1000, 999, 998]` minus
+    their largest, 1000, are `[0, -1, -2]`: the same differences as `[2, 1, 0]`, so the same shares,
+    0.67, 0.24 and 0.09. And $e^0 = 1$, $e^{-1} = 0.37$, $e^{-2} = 0.14$ are small, friendly numbers.
+
     ### Rows, columns and `keepdims`
 
     For a matrix of scores we do this row by row: each picture gets its own shares.
@@ -124,7 +202,34 @@ def _():
     `(10000, 1)` instead of `(10000,)`. A column like that broadcasts across each row: with
     `m = np.max(S, axis=1, keepdims=True)`, `S - m` subtracts each picture's own largest score
     from all ten of its scores (chapter 05 used a row
-    against every row; this is a column against every column).
+    against every row; this is a column against every column). With two pictures and three
+    digits:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "S  (2, 3)", "values": [[2, 1, 0], [5, 7, 6]], "rows": ["picture 0", "picture 1"],
+         "marks": {(0, 0): "box", (1, 1): "box"}},
+        "−",
+        {"name": "m  (2, 1)", "values": [[2], [7]], "marks": {(0, 0): "blue", (1, 0): "red"}},
+        "=",
+        {"name": "S − m  (2, 3)", "values": [[0, -1, -2], [-2, 0, -1]],
+         "marks": {**{(0, c): "blue" for c in range(3)}, **{(1, c): "red" for c in range(3)}}},
+    ], "Each row's largest score, kept as a column m, is subtracted from every score in its own row")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    `m` holds each row's largest score (outlined in `S`), standing as a column. Picture 0's 2 is
+    used against all of row 0 (blue), picture 1's 7 against all of row 1 (red). Without
+    `keepdims=True`, `m` would be the vector `[2, 7]` of shape `(2,)`; NumPy would treat it as a
+    **row** and try to use it against every row of `S`, whose rows have 3 numbers, not 2: an error
+    (or, with as many pictures as digits, a silently wrong answer).
     """)
     return
 
@@ -239,7 +344,33 @@ def _():
     To pick out the right digit's share in a matrix of shares, we use a matrix `Y` of the same
     shape with a 1 in the right digit's column and 0 everywhere else (a **one-hot** row). Then
     `Y * P` keeps only the right digit's share in each row, and `np.sum(Y * P, axis=1)` gives
-    one share per picture. Here is a helper that builds `Y` from the labels: a matrix of zeros,
+    one share per picture. With three digits, a picture of a 0 and a picture of a 2:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "P", "values": [[0.7, 0.2, 0.1], [0.3, 0.3, 0.4]], "rows": ["picture 0", "picture 1"],
+         "cols": ["0", "1", "2"]},
+        "×",
+        {"name": "Y", "values": [[1, 0, 0], [0, 0, 1]], "cols": ["0", "1", "2"],
+         "marks": {(0, 0): "blue", (1, 2): "blue"}},
+        "=",
+        {"name": "Y × P", "values": [[0.7, 0, 0], [0, 0, 0.4]], "cols": ["0", "1", "2"],
+         "marks": {(0, 0): "blue", (1, 2): "blue"}},
+        "→",
+        {"name": "row sums", "values": [[0.7], [0.4]], "marks": {(0, 0): "box", (1, 0): "box"}},
+    ], "Multiplying the shares P by the one-hot rows Y position by position keeps only the right digit's share in each row; adding along each row gives 0.7 and 0.4")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    The 0s in `Y` wipe out every wrong digit's share, so adding along a row just picks out the one
+    that's left. Here is a helper that builds `Y` from the labels: a matrix of zeros,
     then a 1 at row `i`, column `labels[i]`, for each picture.
     """)
     return
@@ -371,6 +502,27 @@ def _():
 
     > the slope of $e^x$ is $e^x$ itself.
 
+    In a picture: wherever you stand on the curve, its height and its steepness are the same
+    number. The two straight lines touch the curve at $x = 1$ and $x = 2$ and go in its direction
+    there. At $x = 1$ the curve is 2.72 high and the line climbs 2.72 per unit; at $x = 2$ it is
+    7.39 high and the line climbs 7.39 per unit.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _e = float(np.exp(1))
+    chart((-1, 2.6), (0, 14), "x", "eˣ",
+          curve=[(x / 50, float(np.exp(x / 50))) for x in range(-50, 131)],
+          lines=[(_e, 0.0), (_e ** 2, -(_e ** 2))],
+          dots=[(1, _e), (2, _e ** 2)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     **$\log x$.** Say $y = \log x$, which means $x = e^y$. Nudge $y$ by a tiny $k$: by the slope
     we just found (change $\approx$ slope $\times$ nudge), $x$ grows by about $e^y \times k = x \times k$. So when $x$ grows by $x \times k$, $\log x$
     grows by $k$. Change of $\log x$ per unit change of $x$:
@@ -468,6 +620,45 @@ def _(slope_boxes):
 def _():
     mo.md(r"""
     The biggest slope, in size, belongs to the right digit: gradient descent will push its score up hard. And the wrong digit that got 0.7 will be pushed down much harder than the one that got 0.1.
+
+    Think of it as a tug of war. The right digit is pulled up by $1 - p$, what it's still missing.
+    Every wrong digit is pushed down by its share $p$, what it wrongly took. The pulls stop when
+    the right digit has everything. Watch it happen to this picture: each step moves every score
+    against its slope (learning rate 1), and the shares are worked out again.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pull_steps = mo.ui.slider(0, 6, value=0, label="steps taken", show_value=True)
+    pull_steps
+    return (pull_steps,)
+
+
+@app.cell(hide_code=True)
+def _(pull_steps):
+    _s = np.log(np.array([0.7, 0.2, 0.1]))
+    _y = np.array([0.0, 1.0, 0.0])
+    for _ in range(pull_steps.value):
+        _p = np.exp(_s) / np.exp(_s).sum()
+        _s = _s - (_p - _y)
+    _p = np.exp(_s) / np.exp(_s).sum()
+    mo.hstack([
+        mo.vstack([mo.md("shares"), bars([(f"digit {i}", v) for i, v in enumerate(_p)], "shares", top=1.0)]),
+        mo.vstack([mo.md("slopes, share minus one-hot"),
+                   bars([(f"digit {i}", v) for i, v in enumerate(_p - _y)], "slopes", top=1.0)]),
+        mo.md(rf"surprise: **{-np.log(_p[1]):.3f}**"),
+    ], widths=[2, 2, 1])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    After one step, digit 1's share jumps from 0.2 to about 0.5; after six, it's over 0.9, and the
+    surprise has fallen from 1.609 towards 0. As the right share grows, every slope shrinks:
+    the closer the model is to right, the gentler the pull.
     """)
     return
 

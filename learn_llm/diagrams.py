@@ -321,3 +321,38 @@ def cards(entries: list[dict], label: str, arrows: str = ""):
             f'aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
             'font-family="ui-monospace, monospace">')
     return mo.Html(head + "".join(body) + "</svg>")
+
+
+def bars(items: list[tuple[str, float]], label: str, top: float | None = None, digits: int = 2):
+    """Horizontal bars, one per (name, value): blue to the right for positive, red to the left
+    for negative, each with its value written beside it. `top` is the value of a full bar
+    (by default the biggest size). `label` describes the picture for screen readers, in the
+    lesson's language.
+    """
+    import marimo as mo
+
+    top = top or max(abs(v) for _, v in items) or 1.0
+    negative = any(v < 0 for _, v in items)
+    name_w = max(_width(n, 14) for n, _ in items) + 16
+    half = 200 if negative else 0
+    span = 200 if negative else 360
+    zero = name_w + (half + 50 if negative else 0)  # room for a negative bar's value
+    row_h, width = 30, zero + span + 70
+    parts = [f'<svg viewBox="0 0 {width:.0f} {row_h * len(items) + 8}" width="100%" style="max-width:{width:.0f}px" '
+             f'role="img" aria-label="{escape(label)}" xmlns="http://www.w3.org/2000/svg" '
+             'font-family="ui-monospace, monospace">']
+    for i, (name, value) in enumerate(items):
+        y = 4 + row_h * i
+        size = min(abs(value) / top, 1.0) * span
+        x = zero if value >= 0 else zero - size
+        color = DOT if value >= 0 else LINE
+        parts.append(f'<text x="{name_w - 10:.1f}" y="{y + 19}" font-size="14" text-anchor="end" fill="{TEXT}">'
+                     f'{escape(name)}</text>')
+        parts.append(f'<rect x="{x:.1f}" y="{y + 4}" width="{max(size, 1):.1f}" height="{row_h - 10}" rx="3" '
+                     f'fill="{color}" fill-opacity="0.75"/>')
+        tx, anchor = (zero + size + 6, "start") if value >= 0 else (zero - size - 6, "end")
+        parts.append(f'<text x="{tx:.1f}" y="{y + 19}" font-size="13" text-anchor="{anchor}" fill="{TEXT}">'
+                     f'{value:.{digits}f}</text>')
+    parts.append(f'<line x1="{zero:.1f}" y1="2" x2="{zero:.1f}" y2="{row_h * len(items) + 6}" stroke="{AXIS}"/>')
+    parts.append("</svg>")
+    return mo.Html("".join(parts))

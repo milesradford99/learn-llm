@@ -10,7 +10,7 @@ with app.setup(hide_code=True):
     from learn_llm import hand, images, todo
     from learn_llm.checks import check
     from learn_llm.data import digits as load_digits
-    from learn_llm.diagrams import grids, pipeline
+    from learn_llm.diagrams import bars, grids, pipeline
     from learn_llm.plot import chart
 
     LOCALE = "zh-CN"
@@ -62,6 +62,30 @@ def _():
     我们想让梯度下降改进旋钮，所以需要一个能给出有用斜率的损失。准确率给不出这样的斜率：把一个旋钮轻推一点点，分数也只变一点点，
     最大的那个分数几乎总还是最大。没有哪个猜测改变，准确率就一动不动：它的斜率几乎处处是 0，步进规则也就改变不了旋钮。
 
+    拿一张图片来看：一张 1，只有两个数字。数字 0 的分数固定为 1。把决定数字 1 分数的那个旋钮从 -1 慢慢拧到 3。
+    左边是这张图片上的准确率；右边是一个平滑的量，表示模型有多确定它是 1（下一节会造出它）：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _xs = [x / 50 for x in range(-50, 151)]
+    mo.hstack([
+        chart((-1, 3), (0, 1), "数字 1 的分数", "准确率",
+              curve=[(x, 1.0 if x > 1 else 0.0) for x in _xs]),
+        chart((-1, 3), (0, 1), "数字 1 的分数", "数字 1 的份额",
+              curve=[(x, float(np.exp(x) / (np.exp(x) + np.exp(1)))) for x in _xs]),
+    ], widths="equal")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    准确率像一个**电灯开关**：先平平地停在 0，在数字 1 的分数超过数字 0 的那一刻突然跳上去，然后平平地停在 1。在平的地方，轻推一下什么也不变，
+    斜率就是 0，梯度下降得不到任何该往哪边走的提示。右边的曲线像一个**调光旋钮**：旋钮每动一点，它就跟着动一点，所以每个地方都有斜率，告诉你“往这边更好”。
+
     我们需要一个平滑的衡量标准：不只是**哪个**数字赢了，还要知道模型对每个数字**有多确定**。如果能把分数变成加起来等于 1 的份额（share），
     比如“3 占 0.7，8 占 0.2，其余占 0.1”，那么轻推一下，份额也会跟着变一点点，这就有了斜率。
 
@@ -89,6 +113,14 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    几个具体的值：
+
+    | 分数 $s$ | −2 | −1 | 0 | 1 | 2 | 3 |
+    |---|---|---|---|---|---|---|
+    | $e^s$ | 0.14 | 0.37 | 1 | 2.72 | 7.39 | 20.09 |
+
+    每往右一格就乘以 2.718，每往左一格就除以 2.718。分数再负，$e^s$ 也只是越来越接近 0，既碰不到 0，更不会变成负数。
+
     注意三点：$e^s$ 永远是正的；分数越高，$e^s$ 越大；分数每加 1，$e^s$ 就乘以大约 2.718。（为什么用 e 而不用 2？因为用 e 时斜率最简单，
     下面你会看到确切的原因。）
 
@@ -96,16 +128,78 @@ def _():
     所以份额是 $7.39 / 11.21 = 0.659$、$0.242$ 和 $0.099$。这个做法（先 $e^{\square}$，再除以总和）叫作 **softmax**。
     得到的份额就是模型的**概率**（probability）：它对每个数字有多确定。
 
+    动手试试。拖动三个分数，看 $e^s$ 和份额怎么变：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    play_scores = mo.ui.array([mo.ui.slider(-3, 3, step=0.5, value=v, label=f"数字 {i} 的分数", show_value=True)
+                               for i, v in enumerate([2, 1, 0])])
+    play_scores.vstack()
+    return (play_scores,)
+
+
+@app.cell(hide_code=True)
+def _(play_scores):
+    _s = np.array(play_scores.value, dtype=float)
+    _e = np.exp(_s)
+    mo.hstack([
+        mo.vstack([mo.md(r"$e^s$"), bars([(f"数字 {i}", v) for i, v in enumerate(_e)], "每个分数的 e 次方", digits=2)]),
+        mo.vstack([mo.md(r"份额：每个 $e^s$ 除以总和 " + f"{_e.sum():.2f}"),
+                   bars([(f"数字 {i}", v) for i, v in enumerate(_e / _e.sum())], "每个数字的份额", top=1.0)]),
+    ], widths="equal")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    可以试试这些：
+
+    - 让三个分数相等。每个份额都是 $1/3$：模型拿不定主意。
+    - 把一个分数调高 1。它的 $e^s$ 乘以 2.72，从别的数字那里分走份额。
+    - 先把分数设成 2、1、0，记下份额，再设成 3、2、1。份额完全不变：每个分数都加上同一个数，每个 $e^s$ 就都乘以同一个倍数，除以总和时又约掉了。
+      只有分数之间的**差**才要紧。
+
     有一个实际问题：`np.exp(1000)` 对计算机来说太大了，会得到 `inf`（无穷大），而 `inf / inf` 不是一个数（NumPy 会显示成 `nan`，
     是英文“not a number”的缩写）。解决办法：在算 $e^{\square}$ 之前，先让每个分数都减去最大的那个分数 $m$。这完全不改变份额：根据上面的规则，
     $e^{s - m} = e^s / e^m$，所以每个 $e^{\square}$ 都除以了同一个 $e^m$，各部分和总和都除以同一个数，份额不变。减完之后，最大的分数是 0，
     它的 $e^{\square}$ 是 1，就不会大到算不了了。（如果漏掉这一步，NumPy 还会打印一条提到“overflow”（溢出）的警告：说的就是这个问题。）
 
+    这正是你刚才最后试的那件事，只是反过来用。分数 `[1000, 999, 998]` 减去其中最大的 1000，得到 `[0, -1, -2]`：和 `[2, 1, 0]` 的差一样，
+    所以份额也一样，是 0.67、0.24 和 0.09。而 $e^0 = 1$、$e^{-1} = 0.37$、$e^{-2} = 0.14$ 都是又小又好算的数。
+
     ### 行、列和 `keepdims`
 
     对分数矩阵，我们一行一行地做：每张图片有自己的份额。`np.max(S, axis=1)` 给出每一行最大的数，`np.sum(E, axis=1)` 给出每一行的总和，
     每张图片一个数。加上 `keepdims=True`，结果会保持“列”的形状，是 `(10000, 1)` 而不是 `(10000,)`。这样的一列会横着广播到每一行上：
-    设 `m = np.max(S, axis=1, keepdims=True)`，`S - m` 就让每张图片的十个分数都减去它自己最大的分数（第 05 章是拿一行去减每一行；这里是拿一列去减每一列）。
+    设 `m = np.max(S, axis=1, keepdims=True)`，`S - m` 就让每张图片的十个分数都减去它自己最大的分数（第 05 章是拿一行去减每一行；这里是拿一列去减每一列）。两张图片、三个数字时：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "S  (2, 3)", "values": [[2, 1, 0], [5, 7, 6]], "rows": ["第 0 张", "第 1 张"],
+         "marks": {(0, 0): "box", (1, 1): "box"}},
+        "−",
+        {"name": "m  (2, 1)", "values": [[2], [7]], "marks": {(0, 0): "blue", (1, 0): "red"}},
+        "=",
+        {"name": "S − m  (2, 3)", "values": [[0, -1, -2], [-2, 0, -1]],
+         "marks": {**{(0, c): "blue" for c in range(3)}, **{(1, c): "red" for c in range(3)}}},
+    ], "每一行最大的分数保存成一列 m，再从这一行的每个分数里减去")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    `m` 竖着放着每一行最大的分数（在 `S` 里框了出来）。第 0 张图片的 2 用在第 0 行的每个数上（蓝），第 1 张图片的 7 用在第 1 行的每个数上（红）。
+    如果不加 `keepdims=True`，`m` 会是形状为 `(2,)` 的向量 `[2, 7]`；NumPy 会把它当成**一行**，拿去和 `S` 的每一行配，
+    可 `S` 每行有 3 个数而不是 2 个：报错（要是图片数恰好等于数字个数，还会悄悄算出错的结果）。
     """)
     return
 
@@ -212,7 +306,32 @@ def _():
     损失就是所有图片意外程度的均值，叫作**交叉熵**（cross-entropy）。
 
     要在份额矩阵里挑出正确数字的份额，我们用一个形状相同的矩阵 `Y`：正确数字那一列是 1，其余全是 0（这样的一行叫 **one-hot**，即“独热”行）。
-    这样 `Y * P` 在每一行里只留下正确数字的份额，`np.sum(Y * P, axis=1)` 就给出每张图片一个份额。下面这个辅助函数根据标签做出 `Y`：
+    这样 `Y * P` 在每一行里只留下正确数字的份额，`np.sum(Y * P, axis=1)` 就给出每张图片一个份额。三个数字，一张 0 和一张 2：
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "P", "values": [[0.7, 0.2, 0.1], [0.3, 0.3, 0.4]], "rows": ["第 0 张", "第 1 张"],
+         "cols": ["0", "1", "2"]},
+        "×",
+        {"name": "Y", "values": [[1, 0, 0], [0, 0, 1]], "cols": ["0", "1", "2"],
+         "marks": {(0, 0): "blue", (1, 2): "blue"}},
+        "=",
+        {"name": "Y × P", "values": [[0.7, 0, 0], [0, 0, 0.4]], "cols": ["0", "1", "2"],
+         "marks": {(0, 0): "blue", (1, 2): "blue"}},
+        "→",
+        {"name": "每行求和", "values": [[0.7], [0.4]], "marks": {(0, 0): "box", (1, 0): "box"}},
+    ], "份额 P 和 one-hot 行 Y 逐个位置相乘，每行只留下正确数字的份额；每行加起来得到 0.7 和 0.4")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    `Y` 里的 0 把每个错误数字的份额都抹掉了，所以沿一行加起来，挑出来的就是剩下的那一个。下面这个辅助函数根据标签做出 `Y`：
     先是一个全 0 的矩阵，然后对每张图片，在第 `i` 行、第 `labels[i]` 列放一个 1。
     """)
     return
@@ -338,6 +457,25 @@ def _():
 
     > $e^x$ 的斜率就是 $e^x$ 自己。
 
+    画成图：不管站在曲线上哪一点，它的高度和陡度都是同一个数。两条直线在 $x = 1$ 和 $x = 2$ 处贴着曲线，方向和曲线在那里一致。
+    在 $x = 1$，曲线高 2.72，直线每单位爬升 2.72；在 $x = 2$，曲线高 7.39，直线每单位爬升 7.39。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    _e = float(np.exp(1))
+    chart((-1, 2.6), (0, 14), "x", "eˣ",
+          curve=[(x / 50, float(np.exp(x / 50))) for x in range(-50, 131)],
+          lines=[(_e, 0.0), (_e ** 2, -(_e ** 2))],
+          dots=[(1, _e), (2, _e ** 2)])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     **$\log x$。** 设 $y = \log x$，也就是 $x = e^y$。把 $y$ 轻推一个很小的 $k$：根据刚求出的斜率（变化量 $\approx$ 斜率 $\times$ 轻推量），$x$ 大约增加 $e^y \times k = x \times k$。
     也就是说，$x$ 增加 $x \times k$ 时，$\log x$ 增加 $k$。那么 $x$ 每变化 1，$\log x$ 变化多少？
 
@@ -424,6 +562,42 @@ def _(slope_boxes):
 def _():
     mo.md(r"""
     按大小算，最大的斜率属于正确的数字：梯度下降会用力把它的分数往上推。而拿到 0.7 的那个错误数字，被往下压的力度比拿到 0.1 的那个大得多。
+
+    可以把它想成拔河。正确的数字被往上拉，拉力是 $1 - p$，也就是它还缺的那部分。每个错误的数字被往下压，压力是它的份额 $p$，也就是它不该拿的那部分。
+    等正确的数字拿到了全部，拉力也就停了。看看这张图片上发生了什么：每一步，每个分数都逆着自己的斜率走（学习率 1），然后重新算出份额。
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    pull_steps = mo.ui.slider(0, 6, value=0, label="走了几步", show_value=True)
+    pull_steps
+    return (pull_steps,)
+
+
+@app.cell(hide_code=True)
+def _(pull_steps):
+    _s = np.log(np.array([0.7, 0.2, 0.1]))
+    _y = np.array([0.0, 1.0, 0.0])
+    for _ in range(pull_steps.value):
+        _p = np.exp(_s) / np.exp(_s).sum()
+        _s = _s - (_p - _y)
+    _p = np.exp(_s) / np.exp(_s).sum()
+    mo.hstack([
+        mo.vstack([mo.md("份额"), bars([(f"数字 {i}", v) for i, v in enumerate(_p)], "份额", top=1.0)]),
+        mo.vstack([mo.md("斜率：份额减 one-hot"),
+                   bars([(f"数字 {i}", v) for i, v in enumerate(_p - _y)], "斜率", top=1.0)]),
+        mo.md(rf"意外程度：**{-np.log(_p[1]):.3f}**"),
+    ], widths=[2, 2, 1])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    走一步之后，数字 1 的份额从 0.2 跳到大约 0.5；走六步之后超过 0.9，意外程度也从 1.609 降向 0。正确的份额越大，每个斜率就越小：
+    模型离答对越近，拉力就越轻。
     """)
     return
 
