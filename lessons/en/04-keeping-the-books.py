@@ -87,8 +87,10 @@ def _():
       this is called an **attribute**. The word `data` appears twice here, meaning two different
       things: on the left, `self.data` is the slot inside the value; on the right, `data` is the
       input from the `def` line.
-    - `self.grad = 0` starts its blame at 0. ("grad" is short for gradient: the blame from
-      chapter 03. It starts at 0 because blame is collected later, by adding.)
+    - `self.grad = 0` starts its blame at 0. ("grad" is short for *gradient*. In chapter 03 we used
+      *gradient* for all the knob slopes together, and in code it's standard to name each single
+      box's own slope/blame `.grad` as well. It starts at 0 because blame is collected later, by
+      adding.)
     - `self.parents = []` and `self.local_slopes = []` start as empty lists: the boxes this one
       was made from, and the local slope towards each, filled in later.
 
@@ -228,10 +230,16 @@ def _():
     backward pass will need to know about this step. Notice that only `z` went into the book:
     `x` and `y` weren't made by a step, you typed them in.
 
+    One crucial detail about `z.parents = [x, y]`: it does **not** store copies of the numbers 3
+    and 4 — it points directly to the `x` and `y` objects themselves. So later, when `backward`
+    updates `parent.grad`, the original `x.grad` and `y.grad` outside change along with it. That
+    is why `backward` doesn't need to `return` anything.
+
     ## Exercise 1: add
 
-    Write `add(a, b, book)` the same way. Think first: in `a + b`, if `a` gets a tiny nudge, how
-    much does the result move per unit? And for `b`? (Chapter 03's table has the answer.)
+    Write `add(a, b, book)` the same way. Think first: in $a + b$, if $a$ grows by a tiny amount,
+    $a + b$ grows by the exact same amount — and the same goes for $b$ — so both local slopes
+    are 1.
     """)
     return
 
@@ -427,10 +435,12 @@ def _(two_users):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    $a$ got blame along **two** roads: 7 straight from $v$, and 2 more by way of $u$. Check it
-    with chapter 02's slopes: $v = (a + b) \times a = a \times a + b \times a$, whose slope for $a$ is
-    $2 \times a + b = 2 \times 2 + 5 = 9$. That's why the engine **adds** to a parent's blame instead
-    of replacing it: replacing would forget one of the roads.
+    $a$ got blame along **two** roads: 7 straight from $v$, and 2 more by way of $u$. You can
+    double-check this directly: $v = (a + b) \times a = a \times a + b \times a$. Treating $b$ as
+    a fixed number, the slope of $a \times a$ is $2 \times a$ and the slope of $b \times a$ is
+    $b$, so together the slope for $a$ is $2 \times a + b = 2 \times 2 + 5 = 9$. That's why the
+    engine **adds** to a parent's blame instead of replacing it: replacing would forget one of
+    the roads.
 
     ### The wrong order
 
@@ -492,7 +502,8 @@ def _():
     ```
 
     Type only the four lines under `def`: the `def` line is already there in your cell. It
-    doesn't need to `return` anything: the blames are stored in the boxes themselves.
+    doesn't need to `return` anything: because `entry.parents` points to the original boxes
+    themselves, updating `parent.grad` writes the blames straight into them.
     """)
     return
 
@@ -616,7 +627,10 @@ def _():
 def _():
     twice_book = []
     w2 = Value(10)
-    loss2 = square(sub(add(mul(w2, Value(14), twice_book), Value(-60), twice_book), Value(63), twice_book), twice_book)
+    p2 = mul(w2, Value(14), twice_book)
+    g2 = add(p2, Value(-60), twice_book)
+    e2 = sub(g2, Value(63), twice_book)
+    loss2 = square(e2, twice_book)
     backward(loss2, twice_book)
     first = w2.grad
     backward(loss2, twice_book)
@@ -637,10 +651,10 @@ def _():
     - $p$ had 34 and gets $1 \times 102$ more: 136.
     - $w$ had 476 and gets $14 \times 136 = 1904$ more: 2380.
 
-    Each box passes on its whole, already-wrong blame, so the mistake grows at every step. That's
-    why `engine_gradient` makes **fresh** `Value` boxes, with a fresh book, every
-    time it's called: every blame starts at 0. (Real deep-learning tools have the same rule;
-    you'll meet it again later in the course.)
+    Each box passes on a blame that already has the old pass mixed into it, so the error
+    snowballs at every step. That's why `engine_gradient` makes **fresh** `Value` boxes, with a
+    fresh book, every time it's called: every blame starts at 0. (Real deep-learning tools have
+    the same rule; you'll meet it again later in the course.)
 
     ## The payoff: a new recipe, no new backward steps
 
@@ -668,10 +682,12 @@ def _():
     with three knobs `a`, `w` and `b`. With `a` negative, the curve bends downwards, like a hill.
 
     One practical detail: here $x$ is the temperature measured **from 25 °C, in tens of degrees**:
-    `x = (t - 25) / 10`, so 14 °C becomes -1.1 and 39 °C becomes 1.4. Why? In chapter 02 you saw
-    $b$ creep along because the loss reacts more strongly to a knob that gets multiplied by big
-    numbers, so one learning rate was safe for $w$ but timid for $b$. Here $a$ gets multiplied by
-    $x \times x$:
+    `x = (t - 25) / 10`, so 14 °C becomes -1.1 and 39 °C becomes 1.4. Think of it as a new
+    thermometer whose 0 sits at a comfortable 25 °C and whose ticks are 10 °C apart: `b` then
+    simply means "sales at 25 °C", and `w` means "how many extra ice creams we sell per 10 °C
+    warmer" around 25 °C. Why rescale? In chapter 02 you saw $b$ creep along because the loss
+    reacts more strongly to a knob that gets multiplied by big numbers, so one learning rate was
+    safe for $w$ but timid for $b$. Here $a$ gets multiplied by $x \times x$:
 
     | $x$ | $x \times x$ runs from | to |
     |---|---|---|
@@ -736,10 +752,10 @@ def _():
     mo.md(r"""
     The curve rises with the temperature and then turns down in the heatwave, and its loss is far
     lower than any straight line's. Because `x` is measured from 25 °C in tens of degrees, the
-    knobs read differently from the line's `w = 10`, `b = -60`: `b` is the guess at 25 °C
-    (where `x = 0`), about 205 ice creams; `w` is how fast sales climb there, about 101 more per
-    10 degrees; and the negative `a` bends the curve back down as it gets hotter. You never worked out a backward step for it: the engine kept
-    the books and did it.
+    knobs read differently from the line's `w = 10`, `b = -60`: at 25 °C (`x = 0`), `b` is the
+    predicted sales of about 205 ice creams; `w` says sales climb by about 101 for every 10 °C
+    warmer near 25 °C; and the negative `a` bends the curve back down once the heatwave hits. You
+    never worked out a backward step for it: the engine kept the books and did it.
 
     ## What's next
 

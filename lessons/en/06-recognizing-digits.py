@@ -53,10 +53,11 @@ def _():
     /// admonition | 🧰 Toolbox: picking items out
     To pick one item out of an array (or a list), put its position in square brackets, counting
     from 0: `train_images[0]` is the first picture, `train_labels[0]` its label. For a matrix,
-    give the row and then the column: for a matrix $M$, `M[2, 5]` is the number in row 2,
-    column 5. One position on a matrix gives a whole row: `train_images[0]` is the first picture
-    (a $28 \times 28$ matrix), so `train_images[0][14]` is row 14 of it, a horizontal line across its
-    middle:
+    give the row and then the column: for a matrix `M`, `M[2, 5]` is the number in row 2,
+    column 5—and `M[2][5]` means the exact same thing (pick row 2 first, then item 5 from that
+    row). One position on a matrix gives a whole row: `train_images[0]` is the first picture
+    (a $28 \times 28$ matrix), so `train_images[0][14]` (equivalently `train_images[0, 14]`) is
+    row 14 of it, a horizontal line across its middle:
     ///
     """)
     return
@@ -278,8 +279,10 @@ def _():
     **every row** of the first with **every column** of the second: the score of picture $i$ for
     digit $c$ is row $i$ of $X$ dotted with column $c$ of $W$. The shape rule is the one from
     chapter 05: `(10000, 784) @ (784, 10)` gives `(10000, 10)`; the two numbers in the middle
-    (784 and 784) match and disappear. Then $+ b$ adds each digit's $b$ to its column, for every
-    picture (broadcasting, as in chapter 05).
+    (784 and 784) match and disappear. Then `+ b` adds each digit's `b` to its column across
+    every picture (broadcasting, as in chapter 05): on a $2 \times 2$ example,
+    `[[3, 1], [3, 1]] + [10, 20]` adds `10` to column 0 and `20` to column 1 of every row,
+    giving `[[13, 21], [13, 21]]`.
 
     /// admonition | 🧰 Toolbox: arrays of zeros
     Let's start with every knob at 0. `np.zeros((784, 10))` makes an array of that shape filled
@@ -474,6 +477,8 @@ def _():
     The array usually comes from a comparison. With `kinds = np.array([7, 9, 7])`, `M[kinds == 7]` gives those same two rows.
 
     `np.mean(M, axis=0)` is the mean **down each column**: one number per column. For the two rows just picked, it's `[3, 4]`.
+
+    A quick way to keep the two directions straight: `axis=1` squashes **across each row** (`(n, 10) -> (n,)`, leaving 1 number per picture); `axis=0` squashes **down each column** (`(n, 784) -> (784,)`, leaving 1 average per pixel).
     ///
 
     Write `template(X, labels, c)`: the mean of the rows of `X` whose label is `c`. `X` has one row per picture, so the result is one vector, with as many numbers as a picture has pixels.
@@ -598,10 +603,10 @@ def _():
 
     ## What you can do now
 
-    - pick items from arrays with `[i]` and `[i, j]`, and reshape a grid into one row
+    - pick items from arrays with `[i]`, `[i, j]`, and `[i][j]`, and reshape a grid into one row
     - multiply a matrix by a matrix, and check the shapes
     - turn scores into guesses, and measure them with accuracy
-    - pick rows of a matrix with `True` and `False`
+    - pick rows of a matrix with `True` and `False`, and tell `axis=0` apart from `axis=1`
     - build a classifier from templates, and test it on pictures it has never seen
     - say why averaged templates fall short
 
