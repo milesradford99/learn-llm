@@ -27,14 +27,14 @@ def _():
     mo.md(r"""
     # 20 · A modern transformer
 
-    Chapter 17's model is the 2017 design. Large models today keep its skeleton, blocks of attention and thinking on the road of $x + f(x)$, but
+    Chapter 17's model is the 2017 design. Large models today keep its skeleton—alternating attention and thinking layers wrapped in residual connections $x + f(x)$—but
     almost every part has been swapped for a better one since. This chapter makes three of those swaps inside the block:
 
     1. **RMSNorm**, a simpler normalisation;
     2. **rotary positions** (RoPE), which replace the position table;
     3. **SwiGLU**, a gated thinking layer.
 
-    You'll build each piece, put them together into a block, and check the new model's shapes and size. **Chapter 21** then trains it, with two more swaps
+    You'll build each piece, put them together into a block, and check the new model's shapes and parameter count. **Chapter 21** then trains it, with two more swaps
     that belong to the training loop. And the model reads **tokens** now, from chapter 19's method.
 
     ## Tokens, and a fair leaderboard
@@ -171,8 +171,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    So the point at angle $\theta$ is $(\cos\theta, \sin\theta)$. At angle 0 you're at $(1, 0)$. A quarter of the way round, you're at the top, $(0, 1)$. We measure angles in **radians**: a full
-    circle is $2\pi$ (where $\pi$ is about 3.14), about 6.28, so a quarter turn is $\pi / 2$, about 1.57.
+    So the point at angle $\theta$ is $(\cos\theta, \sin\theta)$. At $0^\circ$ you're at $(1, 0)$. A quarter of the way round ($90^\circ$), you're at the top, $(0, 1)$. In code, maths functions measure angles in **radians** rather than degrees: a full
+    circle ($360^\circ$) is $2\pi$ (where $\pi \approx 3.14$, so about 6.28), a half turn ($180^\circ$) is $\pi$, and a quarter turn ($90^\circ$) is $\pi / 2 \approx 1.57$.
 
     /// admonition | 🧰 Toolbox: cos, sin and π in NumPy
     `np.cos(angle)` and `np.sin(angle)` compute the two, for one angle or for a whole array of them, and `np.pi` is $\pi$.
@@ -192,15 +192,17 @@ def _():
     mo.md(r"""
     The four points are the right edge, the top, the left edge, and the point in the picture, 0.9 radians round. Here they are as a table to use below:
 
-    | turn | angle $\theta$ | $\cos\theta$ | $\sin\theta$ |
-    |---|---|---|---|
-    | none | 0 | 1 | 0 |
-    | a quarter | $\pi / 2$ | 0 | 1 |
-    | a half | $\pi$ | −1 | 0 |
+    | turn | degrees | angle $\theta$ (radians) | $\cos\theta$ | $\sin\theta$ |
+    |---|---|---|---|---|
+    | none | $0^\circ$ | $0$ | $1$ | $0$ |
+    | a quarter | $90^\circ$ | $\pi / 2$ | $0$ | $1$ |
+    | a half | $180^\circ$ | $\pi$ | $-1$ | $0$ |
 
     **Rotating a pair.** To turn any point $(a, b)$ about the centre by an angle $\theta$, the rule from geometry is:
 
     > $$(a, b) \;\to\; (a\cos\theta - b\sin\theta,\;\; a\sin\theta + b\cos\theta)$$
+
+    Why is there a minus sign in the first coordinate and a plus in the second? Think of $(a, b)$ as starting at the centre, walking $a$ steps right, and then $b$ steps up. One step right, turned by $\theta$, lands at $(\cos\theta, \sin\theta)$; one step up starts $90^\circ$ ahead, so turning it by $\theta$ tilts it left and up to $(-\sin\theta, \cos\theta)$. Scale the two pieces by $a$ and $b$ and add them, and the formula above drops straight out.
 
     ## By hand: turn three points
 
@@ -298,7 +300,7 @@ def _():
     word 7 asks word 5, the scores depend on $7 - 5 = 2$ steps of angle. Word 27 asking word 25 gives exactly the same. Attention now sees relative positions, with no position table at all, and positions beyond the training windows can at least be computed (models still work best on lengths like those they trained on).
 
     Each pair turns at its own **speed**, in radians per position: fast pairs tell near positions apart, and slow pairs tell far ones apart. For a vector of 4 numbers $[x_0, x_1, x_2, x_3]$ there are 2 pairs.
-    The first half holds the first numbers of the pairs and the second half the second numbers, so the pairs are $(x_0, x_2)$ and $(x_1, x_3)$:
+    The first half holds the first numbers of the pairs and the second half the second numbers, so the pairs are $(x_0, x_2)$ and $(x_1, x_3)$. Why pair across the two halves instead of pairing neighbours $(x_0, x_1)$ and $(x_2, x_3)$? Purely so the code can split the vector in one clean cut with `[:half]` and `[half:]`—mathematically, both pairings work identically, because the order of the pairs does not change the dot product:
 
     | pair | its two numbers | turned by |
     |---|---|---|
@@ -343,8 +345,9 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The cell below checks the property on your function, with the speeds the real thing uses: from 1 radian per position for the fastest pair down to about 1/10,000 for the slowest. (The 10,000 is the conventional choice.)
-    It turns a query and a key of 8 numbers, and takes their dot product twice: for positions 7 and 5, and for positions 27 and 25.
+    The cell below checks the property on your function, with the speeds the real thing uses: from 1 radian per position for the fastest pair down to about $1/10000$ for the slowest. (The 10,000 is the conventional choice.)
+    For example, when `half = 4`, the formula `1 / 10000 ** (np.arange(4) / 4)` gives `[1, 0.1, 0.01, 0.001]` (since $10000^{1/4} = 10$): each pair spins 10 times slower than the one before it, smoothly covering both short and long spans.
+    The cell turns a query and a key of 8 numbers, and takes their dot product twice: for positions 7 and 5, and for positions 27 and 25.
     """)
     return
 
@@ -368,9 +371,8 @@ def _():
     `rope` below is your `rope_one` for whole tensors: every position of every text at once, in PyTorch, with the positions and speeds worked out inside. You don't need to write it, but you can read it with these two tools:
 
     /// admonition | 🧰 Toolbox: two indexing tools
-    - `x[..., :half]` means "the first `half` entries of the last dimension, whatever dimensions come before it". The three dots stand for all of those.
-    - `v[:, None]` turns a vector of shape `(n,)` into a column of shape `(n, 1)`, and `v[None, :]` into a row of shape `(1, n)`. A column times a row gives a table of shape `(n, m)`:
-      here, every position meets every speed.
+    - `x[..., :half]` means "keep all the leading dimensions as they are, and take the first `half` entries of the last dimension". For a 4D tensor of shape `(batch, heads, words, size)`, the three dots `...` stand for `:, :, :` (every text, every head, every word position).
+    - `v[:, None]` turns a vector of shape `(n,)` into a column of shape `(n, 1)`, and `v[None, :]` into a row of shape `(1, n)`. A column times a row broadcasts into a 2D table of shape `(n, m)`: here, row $p$ and column $j$ hold position $p$ multiplied by speed $j$.
     ///
     """)
     return
@@ -419,13 +421,12 @@ def _():
     mo.md(r"""
     ## 3. SwiGLU: thinking with a gate
 
-    Chapter 17's thinking layer is $W_2(\text{relu}(W_1 x))$. Two changes make it better. First, a smoother bend: **SiLU**, $x \times \sigma(x)$ with chapter 12's sigmoid.
-    It's about $x$ for large $x$ and about 0 for very negative $x$, like ReLU, but with no sharp corner. In PyTorch it's `F.silu`. Second, something like chapter 14's gates: a third layer $W_3$ decides,
-    number by number, how much of the first passes. (It isn't squeezed between 0 and 1, so it's gate-like rather than a strict gate.) The $\times$ here is position by position:
+    Chapter 17's thinking layer is $W_2(\text{relu}(W_1 x))$. Two changes make it better. First, a smoother bend: **SiLU**, written $x \times \sigma(x)$, where $\sigma(x)$ is chapter 12's sigmoid function that squashes any number into the range 0 to 1.
+    It's about $x$ for large $x$ and about 0 for very negative $x$, like ReLU, but with no sharp corner. In PyTorch it's `F.silu`. Second, a gating idea like chapter 14's: a third layer $W_3$ scales the first branch element by element, deciding how much of each feature passes through to $W_2$. The $\times$ here is position by position:
 
     > $$\text{think}(x) = W_2\big(\text{silu}(W_1 x) \times W_3 x\big)$$
 
-    Three matrices instead of two would mean more knobs, so the hidden layer is made $\tfrac{8}{3}$ as wide as the vector instead of 4 times, to keep the size about the same.
+    Three matrices instead of two would mean more parameters, so the hidden layer is made $\tfrac{8}{3}$ as wide as the vector instead of 4 times, keeping the parameter count about the same.
 
     ## By hand: count the knobs
 
@@ -490,7 +491,7 @@ def _():
     mo.md(r"""
     ## The modern block
 
-    Now the three swaps go into chapter 17's block. Its plan doesn't change: two parts, each on a road that passes it by, each with a normalisation first.
+    Now the three swaps go into chapter 17's block. Its layout stays the same: two stages—attention, then thinking—each starting with normalisation and adding its result back to $x$ via a residual connection.
 
     | step | chapter 17 | now |
     |---|---|---|
@@ -605,7 +606,7 @@ def _():
     No training yet: first make sure the pieces fit. The cell builds a model of the same size as chapter 17's, with 128 numbers per token, 4 heads and 3 blocks,
     and feeds it the first 64 test tokens twice over, as a batch of 2. It shows the shape of the scores, the number of knobs, and the loss.
 
-    Before you look: an untrained model knows nothing, so it should be about as unsure as choosing among all 2,258 tokens. By chapter 13, the surprise of that is $\log 2258$, about 7.7.
+    Before you look: an untrained model knows nothing, so it should be about as unsure as guessing uniformly among all 2,258 tokens—giving each token probability $1/2258$. By chapter 13, the surprise (cross-entropy loss) of that is $-\log(1/2258) = \log 2258 \approx 7.7$.
     """)
     return
 

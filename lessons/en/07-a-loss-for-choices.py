@@ -21,11 +21,11 @@ def _():
     mo.md(r"""
     # 07 · A loss for choices
 
-    Chapter 06 ended with templates made by averaging: 62% of the test digits right, and an 8 guessed for a quarter of all pictures.
-    Those knobs were never adjusted to tell digits apart. In this chapter gradient descent does that, as it did for Mia's line. What it needs is a loss,
-    and building one takes two new pieces of maths, $e^x$ and $\log$. You'll derive their slopes exactly as you did in chapter 02.
+    In chapter 06 we scored each picture with `S = X @ W + b` (784 pixels per row, 10 columns of knobs in `W`, and 10 biases in `b`), and built `W` by simply averaging each digit's pictures. That gave 62% accuracy on the test digits, and guessed 8 for a quarter of all pictures — because those knobs were never adjusted to tell digits apart.
 
-    Here are your two functions from chapter 06, finished. After them come the pictures, unrolled into rows as before, with knobs that are all 0, and the accuracy of that model.
+    In this chapter, gradient descent will tune `W` and `b` directly, just as it tuned Mia's line. What it needs is a loss, and building one takes two new math tools: $e^x$ and $\log x$. You'll work out their slopes step by step, just as you did in chapter 02.
+
+    Here are your two functions from chapter 06, finished. After them come the pictures, flattened into rows as before, with all knobs starting at 0, and the accuracy of that starting model.
     """)
     return
 
@@ -55,19 +55,18 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    0.0969: with every score at 0, the model guesses 0 for every picture, and is right for the 969 zeros.
+    0.0969: with every score at 0, the model guesses 0 for every picture, and is only right on the 969 zeros.
 
     ## Why accuracy can't be the loss
 
     We want gradient descent to improve the knobs, so we need a loss with useful slopes.
-    Accuracy doesn't have them: nudge one knob a tiny bit and the scores move a tiny bit, but the
-    biggest score almost always stays the biggest. No guess changes, so the accuracy doesn't move
-    at all: its slope is 0 almost everywhere, and the step rule never changes the knobs.
+    Accuracy doesn't give us any: nudge one knob a tiny bit and the scores change a tiny bit, but the
+    biggest score almost always stays the biggest. No guess changes, so accuracy doesn't budge:
+    its slope is 0 almost everywhere, and gradient descent never knows which way to move.
 
-    See it on one picture, a 1, with only two digits. The score for digit 0 stays at 1. Turn the
-    knob that sets the score for digit 1 slowly from -1 to 3. On the left, the accuracy on this
-    picture; on the right, a smooth measure of how sure the model is that it's a 1 (built in the
-    next section):
+    See it on one picture — a 1 — with only two digits (0 and 1). Keep digit 0's score fixed at 1,
+    and slowly slide digit 1's score from -1 to 3. On the left is accuracy on this picture; on the
+    right is a smooth measure of how sure the model is that it's a 1 (which we'll build next):
     """)
     return
 
@@ -78,7 +77,7 @@ def _():
     mo.hstack([
         chart((-1, 3), (0, 1), "score for digit 1", "accuracy",
               curve=[(x, 1.0 if x > 1 else 0.0) for x in _xs]),
-        chart((-1, 3), (0, 1), "score for digit 1", "share for digit 1",
+        chart((-1, 3), (0, 1), "score for digit 1", "probability for digit 1",
               curve=[(x, float(np.exp(x) / (np.exp(x) + np.exp(1)))) for x in _xs]),
     ], widths="equal")
     return
@@ -87,31 +86,32 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The accuracy is a **light switch**: flat at 0, a sudden jump where the score for 1 passes the
-    score for 0, then flat at 1. On a flat stretch, a tiny nudge changes nothing, so the slope is
-    0 and gradient descent has no hint which way to go. The curve on the right is a **dimmer**:
-    every nudge of the knob moves it a little, so at every point it has a slope that says "this
-    way is better".
+    Accuracy behaves like a **light switch**: flat at 0, a sudden jump the instant digit 1's score
+    passes digit 0's, then flat at 1. On a flat stretch, a small nudge changes nothing, so the slope
+    is 0 and gradient descent has no hint which way to go. The curve on the right behaves like a
+    **dimmer**: every tiny nudge moves it a little, so every point has a slope saying "this way is better".
 
-    We need a smooth measure instead: not just *which* digit wins, but **how sure** the model
-    is of each. If scores could be turned into shares that add up to 1, like "0.7 for 3, 0.2
-    for 8, 0.1 for the rest", a tiny nudge would change the shares a tiny bit, and that gives
-    slopes.
+    So we need a smooth measure: not just *which* digit wins, but **how confident** the model is
+    in each digit. If we turn raw scores into probabilities (shares that add up to 1) — like
+    "0.7 for 3, 0.2 for 8, 0.1 for the rest" — then nudging a knob changes those probabilities
+    smoothly, giving gradient descent clear slopes to follow.
 
-    ## From scores to shares: $e^s$
+    ## From scores to probabilities: $e^s$
 
-    Scores can be negative, and a share can't. So first we turn each score into a positive
-    number, in a way that keeps the order (a higher score must stay higher). The tool for this
-    is a power of a special number called **e**, about 2.718.
+    Raw scores can be negative, while probabilities must be positive. So first we turn each score
+    into a positive number while keeping their order (a higher score stays higher). The tool is
+    raising a special number called **$e$** (about 2.718) to the power of the score.
 
-    You know powers from chapter 00: `2 ** 3` is $2 \times 2 \times 2$. Powers have a handy rule:
-    $2^{3 + 2} = 2^3 \times 2^2$ (five 2s multiplied either way). Powers are extended to
-    every number, including 0, negatives and fractions, in the one way that keeps this rule
-    true. For example: $e^3 \times e^0$ must be $e^{3 + 0} = e^3$, so $e^0 = 1$. $e^1 \times e^{-1}$ must be
-    $e^0 = 1$, so $e^{-1} = 1 / e$. $e^{0.5} \times e^{0.5}$ must be $e^1$, so $e^{0.5}$ is the number that
-    times itself gives e (about 1.65). One more rule follows the same way:
-    $e^{a - b} \times e^b = e^a$, so **$e^{a - b} = e^a / e^b$**. We write $e^s$; in NumPy it's
-    `np.exp(s)`. Here it is for scores from -3 to 3:
+    You know powers from chapter 00: `2 ** 3` is $2 \times 2 \times 2$. Powers obey a handy rule:
+    $2^{3 + 2} = 2^3 \times 2^2$ (five 2s multiplied either way). Math extends powers to 0, negative
+    numbers, and decimals in the one way that keeps this rule true:
+
+    - $e^3 \times e^0 = e^{3 + 0} = e^3 \implies e^0 = 1$
+    - $e^1 \times e^{-1} = e^0 = 1 \implies e^{-1} = 1 / e \approx 0.37$
+    - $e^{0.5} \times e^{0.5} = e^1 \implies e^{0.5} = \sqrt{e} \approx 1.65$
+    - And for subtraction: $e^{a - b} \times e^b = e^a \implies e^{a - b} = e^a / e^b$
+
+    We write this as $e^s$, and in NumPy it's `np.exp(s)`. Here is the curve for scores from -3 to 3:
     """)
     return
 
@@ -126,26 +126,26 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    A few values, to make it concrete:
+    A few concrete values:
 
     | score $s$ | −2 | −1 | 0 | 1 | 2 | 3 |
     |---|---|---|---|---|---|---|
     | $e^s$ | 0.14 | 0.37 | 1 | 2.72 | 7.39 | 20.09 |
 
-    Each step to the right multiplies by 2.718; each step to the left divides by it. However
-    negative the score, $e^s$ only gets closer to 0, never reaching it or going below.
+    Each step to the right multiplies by 2.718; each step to the left divides by 2.718. No matter
+    how negative the score gets, $e^s$ only gets closer to 0 — never reaching 0 or going negative.
 
-    Three things to notice: $e^s$ is always positive; a higher score always gives a higher
-    $e^s$; and every +1 in the score multiplies $e^s$ by about 2.718. (Why e and not 2? Because
-    with e the slopes come out simplest; you'll see exactly why below.)
+    Three things to notice: $e^s$ is always positive; a higher score always gives a larger $e^s$;
+    and every +1 in the score multiplies $e^s$ by about 2.718. (Why $e$ instead of 2? Because $e$
+    gives the simplest possible slope — you'll see why in a moment.)
 
-    Then **divide each by their total**, so they add up to 1. For scores `[2, 1, 0.1]`:
-    $e^2 = 7.39$, $e^1 = 2.72$, $e^{0.1} = 1.11$, total 11.21, so the shares are
-    $7.39 / 11.21 = 0.659$, $0.242$ and $0.099$. This recipe, $e^s$ then divide by the total,
-    is called **softmax**. Its shares are the model's **probabilities**: how sure it is of each
-    digit.
+    Next, **divide each $e^s$ by their total** so they add up to 1. For scores `[2, 1, 0.1]`:
+    $e^2 = 7.39$, $e^1 = 2.72$, $e^{0.1} = 1.11$, total 11.21, so the probabilities are
+    $7.39 / 11.21 = 0.659$, $0.242$, and $0.099$. This two-step recipe — compute $e^s$, then divide
+    by the sum — is called **softmax**. Its outputs are the model's **probabilities** (how sure it
+    is of each digit).
 
-    Try it. Drag the three scores and watch the $e^s$ values and the shares:
+    Try dragging the three scores and watch $e^s$ and the probabilities respond:
     """)
     return
 
@@ -164,8 +164,8 @@ def _(play_scores):
     _e = np.exp(_s)
     mo.hstack([
         mo.vstack([mo.md(r"$e^s$"), bars([(f"digit {i}", v) for i, v in enumerate(_e)], "e to the power of each score", digits=2)]),
-        mo.vstack([mo.md(r"shares: each $e^s$ divided by the total, " + f"{_e.sum():.2f}"),
-                   bars([(f"digit {i}", v) for i, v in enumerate(_e / _e.sum())], "the share of each digit", top=1.0)]),
+        mo.vstack([mo.md(r"probabilities: each $e^s$ divided by the total, " + f"{_e.sum():.2f}"),
+                   bars([(f"digit {i}", v) for i, v in enumerate(_e / _e.sum())], "the probability of each digit", top=1.0)]),
     ], widths="equal")
     return
 
@@ -175,35 +175,36 @@ def _():
     mo.md(r"""
     Things to try:
 
-    - Make all three scores equal. Every share is $1/3$: the model can't decide.
-    - Push one score up by 1. Its $e^s$ is multiplied by 2.72, and it takes share from the others.
-    - Set the scores to 2, 1, 0, note the shares, then to 3, 2, 1. The shares don't change at all:
-      adding the same number to every score multiplies every $e^s$ by the same amount, and the
-      division by the total cancels it. Only the **differences** between scores matter.
+    - Make all three scores equal. Every probability is $1/3$: the model can't decide.
+    - Push one score up by 1. Its $e^s$ multiplies by 2.72, pulling probability away from the others.
+    - Set the scores to `2, 1, 0`, note the probabilities, then change them to `3, 2, 1`. The
+      probabilities don't change at all: adding the same constant to every score multiplies every
+      $e^s$ by the same factor, which cancels out when dividing by the total. Only the **differences**
+      between scores matter.
 
-    One practical problem: `np.exp(1000)` is far too big for the computer, so it gives `inf`
-    (infinity), and `inf / inf` is not a number (NumPy shows that as `nan`, short for "not a
-    number"). The fix: before $e^{\square}$, subtract the largest score $m$ from every score. This doesn't
-    change the shares at all: by the rule above, $e^{s - m} = e^s / e^m$, so every $e^{\square}$ is divided
-    by the same $e^m$, and dividing every part and the total by the same number leaves the shares
-    unchanged. After subtracting, the largest score is 0, so $e^{\square}$ of it is 1 and nothing gets too
-    big for the computer. (If you leave this step out, NumPy also prints a warning saying
-    "overflow": that's this problem.)
+    This property solves a practical computer problem: `np.exp(1000)` is far too big for a computer
+    to store, so it returns `inf` (infinity), and `inf / inf` produces `nan` ("not a number").
+    The fix is simple: before computing $e^s$, subtract the largest score $m$ from every score.
+    By the rule $e^{s - m} = e^s / e^m$, every term and the total are divided by the same $e^m$,
+    so the probabilities stay identical. After subtracting $m$, the largest score is 0 (so $e^0 = 1$)
+    and every other score is negative, so nothing can overflow. (Without this step, NumPy prints an
+    "overflow" warning.)
 
-    It's the last thing you tried above, the other way round. The scores `[1000, 999, 998]` minus
-    their largest, 1000, are `[0, -1, -2]`: the same differences as `[2, 1, 0]`, so the same shares,
-    0.67, 0.24 and 0.09. And $e^0 = 1$, $e^{-1} = 0.37$, $e^{-2} = 0.14$ are small, friendly numbers.
+    For example, `[1000, 999, 998]` minus its largest value `1000` becomes `[0, -1, -2]` — the exact
+    same gaps as `[2, 1, 0]`, giving the same probabilities `0.67, 0.24, 0.09`, using tiny safe
+    numbers ($e^0 = 1$, $e^{-1} = 0.37$, $e^{-2} = 0.14$).
 
-    ### Rows, columns and `keepdims`
+    ### Rows, columns, and `keepdims`
 
-    For a matrix of scores we do this row by row: each picture gets its own shares.
-    `np.max(S, axis=1)` gives the largest number of each row and `np.sum(E, axis=1)` the total of
-    each row, one number per picture. Add `keepdims=True` and the result keeps a column shape,
-    `(10000, 1)` instead of `(10000,)`. A column like that broadcasts across each row: with
-    `m = np.max(S, axis=1, keepdims=True)`, `S - m` subtracts each picture's own largest score
-    from all ten of its scores (chapter 05 used a row
-    against every row; this is a column against every column). With two pictures and three
-    digits:
+    For a matrix of scores `S`, we apply softmax row by row so each picture gets its own probabilities.
+    `np.max(S, axis=1)` gives the largest score in each row, and `np.sum(E, axis=1)` gives each row's
+    sum — one number per picture. Passing `keepdims=True` keeps the result as a tall **column** of
+    shape `(10000, 1)` instead of a flat 1D vector `(10000,)`.
+
+    Why does the column shape matter? Recall broadcasting from chapter 05: a row `(3,)` stretches
+    vertically across every row of `(2, 3)`, whereas a column `(2, 1)` stretches horizontally across
+    every column of `(2, 3)`. So with `m = np.max(S, axis=1, keepdims=True)`, `S - m` subtracts each
+    picture's own maximum from all of its scores:
     """)
     return
 
@@ -225,11 +226,11 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `m` holds each row's largest score (outlined in `S`), standing as a column. Picture 0's 2 is
-    used against all of row 0 (blue), picture 1's 7 against all of row 1 (red). Without
-    `keepdims=True`, `m` would be the vector `[2, 7]` of shape `(2,)`; NumPy would treat it as a
-    **row** and try to use it against every row of `S`, whose rows have 3 numbers, not 2: an error
-    (or, with as many pictures as digits, a silently wrong answer).
+    `m` holds each row's largest score (outlined in `S`) as a column. Picture 0's `2` is subtracted
+    across row 0 (blue), and picture 1's `7` across row 1 (red). Without `keepdims=True`, `m` would
+    be `[2, 7]` of shape `(2,)`; NumPy would treat it as a **row** and try to match its 2 entries
+    against each 3-entry row of `S`, crashing with a shape error (or worse, silently computing the
+    wrong answer if the number of pictures happened to equal the number of digits!).
     """)
     return
 
@@ -237,9 +238,9 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## By hand: shares
+    ## By hand: probabilities
 
-    Three scores: `[2, 1, 0]`. To two decimals, $e^2 = 7.39$, $e^1 = 2.72$ and $e^0 = 1$. Work out their total. Then work out the share of the first score and the share of the last, to two decimals.
+    Three scores: `[2, 1, 0]`. To two decimals, $e^2 = 7.39$, $e^1 = 2.72$, and $e^0 = 1$. Work out their total, then the probability of the first score and the last score (to two decimals).
     """)
     return
 
@@ -265,16 +266,15 @@ def _():
     mo.md(r"""
     ## Exercise 1: softmax
 
-    Write `softmax(S)` for a matrix of scores, one row per picture. Each row gets its own shares:
+    Write `softmax(S)` for a matrix of scores, one row per picture. Each row gets its own probabilities:
 
-    1. Subtract from every score the largest score of its row.
-    2. Take $e^{\square}$ of the results, with `np.exp`.
-    3. Divide each by the total of its row.
+    1. Subtract from every score the largest score in its row.
+    2. Apply $e^s$ to the result using `np.exp`.
+    3. Divide each entry by the sum of its row.
 
-    Steps 1 and 3 need one number per row that broadcasts across that row. That's what `keepdims=True` is for.
+    Steps 1 and 3 both need one number per row that broadcasts across that row — that's what `keepdims=True` is for.
 
-    The cell after the check tries your function on one picture's scores, `[[2, 1, 0.1]]`. It must give about `[[0.659, 0.242, 0.099]]`. Note the two pairs of
-    brackets: a matrix with one row (one picture), because softmax works row by row.
+    The cell after the check tests your function on one picture's scores, `[[2, 1, 0.1]]`, which should give about `[[0.659, 0.242, 0.099]]`. Notice the double brackets: a 1-row matrix (one picture), because softmax works row by row.
     """)
     return
 
@@ -311,27 +311,30 @@ def _():
     mo.md(r"""
     ## The loss: surprise
 
-    How should we score shares like `[0.659, 0.242, 0.099]` when the right answer is the first
-    one? We want a loss that is 0 when the model gives the right digit all of its share (1.0),
-    and that grows, without limit, as that share shrinks towards 0: a model that's very sure of
-    a wrong answer should pay a lot.
+    How should we score probabilities like `[0.659, 0.242, 0.099]` when the right answer is the first
+    one? We want a loss that is 0 when the model gives the right digit probability 1.0, and grows
+    without limit as that probability shrinks toward 0: a model that's very confident in a wrong
+    answer should pay a heavy penalty.
 
-    **log** does this. $\log$ undoes $e^{\square}$: $\log(e^a) = a$, so $\log x$ answers "e to the power of
-    what gives x?" (in NumPy, `np.log(x)`). $\log 1 = 0$ (because $e^0 = 1$), and for shares below 1 the log is negative
-    (only a negative power of e is below 1), heading down without limit as the share approaches
-    0. So we use **minus** the log of the
-    right digit's share, called the **surprise**:
+    **$\log$** does exactly this. $\log$ undoes $e^a$: $\log(e^a) = a$, so $\log x$ answers "$e$ to
+    what power gives $x$?" (in NumPy, `np.log(x)`). $\log 1 = 0$ (since $e^0 = 1$), and for any
+    probability below 1 the log is negative (only a negative power of $e$ is below 1), plunging
+    downward as $p$ approaches 0. Flipping the sign gives a positive loss called **surprise**:
 
-    | share of the right digit | 1 | 0.9 | 0.5 | 0.1 | 0.01 |
+    | probability $p$ of the right digit | 1 | 0.9 | 0.5 | 0.1 | 0.01 |
     |---|---|---|---|---|---|
     | surprise, $-\log p$ | 0 | 0.105 | 0.693 | 2.303 | 4.605 |
+
+    Notice the last two columns: dropping $p$ by a factor of 10 (from `0.1` to `0.01`) adds a fixed
+    `2.303` to the surprise (from `2.303` to `4.605`). Dropping another factor of 10 to `0.001`
+    adds another `2.303`, giving `6.908`. Every 10x drop in confidence costs the same extra penalty.
     """)
     return
 
 
 @app.cell(hide_code=True)
 def _():
-    chart((0, 1), (0, 5), "share p of the right digit", "surprise −log p",
+    chart((0, 1), (0, 5), "probability p of the right digit", "surprise −log p",
           curve=[(x / 200, float(-np.log(x / 200))) for x in range(2, 201)])
     return
 
@@ -472,40 +475,38 @@ def _(S_zero, Y):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    With all scores 0, every digit gets the same share, 1/10, so every picture's surprise is
-    $-\log 0.1 = 2.303$. That's the loss of a model that knows nothing. Training should bring it
-    down.
+    With all scores 0, every digit gets the same probability, $1/10$, so every picture's surprise is
+    $-\log 0.1 = 2.303$. That's the loss of a model that knows nothing. Training should bring it down.
 
     ## The slopes of $e^x$ and $\log x$
 
-    To run gradient descent we need the loss's slopes, and the loss is built from $e^{\square}$ and $\log$.
-    So, as in chapter 02, we work out their slopes by nudging.
+    To run gradient descent we need the loss's slopes, and the loss is built from $e^x$ and $\log x$.
+    Just as in chapter 02, we can work out their slopes by nudging the input by a tiny amount $h$.
 
     **$e^x$.** Nudge $x$ by a tiny $h$. By the power rule, $e^{x + h} = e^x \times e^h$, so the
-    change is $e^x \times e^h - e^x$. Both parts contain $e^x$ (the second is $e^x \times 1$), so the
-    change is $e^x \times (e^h - 1)$, and the ratio (change $\div$ $h$) is
+    change is $e^x \times e^h - e^x$. Factoring out $e^x$ gives $e^x \times (e^h - 1)$, so the
+    ratio (change $\div h$) is:
 
     > $$e^x \times \frac{e^h - 1}{h}$$
 
-    The part $(e^h - 1) / h$ doesn't depend on $x$ at all. The same steps work for any base:
-    for base 2 the part is $(2^h - 1) / h$. Here it is for bases 2, 3 and e, as $h$ shrinks:
+    Notice that $(e^h - 1) / h$ doesn't depend on $x$ at all. The same algebra works for any base
+    (for base 2 it's $(2^h - 1) / h$). Look at what this number closes in on as $h$ shrinks:
 
     | base | `h = 0.01` | `h = 0.0001` |
     |---|---|---|
     | 2 | 0.6956 | 0.6932 |
     | 3 | 1.1047 | 1.0987 |
-    | e | 1.0050 | 1.0001 |
+    | $e$ | 1.0050 | 1.0001 |
 
-    As in chapter 02, as $h$ shrinks the ratio closes in on a fixed number: about 0.693 for base
-    2, 1.099 for base 3, and exactly **1** for base e. That's what makes e special; it's in fact
-    *chosen* as the base where this number is 1. So the ratio closes in on $e^x \times 1$:
+    As $h$ shrinks, the ratio approaches 0.693 for base 2, 1.099 for base 3, and **1** for base $e$.
+    In fact, $e$ is *defined* as the base where this factor equals 1. So the ratio closes in on
+    $e^x \times 1$:
 
-    > the slope of $e^x$ is $e^x$ itself.
+    > The slope of $e^x$ is $e^x$ itself.
 
-    In a picture: wherever you stand on the curve, its height and its steepness are the same
-    number. The two straight lines touch the curve at $x = 1$ and $x = 2$ and go in its direction
-    there. At $x = 1$ the curve is 2.72 high and the line climbs 2.72 per unit; at $x = 2$ it is
-    7.39 high and the line climbs 7.39 per unit.
+    In a picture: wherever you stand on the curve, its height and its steepness are the exact same
+    number. At $x = 1$ the curve is 2.72 high and climbs 2.72 per unit; at $x = 2$ it is 7.39 high
+    and climbs 7.39 per unit.
     """)
     return
 
@@ -523,44 +524,81 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    **$\log x$.** Say $y = \log x$, which means $x = e^y$. Nudge $y$ by a tiny $k$: by the slope
-    we just found (change $\approx$ slope $\times$ nudge), $x$ grows by about $e^y \times k = x \times k$. So when $x$ grows by $x \times k$, $\log x$
-    grows by $k$. Change of $\log x$ per unit change of $x$:
+    **$\log x$.** Let's try a concrete number first. Since $e^2 \approx 7.39$, we have $\log 7.39 \approx 2$.
+    Now nudge $y = 2$ up by a tiny $k = 0.01$ to $2.01$. We just saw that $e^y$ has slope $e^y$, so at
+    $y = 2$ its slope is $7.39$. That means $x = e^y$ grows by about $7.39 \times 0.01 = 0.0739$.
 
-    > the slope of $\log x$ is $k / (x \times k) = 1 / x$.
+    Now flip your viewpoint: when $x$ grows by $0.0739$, $\log x$ grows by $0.01$. So the slope
+    (change in $\log x \div$ change in $x$) is $0.01 / 0.0739 = 1 / 7.39$.
+
+    The same works for any $x$ (with $y = \log x$, so $x = e^y$): nudging $y$ by a tiny $k$ makes
+    $x$ grow by about $e^y \times k = x \times k$, so:
+
+    > The slope of $\log x$ is $\frac{k}{x \times k} = \frac{1}{x}$.
 
     ## The slope of the loss for each score
 
-    To keep it short, pretend there are only three possible digits, 0, 1 and 2. Take one picture
-    with scores `s0, s1, s2`, where 0 is the right digit. Write
-    $T = e^{s_0} + e^{s_1} + e^{s_2}$ for the total, so the right share is $p_0 = e^{s_0} / T$, and the
-    surprise is $L = -\log(e^{s_0} / T)$.
+    To keep things small, imagine only three digits (0, 1, 2) and one picture whose true digit is 0.
+    Call its three scores $s_0, s_1, s_2$, and write $T = e^{s_0} + e^{s_1} + e^{s_2}$ for the sum.
+    Then the right digit's probability is $p_0 = e^{s_0} / T$, and the surprise is $L = -\log(e^{s_0} / T)$.
 
-    One more log rule first. Take any two positive numbers $x$ and $y$, and write them as powers
-    of e: $x = e^a$ and $y = e^b$, so $a = \log x$ and $b = \log y$. Then
-    $x / y = e^a / e^b = e^{a - b}$ (the rule from earlier), and "e to the power of what gives
-    $x / y$?" is $a - b$. So $\log(x / y) = a - b = \log x - \log y$. Applied to the surprise:
+    First, one quick rule for $\log$: **$\log(x / y) = \log x - \log y$**. Why? Write $x = e^a$ and
+    $y = e^b$ (so $a = \log x$ and $b = \log y$). By the power rule, $x / y = e^a / e^b = e^{a - b}$
+    (for example, $e^5 / e^2 = e^3$, so $\log(e^5 / e^2) = 3 = 5 - 2$). Applying this rule splits
+    our surprise into two simple terms:
 
-    > $L = -(\log(e^{s_0}) - \log T) = -\log(e^{s_0}) + \log T = -s_0 + \log T$
+    > $$L = -(\log(e^{s_0}) - \log T) = -\log(e^{s_0}) + \log T = -s_0 + \log T$$
 
-    (the minus sign in front flips both parts, and $\log(e^{s_0}) = s_0$ because log undoes $e^{\square}$).
+    (The minus sign flips both terms inside the brackets, and $\log(e^{s_0}) = s_0$ because $\log$
+    undoes $e^s$.)
 
-    Now the slopes, with the rules from chapters 02 and 03 (slopes of a sum add; a chain
-    multiplies, blame times local slope):
+    ### Quick reminder: the two rules of blame (chapter 03)
 
-    - **For $s_0$** (the right digit): the $-s_0$ part has slope −1. The $\log T$ part: the slope
-      of $\log T$ for $T$ is $1 / T$, and the slope of $T$ for $s_0$ is $e^{s_0}$ (the other two
-      parts, $e^{s_1}$ and $e^{s_2}$, don't contain $s_0$: slope 0), so together $e^{s_0} / T = p_0$.
-      Total: **$p_0 - 1$**.
-    - **For $s_1$** (a wrong digit): $-s_0$ doesn't contain $s_1$, slope 0. $\log T$ gives
-      $e^{s_1} / T = p_1$. Total: **$p_1$**. The same for $s_2$: $p_2$.
+    Draw the calculation as boxes and arrows, where each arrow carries its **local slope** (how much
+    the box at the tip moves when the box at the tail is nudged by 1). The loss starts with blame 1.
+    Walking backwards:
 
-    In words: **share minus 1 for the right digit, share for every other digit.** With a one-hot
-    row `y`, that's simply `p - y`. Gradient descent steps against the slope, so it pushes the
-    right digit's score **up** (its slope is negative) and every other score **down**, each in
-    proportion to the share it was wrongly given.
+    - **Along a road, multiply.** If $u$ feeds $v$ with local slope 3 and $v$'s blame is 2, then $u$
+      gets $3 \times 2 = 6$ along that arrow.
+    - **Where roads split, add.** If $u$ feeds two boxes and gets 3 along one arrow and 4 along the
+      other, its total blame is $3 + 4 = 7$.
 
-    Let's check it by nudging, the chapter 02 way, for scores `[2, 1, 0.1]`:
+    Now draw $L = -s_0 + \log T$ with those exact local slopes on every arrow:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    network(
+        [[["s0"], ["s1"], ["s2"]], [["-s0"], ["T", "total"]], [["L", "-s0 + log T"]]],
+        [(0, 0, 0, "-1"), (0, 0, 1, "exp(s0)"), (0, 1, 1, "exp(s1)"), (0, 2, 1, "exp(s2)"),
+         (1, 0, 0, "1"), (1, 1, 0, "1/T")],
+        "Three scores feed -s0 and T, which add to L = -s0 + log T. s0 has two paths to L (slopes -1 and exp(s0)/T); s1 and s2 each have one path through T.",
+        ["scores", "two parts", "surprise"],
+        at=0.45,
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Just follow the arrows backwards from $L$ (which starts with blame 1):
+
+    - **For $s_0$** (the right digit), two roads leave $s_0$, so we multiply along each road and add:
+      - Top road ($s_0 \to -s_0 \to L$): $(-1) \times 1 = -1$.
+      - Bottom road ($s_0 \to T \to L$): $e^{s_0} \times \frac{1}{T} = \frac{e^{s_0}}{T} = p_0$.
+      - Total: **$p_0 - 1$**.
+    - **For $s_1$** (a wrong digit), only one road leaves $s_1$: $e^{s_1} \times \frac{1}{T} = p_1$.
+      The same holds for $s_2$: **$p_2$**.
+
+    In one sentence: **probability minus 1 for the right digit; probability itself for every other
+    digit.** With a one-hot row `y`, that's simply `p - y`. Gradient descent steps *against* the
+    slope, so it pushes the right digit's score **up** (its slope is negative) and every wrong
+    digit's score **down**, in proportion to how much probability it wrongly took.
+
+    Let's verify this by nudging, the chapter 02 way, on scores `[2, 1, 0.1]`:
     """)
     return
 
@@ -584,8 +622,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    About `-0.341`, `0.242` and `0.099`: the shares `[0.659, 0.242, 0.099]` with 1 taken off the
-    right digit's. The formula holds.
+    About `-0.341`, `0.242`, and `0.099`: the probabilities `[0.659, 0.242, 0.099]` with 1 subtracted
+    from the right digit's. The formula matches to every decimal place.
     """)
     return
 
@@ -595,7 +633,8 @@ def _():
     mo.md(r"""
     ## By hand: the slopes for one picture
 
-    A picture of a 1. The model's shares for the digits 0, 1 and 2 are `[0.7, 0.2, 0.1]`: it's fairly sure, and wrong. What are the slopes of its surprise for the three scores?
+    A picture of a 1. The model's probabilities for digits 0, 1, and 2 are `[0.7, 0.2, 0.1]`: fairly
+    confident, and wrong. What are the slopes of its surprise for the three scores?
     """)
     return
 
@@ -609,9 +648,9 @@ def _():
 @app.cell(hide_code=True)
 def _(slope_boxes):
     hand.marked(slope_boxes, {'score 0': 0.7, 'score 1': -0.8, 'score 2': 0.1}, {
-        'score 0': r"""a wrong digit: the slope is its share""",
-        'score 1': r"""the right digit: its share minus 1""",
-        'score 2': r"""a wrong digit: the slope is its share""",
+        'score 0': r"""a wrong digit: the slope is its probability""",
+        'score 1': r"""the right digit: its probability minus 1""",
+        'score 2': r"""a wrong digit: the slope is its probability""",
     }, LOCALE)
     return
 
@@ -619,12 +658,13 @@ def _(slope_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The biggest slope, in size, belongs to the right digit: gradient descent will push its score up hard. And the wrong digit that got 0.7 will be pushed down much harder than the one that got 0.1.
+    The largest slope (in magnitude) belongs to the right digit: gradient descent pulls its score up
+    hard. Meanwhile, the wrong digit that got 0.7 is pushed down much harder than the one that got 0.1.
 
-    Think of it as a tug of war. The right digit is pulled up by $1 - p$, what it's still missing.
-    Every wrong digit is pushed down by its share $p$, what it wrongly took. The pulls stop when
-    the right digit has everything. Watch it happen to this picture: each step moves every score
-    against its slope (learning rate 1), and the shares are worked out again.
+    Think of it as a tug of war. The right digit is pulled up by $1 - p$ (how much probability it's
+    still missing). Every wrong digit is pushed down by $p$ (how much probability it wrongly took).
+    Once the right digit gets all the probability, every pull drops to 0. Watch it happen step by
+    step (learning rate 1):
     """)
     return
 
@@ -645,8 +685,8 @@ def _(pull_steps):
         _s = _s - (_p - _y)
     _p = np.exp(_s) / np.exp(_s).sum()
     mo.hstack([
-        mo.vstack([mo.md("shares"), bars([(f"digit {i}", v) for i, v in enumerate(_p)], "shares", top=1.0)]),
-        mo.vstack([mo.md("slopes, share minus one-hot"),
+        mo.vstack([mo.md("probabilities"), bars([(f"digit {i}", v) for i, v in enumerate(_p)], "probabilities", top=1.0)]),
+        mo.vstack([mo.md("slopes: probability minus one-hot"),
                    bars([(f"digit {i}", v) for i, v in enumerate(_p - _y)], "slopes", top=1.0)]),
         mo.md(rf"surprise: **{-np.log(_p[1]):.3f}**"),
     ], widths=[2, 2, 1])
@@ -656,9 +696,9 @@ def _(pull_steps):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    After one step, digit 1's share jumps from 0.2 to about 0.5; after six, it's over 0.9, and the
-    surprise has fallen from 1.609 towards 0. As the right share grows, every slope shrinks:
-    the closer the model is to right, the gentler the pull.
+    After one step, digit 1's probability jumps from 0.2 to about 0.5; after six steps it passes 0.9,
+    and the surprise drops from 1.609 toward 0. As the right probability grows, every slope shrinks:
+    the closer the model gets to right, the gentler the pull.
     """)
     return
 
@@ -668,9 +708,9 @@ def _():
     mo.md(r"""
     ## From the scores to the knobs
 
-    Gradient descent doesn't move scores, though: it moves knobs, the $784 \times 10$ numbers in
-    $W$ and the 10 in $b$. Here is the whole recipe for all the pictures at once, with the shape
-    of each value:
+    Gradient descent doesn't edit scores directly — it adjusts the knobs (`W`, with $784 \times 10$
+    numbers, and `b`, with 10 numbers). Here is the full pipeline for all $n$ pictures at once, with
+    each matrix's shape:
     """)
     return
 
@@ -679,43 +719,29 @@ def _():
 def _():
     pipeline([("X", "(n, 784)"), ("S", "(n, 10)"), ("P", "(n, 10)"), ("L", "one number")],
              ["@ W + b", "softmax", "cross-entropy"],
-             "X, times W plus b, gives the scores S; softmax gives the shares P; cross-entropy gives the loss L")
+             "X, times W plus b, gives the scores S; softmax gives the probabilities P; cross-entropy gives the loss L")
     return
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Blame flows backwards, as in chapter 03. The last section took it from **one** picture's
-    surprise back to that picture's scores. Two steps are still missing: the loss $L$ is the
-    **mean** of all the pictures' surprises, not one surprise; and gradient descent moves knobs,
-    not scores. We'll fill in both on a world small enough to see every number, with nothing but
-    chapter 03's rules.
-
-    ### A reminder: the two rules of blame
-
-    Draw the calculation as boxes and arrows. Each arrow has a **local slope**: how much the box
-    at its end moves, per unit, when the box at its start is nudged a tiny bit. The loss has
-    blame 1. Walking backwards:
-
-    - **Along a road, multiply.** If $u$ feeds $v$ with local slope 3, and $v$'s blame is 2,
-      then $u$ gets $3 \times 2 = 6$ along that arrow.
-    - **Where roads split, add.** If $u$ feeds several boxes, its blame is the sum of what it
-      gets along each arrow. (In chapter 04, $a$ in $v = (a + b) \times a$ got 7 along one road and
-      2 along the other: 9.)
-
-    That's all this section uses.
+    The last section carried blame from **one** picture's surprise back to its scores. Two steps
+    remain: the loss $L$ is the **mean** of all pictures' surprises (not just one), and we need
+    slopes for the **knobs** `W` and `b` (not just the scores `S`). Using the exact same two rules —
+    *multiply along a road, add where roads split* — let's trace both steps on a tiny world where we
+    can see every single number.
 
     ### A world small enough to see
 
-    Two pictures of only 3 pixels each, and only two digits, 0 and 1. A pixel is 1 where there's
-    ink and 0 where there isn't. Picture 0 is a 0, with ink in pixels 0 and 2; picture 1 is a 1,
-    with ink in pixels 1 and 2. The model gives picture 0 the shares `[0.6, 0.4]` (right, but
-    not sure) and picture 1 the shares `[0.8, 0.2]` (sure, and wrong).
+    Two pictures of only 3 pixels each, and only two digits (0 and 1). Ink is 1, blank is 0.
+    Picture 0 is a 0, with ink in pixels 0 and 2; picture 1 is a 1, with ink in pixels 1 and 2.
+    Suppose the model gives picture 0 probabilities `[0.6, 0.4]` (right, not very sure) and
+    picture 1 probabilities `[0.8, 0.2]` (confident, and wrong).
 
     Here is the end of the calculation as a graph: four scores, two surprises, one loss. Score
     `S[i, c]` is picture $i$'s score for digit $c$. The loss is the mean of the two surprises,
-    $L = (\text{surprise}_0 + \text{surprise}_1) / 2$. Local slopes are on the arrows; blames are in red.
+    $L = (\text{surprise}_0 + \text{surprise}_1) / 2$. Local slopes sit on the arrows; blames are in red.
     """)
     return
 

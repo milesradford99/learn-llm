@@ -26,16 +26,16 @@ def _():
     mo.md(r"""
     # 29 · A mini vLLM
 
-    Chapter 28 made one request fast. A real service never has just one. People send questions whenever they like: some short, some with a long document pasted in, some wanting a sentence back and some a page.
-    The program that answers all of them on one machine is called an **inference engine**, or a serving engine. The best known open one is called *vLLM*, and this chapter builds a small one with its three main ideas:
+    Chapter 28 made one request fast. A real service never has just one. People send questions whenever they like: some short, some with a long document pasted in, some wanting a sentence back and some a full page.
+    The program that serves all of them on one machine is called an **inference engine** (or serving engine). The best-known open one is *vLLM*, and this chapter builds a small one around its three core ideas:
 
-    1. **batching**: several requests share each run of the model;
-    2. **a paged KV cache**: the requests' caches share one pool of memory, in small pages;
-    3. **chunked prefill**: a long prompt is read in pieces, so it can't freeze everyone else.
+    1. **batching**: several requests share each forward pass of the model;
+    2. **a paged KV cache**: all requests share one memory pool, carved into small fixed-size pages;
+    3. **chunked prefill**: a long prompt is read in pieces so it can't freeze everyone else.
 
-    An engine is judged by two things that pull against each other. **Throughput**: how many tokens it writes per second, for everyone together. And **latency**: how long each person waits, which chapter 28 measured as the time to the first token and the time per token after it.
+    An engine is judged by two goals that pull against each other. **Throughput** is how many tokens per second it produces for everyone combined. **Latency** is how long each person waits — which chapter 28 measured as time to the first token and time per token after it.
 
-    **From earlier chapters.** The folded cells below hold chapter 27's file reader and `share_heads`, chapter 20's `rms_norm`, chapter 28's `rope` with its `start` and your `attend_new`, and chapter 22's `time_it`. The cell after them loads the model, as in chapter 28.
+    **From earlier chapters.** The folded cells below hold chapter 27's file reader and `share_heads`, chapter 20's `rms_norm`, chapter 28's `rope` (with its `start` offset) and `attend_new`, and chapter 22's `time_it`. The cell after them loads Qwen's weights and tokenizer, just as in chapter 28.
     """)
     return
 
@@ -113,15 +113,15 @@ def _():
     mo.md(r"""
     ## One run, many requests
 
-    Chapter 28 found that a decode step is slow because every knob has to be fetched from memory, 2.4 GB of them, to push **one** vector through. The arithmetic was the cheap part.
+    Chapter 28 found that a decode step is slow because every weight has to be fetched from memory — 2.4 GB of them — just to push **one** vector through. The arithmetic itself was the cheap part.
 
-    So push several vectors through on the same trip. Five requests, each waiting for its next token, put their five vectors in one tensor, one row each, and every matrix multiplies all five rows at once. The knobs are fetched once and used five times. This is **batching**.
+    So push several vectors through on the same trip. Five requests, each waiting for its next token, stack their five vectors into one tensor (one row each), and every weight matrix multiplies all five rows at once. The weights are fetched once and used five times. This is **batching**.
 
-    Only one part of the model can't be shared: attention. Each request's new token must look at **its own** earlier tokens, through its own cache, and never at another person's text. So the matrices work on all the rows together, and attention works on each request alone.
+    Only one part of the model can't be shared: attention. Each request's new token must look at **its own** earlier tokens, through its own cache, and never at another person's text. So the matrices work on all rows together, while attention works on each request alone.
 
     ## By hand: what a shared run costs
 
-    Say one decode step takes 0.125 seconds for one request, all of it spent fetching knobs. If 8 requests share the step and the fetching is all that counts, how long does the step take? How many tokens per second does the engine write, for all 8 together? And for one request alone?
+    Say one decode step takes 0.125 seconds for one request, all of it spent fetching weights. If 8 requests share the step and memory fetching is all that counts, how long does the step take? How many tokens per second does the engine write, for all 8 together? And for one request alone?
     """)
     return
 
@@ -135,7 +135,7 @@ def _():
 @app.cell(hide_code=True)
 def _(share_boxes):
     hand.marked(share_boxes, {'seconds for a step of 8': 0.125, 'tokens per second, 8 together': 64, 'tokens per second, 1 alone': 8}, {
-        'seconds for a step of 8': r"""the knobs are fetched once, whatever the number of rows""",
+        'seconds for a step of 8': r"""the weights are fetched once, no matter how many rows share them""",
         'tokens per second, 8 together': r"""8 tokens every 0.125 seconds: $8 / 0.125$""",
         'tokens per second, 1 alone': r"""$1 / 0.125$""",
     }, LOCALE)
@@ -145,35 +145,35 @@ def _(share_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    That's the ideal. The real gain is smaller, because the rows do cost some arithmetic, and attention, done for each request alone, costs more for each request added. The next sections build the engine, and then measure it.
+    That's the ideal. The real gain is smaller, because extra rows do cost some arithmetic, and attention — done for each request alone — adds work with every request. The next sections build the engine, and then measure it.
 
     ## Two ways to batch
 
     Requests don't arrive together, and they don't finish together: one answer takes 3 tokens, another 200. The simplest way to batch, **static batching**, takes a group of requests, runs them until **all** are finished, then takes the next group.
-    While the long answer is being written, the places of the finished ones stand empty.
+    While the long answer is still being written, the slots of the finished ones sit empty.
 
-    **Continuous batching** decides again at every step. A request that finishes leaves the batch at once, and a waiting request takes its place at the next step. The batch is always as full as it can be.
+    **Continuous batching** decides again at every step. A request that finishes leaves the batch at once, and a waiting request takes its slot on the very next step. The batch stays as full as it can be.
 
-    ## By hand: empty places
+    ## By hand: empty slots
 
-    A batch has room for 4 requests. Their answers take 3, 10, 2 and 5 steps. With static batching, how many steps does the group take? A **place-step** is one place for one step: how many place-steps does the group hold, and how many of them are used to write a token? What share is that?
+    A batch has 4 request slots. Their answers take 3, 10, 2 and 5 steps. With static batching, how many steps does the group take? A **slot-step** is one request slot held for one step: how many slot-steps does the group hold in total, and how many of them are actually used to write a token? What share is that?
     """)
     return
 
 
 @app.cell(hide_code=True)
 def _():
-    static_boxes = hand.boxes(['steps for the group', 'place-steps', 'place-steps used', 'share used'], step=0.01)
+    static_boxes = hand.boxes(['steps for the group', 'slot-steps', 'slot-steps used', 'share used'], step=0.01)
     return (static_boxes,)
 
 
 @app.cell(hide_code=True)
 def _(static_boxes):
-    hand.marked(static_boxes, {'steps for the group': 10, 'place-steps': 40, 'place-steps used': 20, 'share used': 0.5}, {
+    hand.marked(static_boxes, {'steps for the group': 10, 'slot-steps': 40, 'slot-steps used': 20, 'share used': 0.5}, {
         'steps for the group': r"""the group ends when its longest answer does""",
-        'place-steps': r"""4 places for each of those steps""",
-        'place-steps used': r"""each request uses one place for as many steps as its answer takes: $3 + 10 + 2 + 5$""",
-        'share used': r"""used divided by all""",
+        'slot-steps': r"""4 slots across each of those 10 steps""",
+        'slot-steps used': r"""each request uses one slot for as many steps as its answer takes: $3 + 10 + 2 + 5$""",
+        'share used': r"""used divided by total""",
     }, LOCALE, per_row=2)
     return
 
@@ -181,8 +181,8 @@ def _(static_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Half the places stand empty. `steps_needed` counts the steps for a list of answer lengths on a number of places. `running` holds, for each request, the tokens it still has to write: each step takes one off, and a request leaves when it has none left.
-    `continuous` says which way to batch: with `False`, new requests may only come in when the batch is empty.
+    Half the slots sit idle. `steps_needed` counts how many steps a list of answer lengths takes on a given number of slots (`places`). `running` holds how many tokens each active request still has to write: each step subtracts 1, and a request leaves when it has none left.
+    `continuous` picks the batching mode: when `False`, new requests may only enter once the batch is completely empty.
     """)
     return
 
@@ -236,23 +236,23 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Now 40 requests, with answers between 5 and 60 tokens long, drawn at random, on 8 places. The cell shows the steps with static batching, the steps with continuous batching, and the fewest possible, if all 8 places were busy every step: on the test machine, 281, 182 and 150. Continuous batching is much closer to the fewest. Every real engine batches this way.
+    Now 40 requests, with random answer lengths between 5 and 60 tokens, on 8 slots. The cell prints the steps for static batching, for continuous batching, and the theoretical minimum if all 8 slots were busy every step: on the test machine, 281, 182 and 150. Continuous batching is much closer to the minimum, which is why every real engine batches this way.
 
     ## Where to keep the caches
 
-    Batching has a cost. In chapter 28 each request's cache grew with `torch.cat`, which builds a whole new tensor every time. With many requests that start and end at different moments, memory gets cut into pieces of every size.
-    An engine wants to set its memory aside **once**, at the start, and hand it out as requests need it.
+    Batching creates a memory problem. In chapter 28 each request's cache grew with `torch.cat`, allocating a brand-new tensor every step. With many requests starting and ending at different times, memory gets shredded into awkward gaps.
+    An engine prefers to reserve its memory **once**, up front, and hand it out as requests need it.
 
-    How much should a request get? Its answer's length isn't known until it ends. Giving every request room for the longest possible text, say 4,096 tokens, costs 0.94 GB each at chapter 28's 229,376 bytes a token. Eight requests would fill a laptop, and most of that room would never be used.
+    How much should a request get? Nobody knows how long its answer will be until it finishes. Reserving space for the maximum length — say 4,096 tokens — costs 0.94 GB per request at chapter 28's 229,376 bytes per token. Eight requests would fill a laptop, and most of that space would sit unused.
 
-    vLLM's answer comes from how operating systems manage memory. Cut the memory into small **blocks** of the same size, here 16 tokens each, and give a request one more block whenever it fills the last one. All blocks live in one big tensor, the **pool**.
-    A request's blocks needn't be next to each other in the pool. Each request keeps a **block table**: the list of its blocks' numbers, in order. And the engine keeps a list of the free blocks. When a request ends, its blocks go back on that list.
+    vLLM's answer comes from how operating systems manage memory. Slice the memory into small fixed-size **cache blocks** (memory pages) — here 16 tokens each — and hand a request one more block whenever it fills its current one. All cache blocks live in one pre-allocated tensor called the **pool**.
+    A request's cache blocks don't need to sit next to each other in the pool. Each request keeps a **block table**: the list of its block numbers, in order. The engine keeps a list of **free blocks**. When a request finishes, its blocks go right back onto that free list.
 
-    This is the **paged KV cache**. A request never holds more than one block it doesn't fill, so at most 15 unused tokens' room.
+    This is the **paged KV cache**. A request never holds more than one partially filled block, so at most 15 token slots go unused.
 
-    ## By hand: blocks
+    ## By hand: cache blocks
 
-    Blocks hold 16 tokens. How many blocks does a request of 300 tokens need? How many of the tokens' places in them are unused? And a request of 32 tokens?
+    Each cache block holds 16 tokens. How many blocks does a request of 300 tokens need? How many token slots in them are unused? And how many blocks for a request of 32 tokens?
     """)
     return
 
@@ -278,11 +278,11 @@ def _():
     mo.md(r"""
     ## Exercise 1: blocks_for
 
-    Write `blocks_for(length, block_size)`. It gives back how many blocks of `block_size` tokens are needed to hold `length` tokens: `length` divided by `block_size`, rounded **up**. 0 tokens need 0 blocks.
+    Write `blocks_for(length, block_size)`. It returns how many cache blocks of `block_size` tokens are needed to hold `length` tokens: `length` divided by `block_size`, rounded **up**. 0 tokens need 0 blocks.
 
     `blocks_for(300, 16)` must give 19, and `blocks_for(32, 16)` must give 2.
 
-    Chapter 11's `//` rounds down. One way to round up: add $\text{block size} - 1$ to `length` first.
+    Integer division `//` rounds down (drops the remainder). One way to round up: add $\text{block size} - 1$ to `length` first.
     """)
     return
 
@@ -377,24 +377,24 @@ def _():
     mo.md(r"""
     ## Reading a request's cache
 
-    (Two kinds of block meet in this chapter: the model's 28 blocks from chapter 16, and the cache's blocks of memory. The page says "block of the model" for the first kind.)
+    *(Terminology note: in this chapter we call Qwen's 28 Transformer blocks **layers** — matching `layer` in the code — so **block** always means a cache block / memory page of 16 tokens.)*
 
-    The pool for one block of the model is a tensor of the shape (blocks, heads, block size, numbers): for Qwen, (160, 8, 16, 128) in this chapter. Keys and values each have their own pool, and each of the 28 blocks of the model has its own pair.
+    The pool for one layer is a 4D tensor of shape `(blocks, heads, block_size, numbers)`: for Qwen in this chapter, `(160, 8, 16, 128)`. Keys and values each have their own pool, and each of the model's 28 layers has its own `(pool_k, pool_v)` pair.
 
-    Attention wants a request's keys as chapter 28 had them: (1, heads, tokens, numbers), in order. So the engine gathers the request's blocks from the pool, joins them along the token dimension, and cuts off the unused places at the end.
+    Attention expects a request's keys in the same 4D shape chapter 28 used: `(1, heads, tokens, numbers)`, in order. So the engine gathers the request's cache blocks from the pool, joins them along the token dimension, and slices off the unused trailing slots.
 
     /// admonition | 🧰 Toolbox: a list of tensors, and a new first dimension
-    - `[pool[b] for b in [4, 1]]` is a list of two tensors: block 4 of the pool, then block 1. Each has the shape (heads, block size, numbers).
+    - `[pool[b] for b in [4, 1]]` is a list of two tensors: cache block 4 of the pool, then cache block 1. Each has shape `(heads, block_size, numbers)`.
     - `torch.cat` joins a list of any length, as in chapter 14: `torch.cat([a, b, c], dim=1)`.
-    - `x[None]` puts a new dimension of size 1 in front, like chapter 20's `v[:, None]` does in the second place: a tensor of the shape (8, 40, 128) becomes (1, 8, 40, 128).
+    - `x[None]` adds a new leading dimension of size 1, just as `v[:, None]` adds one in the second place: a tensor of shape `(8, 40, 128)` becomes `(1, 8, 40, 128)`.
     ///
 
     ## Exercise 3: read_cache
 
-    Write `read_cache(pool, table, length)`. `pool` has the shape (blocks, heads, block size, numbers), `table` is a request's block table, and `length` is how many tokens the request has so far.
-    It gives back the request's keys (or values) in order, with the shape (1, heads, length, numbers).
+    Write `read_cache(pool, table, length)`. `pool` has shape `(blocks, heads, block_size, numbers)`, `table` is a request's block table, and `length` is how many tokens the request has so far.
+    It returns the request's keys (or values) in order, with shape `(1, heads, length, numbers)`.
 
-    With blocks of 2 tokens, the table `[3, 0]` and `length` 3, the result holds the 2 tokens of pool block 3, then the first token of pool block 0.
+    With blocks of 2 tokens, table `[3, 0]` and `length` 3, the result holds the 2 tokens of pool block 3 followed by the first token of pool block 0.
     """)
     return
 
@@ -425,10 +425,19 @@ def _():
     mo.md(r"""
     ## The model, for a whole batch
 
-    Here is chapter 28's `block_step`, rewritten for a batch. All new tokens of all requests sit in one row, `x`, of the shape (1, total new tokens, 1,024): the first request's tokens, then the second's, and so on. `parts` says where each request's tokens are: one triple `(table, seen, new)` per request.
+    Here is chapter 28's `block_step`, rewritten to process one layer for a whole batch. Different requests bring different numbers of new tokens — a decoding request brings 1, while a prefilling prompt might bring 20 — so the engine packs all of them end-to-end into a single strip `x` of shape `(1, total, 1024)`:
 
-    The matrices work on all tokens at once. Then, one request at a time, the new keys and values are written into the pool with your `slot`, the request's whole cache is read with your `read_cache`, and your `attend_new` blends it.
-    The `pools` hold one pair `(K, V)` for each block of the model.
+    ```text
+    [Request A (1 tok) | Request B (1 tok) | Request C (20 toks)]  ->  one strip x: (1, 22, 1024)
+    ```
+
+    `parts` records where each request's slice sits: one triple `(table, seen, new)` per request. Three details to watch as you read `block_batch`:
+
+    - **One big matrix pass, then split by `at : at + new`.** The Q, K, and V matrices multiply the whole strip at once, producing 3D tensors `q` `(16, total, 128)`, `k` `(8, total, 128)`, and `v` `(8, total, 128)`. Inside the loop, `at` walks along the strip so each request gets its own slice `at : at + new`, applies RoPE starting at its own `seen` position, and runs attention on its own cache alone.
+    - **Writing into the 4D pool: `pool_k[b, :, place] = k_one[:, j]`.** `pool_k` has 4 dimensions `(blocks, 8, 16, 128)`. Writing `pool_k[b, :, place]` omits the trailing `:` (short for `pool_k[b, :, place, :]`), so both sides have the exact same 2D shape `(8, 128)` — all 8 KV heads and their 128 numbers for that single token slot. (Same for `pool_v[b, :, place] = v[:, at + j]`.)
+    - **Adding `[None]`, then stripping `[0]`: `attend_new(q_one[None], ...)[0]`.** `q_one` is 3D `(16, new, 128)`, whereas `read_cache` returns 4D `(1, 8, seen + new, 128)` and chapter 28's `attend_new` expects 4D inputs `(1, heads, tokens, 128)`. Adding `[None]` temporarily puts back the leading `batch=1` dimension; taking `[0]` right after drops it back to 3D `(16, new, 128)` so `torch.cat(blended, dim=1)` can glue all requests back into one strip for the output and feed-forward matrices.
+
+    `pools` holds one `(pool_k, pool_v)` pair for each of the model's 28 layers.
     """)
     return
 
@@ -488,7 +497,9 @@ def _(batch_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `run_batch` runs all 28 blocks and gives back one row of scores per request: the scores after its last new token. `new_pools` sets aside the memory once: 160 blocks of 16 tokens, for 28 blocks of the model, keys and values: 0.59 GB.
+    `run_batch` runs all 28 layers and returns one row of vocabulary scores per request. Notice `x[0, ends]` at the end: `ends` collects the strip index of each request's **last** new token. Earlier prompt tokens only needed to fill the KV cache — they don't predict the next word — so indexing `x[0, ends]` keeps just one vector per request and avoids wasting the huge vocabulary projection on intermediate prompt tokens.
+
+    `new_pools` reserves the cache memory once up front: 160 cache blocks of 16 tokens each, for both keys and values across all 28 layers — 0.59 GB in total.
     """)
     return
 
@@ -543,28 +554,28 @@ def _(knobs, tokenizer):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    On the test machine: 7.5 tokens per second for one request, 22 for 8, 35 for 16. Not the ideal 16 times, but more than 4 times as much from the same computer, at no extra cost. The time per step grows slowly, so each person's tokens come a little slower: throughput bought with a little latency.
+    On the test machine: 7.5 tokens per second for one request, 22 for 8, and 35 for 16. Not the ideal 16-fold jump, but more than 4 times the throughput from the same laptop, with no extra hardware. The time per step rises only slowly, so each person's tokens arrive a little slower: higher throughput bought with a small bit of latency.
 
-    (The gain is smaller than the ideal partly because of this page's Python: `block_batch` loops over the requests and over every new token. A real engine does that work in fused operations, chapter 28's word.)
+    *(The speedup is smaller than the ideal partly because of Python overhead: `block_batch` loops over requests and over every new token one by one. A production engine fuses those steps into a single GPU kernel — chapter 28's **fused operations**.)*
 
     ## Letting requests in
 
-    Now the engine's loop. Every step, it does four things:
+    Now for the engine's main loop. On every step, it does four things:
 
-    1. requests that have arrived join the **waiting** list;
-    2. it **admits** waiting requests into the **running** list, as many as it may;
-    3. it decides how many tokens of each running request to feed;
-    4. it runs the model once on all of them, and gives each request whose input is used up its next token.
+    1. newly arrived requests join the **waiting** list;
+    2. it **admits** as many waiting requests into the **running** list as fit;
+    3. it decides how many tokens of each running request to feed in this step;
+    4. it runs the model once on all of them, and generates the next token for every request whose pending tokens are now all fed.
 
-    The part that decides who may run is called the **scheduler**. Ours has two limits: at most `max_running` requests at once, and enough free blocks for a new request's prompt. Requests are taken in the order they arrived: if the first waiting request doesn't fit, the ones behind it wait too.
+    The part that decides who may run is called the **scheduler**. Ours enforces two limits: at most `max_running` requests at once, and enough free cache blocks to hold a new request's prompt. Requests are admitted in arrival order: if the first waiting request doesn't fit, the ones behind it wait too.
 
-    A request is a dictionary: `"ids"` holds its tokens so far, prompt included.
+    Each request is a dictionary whose `"ids"` list holds all of its tokens so far (prompt included).
 
     ## Exercise 4: admit
 
-    Write `admit(waiting, running, free_blocks, max_running, block_size)`. `waiting` and `running` are lists of requests, and `free_blocks` is how many blocks are free. It gives back a pair: the new waiting list and the new running list.
+    Write `admit(waiting, running, free_blocks, max_running, block_size)`. `waiting` and `running` are lists of requests, and `free_blocks` is the number of free cache blocks. It returns a pair: the updated waiting list and the updated running list.
 
-    As long as there's a waiting request, the running list has fewer than `max_running`, and the **first** waiting request's prompt fits in the free blocks: move that request to the end of the running list, and count its blocks as no longer free.
+    As long as there is a waiting request, the running list has fewer than `max_running` entries, and the **first** waiting request's prompt fits in `free_blocks`: move that request to the end of `running`, and subtract its blocks from `free_blocks`.
 
     With 3 free blocks of 16 tokens, nobody running, room for 4, and waiting prompts of 20, 10 and 5 tokens: the first two are admitted (2 blocks, then 1), and the third must wait.
     """)
@@ -666,12 +677,16 @@ def _():
     mo.md(r"""
     ## The engine
 
-    Here are the four steps of the loop, with your three functions in them. `new_request` makes a request. `"fed"` counts the tokens the model has already read, `"table"` is the block table, and `"arrives"` is the step at which the request arrives.
-    Requests must be listed in the order they arrive.
+    Here is the complete 36-line main loop, wiring together your `admit`, `chunk_sizes`, and `blocks_for` (plus `slot` and `read_cache` inside `block_batch`). `new_request` builds a request dictionary: `"ids"` holds all tokens so far (prompt plus any generated tokens), `"prompt"` stores the original prompt length, `"fed"` counts how many tokens have already been fed through the model into the KV cache, `"table"` is its block table, and `"arrives"` is its arrival step. Requests must be listed in arrival order.
 
-    Before each step, the running requests are put in order, decoding ones first, and new blocks are taken from the front of the free list as a request needs them. When a request ends, its blocks go back on the list. The `log` notes, for every step, who was fed how many tokens and how long the step took.
+    Two state checks drive the whole loop:
 
-    (A real engine also handles running out of blocks. vLLM then pauses the request that came last, frees its blocks and computes its cache again later. This engine's pool is large enough for this page.)
+    - **`r["fed"] >= r["prompt"]` (prefill done -> decoding).** Once a request has fed its entire prompt, it enters the decode phase and only needs 1 new token per step. Requests with `r["fed"] < r["prompt"]` are still in prefill. That is how `order` puts all decoding requests first and prefilling requests behind them before `chunk_sizes` divides up the budget.
+    - **`r["fed"] == len(r["ids"])` (all pending tokens fed -> sample next token).** After `run_batch` finishes and updates `r["fed"]`, we check whether every pending token in `r["ids"]` has now been fed. If so, the model has seen everything up to the end and we pick the next token with `argmax(scores[i])` — finishing the request (and returning its blocks to `free`) if it hits `END_OF_TURN` or `limit`, or appending the new token to `r["ids"]` for the next step. If a long prompt was only fed partway (`r["fed"] < len(r["ids"])`), this step **only fills its KV cache** and does not generate a new token yet.
+
+    The `log` records, for every step, who was fed how many tokens and how long the step took.
+
+    *(A production engine also handles running out of cache blocks: vLLM pauses the most recent request, frees its blocks, and recomputes its cache later. Our pool of 160 blocks is large enough for every experiment on this page.)*
     """)
     return
 
@@ -832,7 +847,7 @@ def _():
     mo.md(r"""
     On the test machine: with no cut, one step took 3.9 seconds, and for those seconds four people saw nothing move. With a budget of 64 the longest step took 0.83 seconds, and the long prompt was read over 9 steps, so its answer started at step 15 instead of 7. The answer itself is the same.
 
-    That's the trade every engine tunes: a larger budget reads long prompts sooner, a smaller one keeps everyone else's tokens flowing.
+    That's the trade-off every engine tunes: a larger budget gets through long prompts sooner, while a smaller one keeps everyone else's replies streaming smoothly.
 
     ## What you built
     """)
@@ -848,27 +863,27 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    That's an inference engine: your scheduler, your paged cache, your budget, around chapter 28's model with its cache. vLLM and the engines like it add a lot of engineering, mostly to make each of these steps fast on a GPU, but their loop is this one.
+    That's an inference engine: your scheduler, your paged cache, and your token budget wrapped around chapter 28's cached model. Production engines like vLLM add heavy systems engineering — mostly custom GPU kernels to make each step fly — but their main loop is this exact one.
 
     ## What's next
 
-    **Chapter 30**, the optional capstone, takes one more step of your choice: speculative decoding, where a small model guesses several tokens and the large one checks them in one run; mixture-of-experts models; or a small agent loop on your own engine.
+    **Chapter 30** is the capstone project: you'll build **speculative decoding** yourself — where a small model guesses several tokens ahead and the large model checks them in a single forward pass — and at the end look ahead to mixture-of-experts (MoE) models and the agent loop track (chapters 40–51).
 
     ## What you can do now
 
     - explain why batching raises throughput, and what it costs in latency
-    - compare static and continuous batching, and count the empty places
-    - explain a paged KV cache: blocks, the pool, block tables and the free list
+    - compare static and continuous batching, and count the wasted slot-steps
+    - explain a paged KV cache: cache blocks, the pool, block tables, and the free list
     - find any token of a request in the pool, and read a request's cache in order
-    - write a scheduler that admits requests by order, room and free memory
+    - write a scheduler that admits requests by order, slots, and free memory
     - share a token budget between decoding requests and prompts in chunks
-    - read an engine's log and say what each step did
+    - read an engine's log and explain what each step did
 
     ---
 
     <!-- go-deeper -->
     **Go deeper (optional):** The paged KV cache is from the vLLM paper, *Efficient Memory Management for Large Language Model Serving with PagedAttention* (Kwon et al., 2023). Continuous batching was described in *Orca* (Yu et al., 2022), and chunked prefill in *SARATHI* (Agrawal et al., 2023).
-    Engines also share blocks between requests that begin with the same text, which is called *prefix caching*.
+    Engines also share cache blocks between requests that begin with the same text, which is called *prefix caching*.
     """)
     return
 

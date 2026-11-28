@@ -23,11 +23,11 @@ def _():
     # 24 · Scaling laws
 
     Suppose you're given a budget for one big training run: so many GPUs for so many weeks. Two questions come first. How big should the model be?
-    And how much text should it read? Guess wrong, and the budget is spent on a model that's worse than it could have been. And you can't find the answer by trying:
-    each try *is* the big run.
+    And how much text should it read? Guess wrong, and the budget is spent on a model that's worse than it could have been. And you can't find the answer by trial and error:
+    each try *is* the whole big run.
 
     The way out is one of the most useful habits in the field. Run many **small** experiments, cheap enough to repeat. Find the rule their results follow.
-    Then use the rule to predict the big run before paying for it. Such a rule is called a **scaling law**, and in this chapter you'll measure one yourself, on your own
+    Then use that rule to predict the big run before paying for it. Such a rule is called a **scaling law**, and in this chapter you'll measure one yourself, on your own
     machine, and use it to plan a run.
 
     ## Power laws
@@ -36,11 +36,11 @@ def _():
 
     > $$y = a \times x^k$$
 
-    $x$ is what you spend (text, knobs), $y$ is what you get (the loss), and $a$ and $k$ are two fixed numbers. When $k$ is negative, $y$ falls as $x$ grows: remember that $x^{-1}$ is $\frac{1}{x}$,
-    and $x^{-0.5}$ is $\frac{1}{\sqrt{x}}$.
+    Here $x$ is what you spend (amount of text or number of knobs), $y$ is the result you care about (the test loss), and $a$ and $k$ are two fixed numbers. When $k$ is negative, $y$ falls as $x$ grows:
+    a minus sign in the exponent flips it into a fraction ($x^{-1} = \frac{1}{x}$), and a $0.5$ exponent is a square root, so $x^{-0.5} = \frac{1}{\sqrt{x}}$.
 
-    A power law has one property that defines it. Multiply $x$ by 2, and $y$ is multiplied by $2^k$, **wherever you start**: $a \times (2x)^k = 2^k \times (a \times x^k)$.
-    Going from 1 to 2 helps as much, in proportion, as going from a million to two million. Each doubling costs twice the last one and buys the same.
+    A power law has one defining property. Multiply $x$ by 2, and $y$ is multiplied by $2^k$, **wherever you start**: $a \times (2x)^k = 2^k \times (a \times x^k)$.
+    Going from 1 to 2 gives the same *proportional* drop as going from a million to two million. Each doubling costs twice as much as the last one, yet buys the same percentage improvement.
 
     ## By hand: a law that halves
 
@@ -82,19 +82,18 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    It's hard to read. The first three dots are squeezed against the left edge, and you couldn't tell this curve from many others that fall and flatten.
+    It's hard to read. The first three dots are squeezed against the left edge, and by eye you couldn't tell this curve apart from many others that fall and flatten.
 
     ## Logs make it a line
 
-    The dots are evenly spaced in *multiplications*: each is 4 times further right and 2 times lower. So count the multiplications. That's what a log does: chapter 13 used
-    $\log(a \times b) = \log a + \log b$. Apply it to $x^k$, which is $x$ multiplied by itself $k$ times, and you get $\log(x^k) = k \times \log x$. (It holds for any $k$, not only whole numbers.) Now take the log of both sides of the power law:
+    Notice the pattern between neighbouring dots: they aren't evenly spaced by adding a fixed step, they're evenly spaced by *multiplying* — each dot is 4 times further right and half as high. So instead of raw values, count the multiplications. That's what a logarithm does: turning multiplication into addition, $\log(a \times b) = \log a + \log b$. Apply that to $x^k$ ($x$ multiplied by itself $k$ times) and you get $\log(x^k) = k \times \log x$ (which holds for any $k$, not just whole numbers). Now take the log of both sides of the power law:
 
     > $$\log y = \log a + k \times \log x$$
 
-    Read it as a line. With $\log x$ along the bottom and $\log y$ up the side, **a power law is a straight line. Its slope is $k$ and its intercept is $\log a$.** A chart drawn this way is called a **log-log plot**.
-    If measurements fall on a line there, they follow a power law, and the line's slope is the one number worth remembering.
+    Read this as the equation of a line. With $\log x$ along the horizontal axis and $\log y$ along the vertical axis, **every power law becomes a straight line whose slope is $k$ and whose intercept is $\log a$.** A chart drawn with log axes is called a **log-log plot**.
+    If measured points fall on a straight line there, they follow a power law, and the line's slope $k$ is the single number worth remembering.
 
-    Our logs so far were the natural ones, which count multiplications by $e$. By hand it's easier to count multiplications by 2, the doublings. The idea is the same. Our four dots:
+    Our logs so far were natural logs ($\ln$), which count multiplications by $e$. By hand it's easier to count multiplications by 2 — the doublings. Our four dots become:
 
     | $x$ | doublings in $x$ | $y$ | doublings in $y$ |
     |---:|---:|---:|---:|
@@ -117,18 +116,20 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    A straight line, evenly spaced dots. It goes down 1 for every 2 across, so its slope is $-0.5$: that's $k$. It starts at 6, and six doublings make 64: that's $a$.
+    A straight line, with evenly spaced dots. It drops 1 for every 2 across, so its slope is $-0.5$ — that's $k$. It starts at 6, and six doublings make 64 — that's $a$.
+
+    Does the choice of log base change the slope? **No.** In $\log y = \log a + k \times \log x$, switching between base-2 log and the natural log $\ln$ scales both sides by the same constant, so the slope $k$ stays identical. That's why we can count doublings by hand and still pair `np.log` with `np.exp` in code.
 
     ## The best line, in one go
 
-    Real measurements never sit exactly on a line, so we need the line that fits them best. You've done this: chapter 01 measured a line's misses with the mean squared error, and chapter 02 walked downhill to the best one.
-    For a single straight line there's a shortcut. The bottom of that valley is where both slopes are zero, and those two equations can be solved once and for all. We'll skip the algebra and take the result.
+    Real measurements never sit exactly on a line, so we need the line that fits them best. Earlier in the course we measured a line's error with mean squared error (chapter 01) and walked downhill with gradient descent to find the best one (chapter 02).
+    For a single straight line there's a one-step shortcut. The bottom of that error valley is where the slopes with respect to both line parameters are zero, and those two equations can be solved once and for all. We'll skip the algebra and use the result directly.
     Write $\bar{x}$ for the mean of the $x$ values and $\bar{y}$ for the mean of the $y$ values. Then:
 
     > $$\text{slope} = \frac{\text{sum of } (x - \bar{x}) \times (y - \bar{y})}{\text{sum of } (x - \bar{x})^2} \qquad\qquad \text{intercept} = \bar{y} - \text{slope} \times \bar{x}$$
 
-    The top of the fraction asks: when $x$ is above its mean, is $y$ above its mean too (a positive product) or below (a negative one)? The bottom scales the answer by how spread out the $x$ values are.
-    The intercept then puts the line through the point $(\bar{x}, \bar{y})$. This is called a **least-squares fit**.
+    The top of the fraction checks how $x$ and $y$ move together: when $x$ is above its mean, is $y$ above its mean too (a positive product) or below (a negative one)? The bottom scales that by how spread out the $x$ values are.
+    The intercept then pins the line so it passes through the centre point $(\bar{x}, \bar{y})$. This direct formula is called a **least-squares fit**.
 
     ## By hand: the line through three points
 
@@ -234,13 +235,13 @@ def _():
     mo.md(r"""
     ## Your own small runs
 
-    Time to measure. The function `small_run(d, tokens, …)` does one complete training run and gives back one number:
+    Time to measure. The function `small_run(d, tokens, …)` runs one complete training job and returns one number:
 
-    - it builds chapter 20's transformer with `d` numbers per token and 2 blocks;
-    - it trains it chapter 21's way (AdamW, warmup, cosine decay) on `tokens` tokens of the stories, each read once;
-    - it gives back the mean surprise per token on a fixed piece of the test stories. That's the loss, and $e^{\text{loss}}$ is the perplexity.
+    - it builds a 2-block transformer with `d` numbers per token (the same architecture from chapter 20);
+    - it trains it with AdamW, warmup and cosine decay (chapter 21) on `tokens` tokens of the stories, reading each token once;
+    - it returns the mean surprise per token on a fixed slice of test stories — that's the loss, and $e^{\text{loss}}$ is the perplexity.
 
-    Its code is in `learn_llm/scaling.py`, and nothing in it is new. We'll try four widths, from 16 to 128, and four amounts of text, from 50,000 to 400,000 tokens: 16 runs. The cell below loads the tokens and counts each width's knobs.
+    Its code lives in `learn_llm/scaling.py`, and nothing in it is new. We'll test four widths, from 16 to 128, and four amounts of text, from 50,000 to 400,000 tokens: 16 runs in total. The cell below loads the tokens and counts each width's knobs.
     """)
     return
 
@@ -258,8 +259,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    From about 78,000 knobs to nearly a million. The biggest run reads eight times more text than the smallest with a model twelve times bigger, so it costs about a hundred times more.
-    The button does all 16 runs. It takes 1 to 3 minutes, and until it finishes, the cells that need the results say `Ancestor stopped`. That's normal.
+    From about 78,000 knobs to nearly a million. The biggest run reads eight times more text than the smallest with a model twelve times bigger, so it costs about a hundred times more compute.
+    The button runs all 16 experiments. It takes 1 to 3 minutes, and until it finishes, the cells below that depend on it say `Ancestor stopped`. That's normal.
     """)
     return
 
@@ -285,10 +286,10 @@ def _(sweep_button, test_tokens, token_counts, train_tokens, vocab_size, widths)
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Each row is one model size, smallest first. Each column is one amount of text, least first. Read along a row: more text, lower loss. Read down a column: more knobs, lower loss.
-    Nothing surprising yet. The question is *how fast* it falls.
+    Each row is one model size, smallest first. Each column is one amount of text, least first. Read across a row: more text, lower loss. Read down a column: more knobs, lower loss.
+    Nothing surprising yet. The real question is *how fast* it falls.
 
-    Take the third row, the model with 64 numbers per token, and fit a power law to its four losses with your function:
+    Take the third row — the model with 64 numbers per token — and fit a power law to its four losses using your function:
     """)
     return
 
@@ -309,10 +310,12 @@ def _(a_text, k_text, loss_table, token_counts):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The four dots are close to the line: over this range, the loss follows a power law in the amount of text. You should see a $k$ near $-0.14$. By the doubling rule, each doubling of the text multiplies the loss by
-    $2^{-0.14} \approx 0.91$. It takes off 9%, every time, and each time the doubling costs twice as much.
+    To read the horizontal axis without computing $e^{12}$ in your head: a natural log of `11` is about 60,000 tokens, `12` is about 160,000, and `13` is about 440,000.
 
-    The same works down a column. Here's the last column, 400,000 tokens, against the number of knobs:
+    The four dots sit close to the line: over this range, the loss follows a power law in the amount of text. You should see a $k$ near $-0.14$. By the doubling rule, each doubling of the text multiplies the loss by
+    $2^{-0.14} \approx 0.91$ — shaving off 9% each time, while each doubling costs twice as much.
+
+    The same holds down a column. Here is the last column (400,000 tokens) against the number of knobs:
     """)
     return
 
@@ -326,15 +329,15 @@ def _(loss_table, sizes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    A $k$ near $-0.1$: doubling the model takes about 7% off the loss.
+    A $k$ near $-0.1$: doubling the model size takes about 7% off the loss.
 
-    A pure power law can't be the whole truth, though. It falls towards 0 forever, and no model can reach a loss of 0 on stories: what comes next in a story is partly a free choice of its writer.
-    There's a **floor** under the loss, the surprise that even a perfect model would be left with. We'll put it into the law in a moment.
+    A pure power law can't be the whole truth, though. It drops towards 0 forever, whereas no model can reach a loss of 0 on stories: what happens next in a story is partly the writer's free choice.
+    There is an irreducible **floor** under the loss — the surprise that even a perfect model would still face. We'll build it into the law in a moment.
 
     ## What a budget buys
 
-    Chapter 22 gave the cost of training: about $6 \times N \times D$ FLOPs, for $N$ knobs and $D$ tokens read. A **compute budget** is a number of FLOPs you may spend, so it fixes the product $N \times D$ and nothing else.
-    You choose how to split it. A model twice as big can read only half as much.
+    Chapter 22 gave a simple rule for training cost: about $6 \times N \times D$ FLOPs (floating-point operations), for a model with $N$ knobs reading $D$ tokens. A **compute budget** is a fixed total number of FLOPs you're allowed to spend, so it fixes the product $N \times D$ and nothing else.
+    You choose how to split it: a model twice as big can afford only half as much text.
 
     ## By hand: spend a budget
 
@@ -396,21 +399,21 @@ def _():
     mo.md(r"""
     ## One law for both
 
-    To choose the split we need one law that knows about both the knobs and the text. The form that has worked best for language models adds three parts:
+    To choose the split we need one law that accounts for both the knobs and the text. The form that has worked best for language models adds three parts:
 
     > $$\text{loss}(N, D) = E + \frac{a}{N^{\alpha}} + \frac{b}{D^{\beta}}$$
 
-    - $E$ is the floor: the loss a perfect model would have after reading endless text.
-    - $\frac{a}{N^{\alpha}}$ is what's lost because the model is **too small**. It's a power law in $N$ (dividing by $N^{\alpha}$ is multiplying by $N^{-\alpha}$), and it fades as the model grows.
-    - $\frac{b}{D^{\beta}}$ is what's lost because the model has read **too little**. It fades as the text grows.
+    - $E$ is the floor: the loss a perfect model would still have after reading endless text.
+    - $\frac{a}{N^{\alpha}}$ is the extra loss from the model being **too small**. It's a power law in $N$ (dividing by $N^{\alpha}$ is the same as multiplying by $N^{-\alpha}$), and it fades as the model grows.
+    - $\frac{b}{D^{\beta}}$ is the extra loss from reading **too little text**. It fades as the text grows.
 
-    $\alpha$ and $\beta$ are the Greek letters alpha and beta. Five numbers in all, $E$, $a$, $\alpha$, $b$ and $\beta$, to be measured from runs.
+    $\alpha$ and $\beta$ are the Greek letters alpha and beta. Five numbers in all — $E$, $a$, $\alpha$, $b$ and $\beta$ — to be measured from runs.
 
-    Now the trade-off shows. With a fixed budget, a big model makes the middle part small and the last part large, because it can afford little text. A small model does the reverse. Somewhere between is a best size.
+    Now the trade-off is clear. With a fixed budget, a bigger model leaves less compute for text, shrinking the middle term while enlarging the last term. A smaller model does the reverse. Somewhere in between sits a best size.
 
     ## Exercise 4: joint_law
 
-    Write `joint_law(knobs, tokens, floor, a, alpha, b, beta)`, the formula above. It must work on plain numbers, and on arrays or tensors of knobs and tokens, which it will if you only use `+`, `*` or `/`, and `**`.
+    Write `joint_law(knobs, tokens, floor, a, alpha, b, beta)` using the formula above. It must work on plain numbers as well as arrays or tensors of knobs and tokens, which happens automatically if you stick to `+`, `*` or `/`, and `**`.
 
     With 100 knobs, 10,000 tokens, a floor of 2, $a = 10$, $b = 300$ and both powers 0.5, it must give $2 + \frac{10}{10} + \frac{300}{100} = 6$.
     """)
@@ -469,18 +472,18 @@ def _(split_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The smallest model is starved of knobs and the biggest is starved of text. The best of the four is $N = 50$, where the two parts are equal. A model chosen this way is called **compute-optimal** for its budget.
+    The smallest model is starved of knobs and the biggest is starved of text. The best of the four is $N = 50$, where the two parts balance. A model chosen this way is called **compute-optimal** for its budget.
 
     /// admonition | 🧰 Toolbox: where is the smallest?
-    `np.argmin` is `np.argmax`'s twin: the position of the smallest number. `np.argmin([7, 3, 9])` is 1.
+    `np.argmin` is `np.argmax`'s twin: it returns the index of the smallest number. `np.argmin([7, 3, 9])` is 1.
     ///
 
     ## Exercise 5: best_size
 
-    Write `best_size(budget, sizes, law)`. `sizes` is a list of numbers of knobs to choose from, and `law` is a function: `law(knobs, tokens)` gives a predicted loss (chapter 02: functions are values).
-    Each size gets the tokens the budget can pay for, from your `tokens_for`. Give back the size with the lowest predicted loss.
+    Write `best_size(budget, sizes, law)`. `sizes` is a list of knob counts to choose from, and `law` is a function that takes `(knobs, tokens)` and returns a predicted loss (remember from chapter 02 that functions can be passed as arguments just like numbers).
+    Each size gets the tokens the budget can pay for, via your `tokens_for`. Return the size with the lowest predicted loss.
 
-    On your hand exercise, a budget of 60,000, the sizes `[10, 50, 100, 200]` and the toy law, it must give 50.
+    On your hand exercise, with a budget of 60,000, the sizes `[10, 50, 100, 200]` and the toy law, it must return 50.
     """)
     return
 
@@ -511,10 +514,13 @@ def _():
     mo.md(r"""
     ## Fitting the law to your runs
 
-    The joint law isn't a straight line in any plot, so `fit_line` can't find its five numbers. But you know a method that fits anything: walk downhill. The function below is chapter 10's training loop.
-    Its "model" is your `joint_law`, its knobs are the law's five numbers, and its loss is the mean squared miss between the logs of the predicted and the measured losses, so that a miss of 1% counts the same anywhere in the table.
+    The joint law isn't a straight line in any plot, so `fit_line` can't find its five numbers. Fortunately we already know a method that can fit any smooth formula: gradient descent. The function below is the same PyTorch training loop from chapter 10, where `joint_law` is the "model" and its five numbers are the parameters Adam tunes.
 
-    Two details. `a` and `b` must stay positive, so the fit keeps their logs as knobs and passes `torch.exp` of them to the law. And the sizes are made a column and the token counts a row (chapter 20's `[:, None]`), so that broadcasting fills the whole $4 \times 4$ table of predictions at once.
+    Three small tricks make it work cleanly:
+
+    - **Keeping $a$ and $b$ positive with `torch.exp`**: `a` and `b` must never turn negative, so Adam optimizes `p[1]` and `p[3]` freely and passes `torch.exp(p[1])` and `torch.exp(p[3])` into `joint_law`. Even if Adam pushes `p[1]` to a negative number like $-10$, $e^{-10} \approx 0.000045$ is still strictly positive.
+    - **Measuring percentage error in log space**: the loss is the mean squared difference of `torch.log(predicted)` and `torch.log(measured)`. Because $\log(1.01 y) - \log y = \log 1.01 \approx 0.01$, a difference in logs directly reflects a percentage error — so a 1% miss counts the same everywhere in the table.
+    - **Filling the $4 \times 4$ grid in one shot**: `[:, None]` turns the 4 sizes into a $4 \times 1$ column and `[None, :]` turns the 4 token counts into a $1 \times 4$ row, so broadcasting evaluates all 16 predictions at once.
     """)
     return
 
@@ -578,12 +584,14 @@ def _(loss_table, sizes, token_counts):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    You should see powers $\alpha$ and $\beta$ near 0.25 to 0.3, and a floor $E$ somewhere near 0.3. Don't trust the floor. The lowest loss you measured is about 3.5,
-    ten times higher, so your runs say almost nothing about where the fall ends. A fit is only as good as the range it was measured on.
+    You should see powers $\alpha$ and $\beta$ near 0.25 to 0.3, and a floor $E$ somewhere near 0.3. Don't trust the floor. The lowest loss you measured is about 3.5 —
+    ten times higher — so these 16 runs tell us almost nothing about where the curve will eventually bottom out. A fit is only trustworthy within the range where it was measured.
 
     ## Predict, then run
 
-    Now use the law the way it's used for real: decide a run before making it. The budget is $1.86 \times 10^{12}$ FLOPs, a little less than the biggest run of your table cost. Which of the four sizes should get it?
+    Now use the law the way it's used in practice: choose a run before paying for it. The budget is $1.86 \times 10^{12}$ FLOPs, slightly less than the largest run in your table. Which of the four sizes should get it?
+
+    (In the cell below, `*law_numbers` unpacks the 5 numbers inside `law_numbers` and passes them in order as the 5 arguments `floor`, `a`, `alpha`, `b`, `beta` to `joint_law`.)
     """)
     return
 
@@ -612,11 +620,12 @@ def _(budget, fitted_law):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The first number is the law's choice: the third size, 387,392 knobs, the model with 64 numbers per token. The chart shows the predicted loss for every size at this budget: the valley you found by hand, with a flat bottom.
-    A flat bottom is good news, since being a little off the best size costs little.
+    Here on the horizontal axis, `11` is about 60,000 knobs, `12` about 160,000, `13` about 440,000, and `14` about 1.2 million.
 
-    The law's choice would read 800,000 tokens, twice as much text as any run in your table. The size below it would read 1.8 million tokens, more than four times as much. So this is a real prediction, outside what was measured.
-    The button runs the three largest sizes on this budget, and shows the prediction next to the measurement for each. (The smallest size is left out: it could afford 3.9 million tokens, and the stories only have 2 million. Running out of text is a real limit too.) It takes 1 to 2 minutes.
+    The first number printed is the law's choice: the third size, 387,392 knobs (the model with 64 numbers per token). The chart plots the predicted loss across all sizes at this budget: the same valley you found by hand, with a reassuringly flat bottom — being slightly off the exact optimum barely hurts.
+
+    The chosen model will read 800,000 tokens, twice as much text as any run in your table; the size below it would read 1.8 million tokens, more than four times as much. So this is a genuine prediction outside the measured range.
+    The button runs the three largest sizes at this budget and prints each prediction alongside its measured loss. (The smallest size is skipped: it could afford 3.9 million tokens, whereas our stories only contain 2 million — running out of data is a real-world bottleneck too.) Expect 1 to 2 minutes.
     """)
     return
 
@@ -643,41 +652,41 @@ def _(budget, fitted_law, sizes, test_button, test_tokens, train_tokens, vocab_s
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Each row is (numbers per token, tokens read, predicted loss, measured loss). On our machine the measured losses were about 3.60, 3.52 and 3.64: the middle size wins, as predicted, and each prediction is within 0.1 of its measurement.
-    Your numbers will differ a little.
+    Each row shows (numbers per token, tokens read, predicted loss, measured loss). On our machine the measured losses were about 3.60, 3.52 and 3.64: the middle size wins, just as predicted, and every prediction lands within 0.1 of the measurement.
+    Your numbers will differ slightly.
 
-    That's the method. Sixteen cheap runs told you how to spend a budget before spending it.
+    That is the whole method: sixteen cheap runs told you how to spend a larger budget before you spent it.
 
     ## What the real laws say, and what they don't
 
-    Laboratories do exactly this, with runs a million times larger. Two findings are worth knowing:
+    Frontier labs follow this exact playbook at a million times the scale. Two findings stand out:
 
-    - The powers are small, as yours were. Ten times more compute buys a modest, steady drop in the loss, never a collapse. Progress by scale is real and expensive.
-    - For large models, the best split was measured at roughly **20 tokens of text per knob**. Before that was measured, the fashion was bigger models reading too little text, and smaller models trained properly turned out to beat them.
+    - The exponents are small, just like yours. Ten times more compute buys a modest, steady drop in loss, never a sudden cliff. Progress from scale is real — and expensive.
+    - For large models, the compute-optimal ratio turned out to be roughly **20 tokens of text per knob**. Before this was measured, labs trained huge models on too little text; smaller models trained on more text beat them for the same compute.
 
-    Your own best split is about 2 tokens per knob, not 20. That isn't a mistake, and it's the most important caution in this chapter: **the numbers in a scaling law belong to the setup they were measured on.**
-    Your models are tiny, most of their knobs sit in the tables of token vectors, and the stories are simple. Change the kind of model, the text or the way of training, and the constants change.
-    The method carries over, and the numbers must be measured again.
+    Your own optimum is around 2 tokens per knob, not 20. That's not a bug — it's the most important caveat in this chapter: **the constants in a scaling law belong to the exact setup they were measured on.**
+    Your models are tiny, most of their knobs live in the token embedding tables, and the stories are simple. Change the architecture, the dataset, or the training recipe, and the constants shift.
+    The method carries over; the numbers must always be re-measured.
 
-    And a law is only trusted near where it was measured. Yours was checked at twice the text. Nobody should believe its guess for a thousand times the text: the floor, which you couldn't pin down, would decide the answer.
+    And a scaling law is only trustworthy near the range where it was measured. Ours was checked at twice the text. Nobody should trust its prediction at a thousand times the text, where the poorly pinned-down floor $E$ would dominate the answer.
 
     ## What's next
 
-    More text lowers the loss, but all the text here was good text. On the real internet, most text is duplicated, broken or junk. **Chapter 25** is about turning a raw pile of text into data worth training on.
+    More text lowers the loss, but all the text here was clean. On the open internet, most text is duplicated, broken or junk. **Chapter 25** is about turning a raw pile of text into data worth training on.
 
     ## What you can do now
 
     - recognise a power law, and say what each doubling buys
     - turn a power law into a straight line with logs, and read $k$ and $a$ off it
-    - fit the best line through points without walking downhill
+    - fit the best line through points in one step without gradient descent
     - measure a scaling law from your own training runs
-    - work out what a compute budget can pay for, and choose the model size that uses it best
-    - say why a law's numbers don't carry over to another setup, or far beyond the measured range
+    - work out what a compute budget can pay for, and choose the compute-optimal model size
+    - explain why a law's constants don't carry over to another setup, or far beyond the measured range
 
     ---
 
     <!-- go-deeper -->
-    **Go deeper (optional):** The first large study is Kaplan et al., *Scaling Laws for Neural Language Models* (2020). The three-part law and the 20 tokens per knob are from Hoffmann et al.,
+    **Go deeper (optional):** The first large study is Kaplan et al., *Scaling Laws for Neural Language Models* (2020). The three-part law and the 20 tokens per knob rule come from Hoffmann et al.,
     *Training Compute-Optimal Large Language Models* (2022), known as the *Chinchilla* paper. NumPy's `np.polyfit(xs, ys, 1)` does what your `fit_line` does.
     """)
     return

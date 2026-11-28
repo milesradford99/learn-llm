@@ -21,23 +21,23 @@ def _():
     mo.md(r"""
     # 16 · Self-attention
 
-    Chapter 15 ended with a question: if attention does the real work, why keep the LSTM? An LSTM has to read one word
-    at a time, so every step waits for the one before it, and blame has a long way to travel.
+    Chapter 15 ended with a question: if attention is doing the real work, why keep the LSTM at all? An LSTM has to read one word
+    at a time, so every step waits for the previous one, and gradients (error signals) have to travel a long chain back to earlier words.
 
-    The **Transformer** drops recurrence altogether. Every word looks directly at the words before it, all at once. The
-    design was published in 2017, and every large language model today is built on it.
+    The **Transformer** drops recurrence altogether. Every word looks directly at the words before it, all at once. Published in 2017,
+    this design is the backbone of every large language model today.
 
-    It takes two chapters. This one builds its one new part, the **self-attention** layer, piece by piece. Chapter 17 stacks
-    that layer into a tiny **GPT**, trains it, and puts it on your leaderboard. Every idea in the layer, you've met: it's chapter 15's attention,
-    with four changes.
+    We'll build it across two chapters. This chapter builds its one new component, the **self-attention** layer, piece by piece. Chapter 17 stacks
+    that layer into a tiny **GPT**, trains it, and puts it on your leaderboard. Every core idea is one you've met before: it's chapter 15's attention
+    (score, softmax into weights, blend values), with four upgrades.
 
     ## Words asking each other
 
-    In chapter 15, the decoder's states asked questions of the encoder's states. In self-attention the words of one text ask
-    questions of each other: each word is a query, and each word is also a key and a value.
+    In chapter 15, the decoder's states asked questions of the encoder's states. In self-attention, the words of a single text ask
+    questions of each other: every word acts as a query, a key, and a value all at once.
 
-    The simplest way would be to use each word's vector for all three. Let's try it on three words with vectors of 2 numbers.
-    The table below holds every score: row $i$, column $j$ is the dot product of word $i$ with word $j$, that is, how strongly word $i$ looks at word $j$.
+    The simplest idea would be to use each word's raw vector for all three roles. Let's try it on three words with 2-number vectors.
+    The table below holds every score: row $i$, column $j$ is the dot product of word $i$ with word $j$ — how strongly word $i$ attends to word $j$.
     """)
     return
 
@@ -52,22 +52,22 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Two things are wrong with this table.
+    Two things go wrong with this table.
 
-    - **Every word looks mostly at itself.** A vector's dot product with itself is the sum of its squares, which is usually the biggest in its row:
+    - **Every word attends mostly to itself.** A vector's dot product with itself is the sum of its squares, which is usually the largest entry in its row:
       4 in row 0, and 9 in row 2.
-    - **Looking is mutual.** Row 1, column 2 holds 3, and so does row 2, column 1. Word 1 looks at word 2 exactly as strongly as word 2 looks at word 1,
-      because a dot product doesn't care about the order of its two vectors.
+    - **Attention is forced to be symmetric.** Row 1, column 2 holds 3, and so does row 2, column 1. Word 1 attends to word 2 with the exact same score as word 2 attends to word 1,
+      because a dot product doesn't care which vector comes first.
 
-    Language doesn't work like that. In `the dog ran`, the word `ran` needs to find its subject, `dog`. That doesn't mean `dog` needs `ran` just as much.
+    Language doesn't work like that. In `the dog ran`, the verb `ran` needs to find its subject `dog`, but `dog` doesn't need `ran` in the same way.
 
-    So each word gets separate vectors for separate roles. Its vector goes through three different `nn.Linear` layers (with no bias, so each is a matrix), giving it:
+    So each word gets separate vectors for separate roles. Its vector goes through three different `nn.Linear` layers (with no bias, so each is just a matrix), giving it:
 
     - a **query**: what am I looking for?
     - a **key**: what do I offer to others who are looking?
-    - a **value**: what do I pass on, if I'm chosen?
+    - a **value**: what information do I pass along if I'm chosen?
 
-    Here are the same three words, with a made-up matrix for the queries and another for the keys. Row $i$, column $j$ is now the query of word $i$ times the key of word $j$:
+    Here are the same three words with one made-up matrix for queries and another for keys. Row $i$, column $j$ is now word $i$'s query dotted with word $j$'s key:
     """)
     return
 
@@ -83,15 +83,15 @@ def _(X_words):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The table is no longer the same when you swap rows and columns: word 2 looks at word 0 with a score of 6, while word 0 looks at word 2 with a score of $-6$.
-    And the diagonal is no longer the biggest. What a word looks for and what it offers have come apart. In a real layer, these matrices are knobs, and training finds them.
+    The table is no longer symmetric: word 2 scores 6 on word 0, while word 0 scores $-6$ on word 2.
+    And the diagonal is no longer the largest. What a word searches for and what it advertises have been separated. In a real layer, these matrices are trainable parameters learned from data.
 
-    After that, attention runs as before: compare, share out, blend the values. So the new vector of each word is a blend of what the words it found relevant passed on.
+    After that, attention runs just as before: compute scores, turn each row into weights (probabilities) with softmax, and take a weighted blend of the values. Each word's new vector is a blend of what the relevant words passed along.
 
     ## By hand: who asks whom
 
-    Two words. `dog` has the query `[1, 0]` and the key `[0, 2]`. `ran` has the query `[0, 3]` and the key `[1, 1]`.
-    A score is always the asker's query times the other word's key. Work out both.
+    Two words: `dog` has query `[1, 0]` and key `[0, 2]`; `ran` has query `[0, 3]` and key `[1, 1]`.
+    A score is always the asker's query dotted with the other word's key. Work out both.
     """)
     return
 
@@ -105,8 +105,8 @@ def _():
 @app.cell(hide_code=True)
 def _(ask_boxes):
     hand.marked(ask_boxes, {'dog asks ran': 1, 'ran asks dog': 6}, {
-        'dog asks ran': r"""the query of `dog`, `[1, 0]`, times the key of `ran`, `[1, 1]`""",
-        'ran asks dog': r"""the query of `ran`, `[0, 3]`, times the key of `dog`, `[0, 2]`""",
+        'dog asks ran': r"""the query of `dog`, `[1, 0]`, dotted with the key of `ran`, `[1, 1]`""",
+        'ran asks dog': r"""the query of `ran`, `[0, 3]`, dotted with the key of `dog`, `[0, 2]`""",
     }, LOCALE)
     return
 
@@ -114,12 +114,12 @@ def _(ask_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Different, as intended. That was change 1: three roles. Three more follow.
+    Different, as intended. That was change 1: three separate roles. Three more follow.
 
     ## Change 2: no peeking
 
-    A language model predicts the next word, so a word mustn't look at the words after it, or the model would just
-    copy the answer. We need a table that says which looks are blocked. For 4 words, `True` means "blocked":
+    A language model predicts the next word, so a word must not look at words that come after it — otherwise the model would just
+    copy the answer. We need a table marking which positions are blocked. For 4 words, `True` means blocked:
 
     ```
     False  True  True  True      word 0 sees only itself
@@ -128,11 +128,11 @@ def _():
     False False False False      word 3 sees everything up to itself
     ```
 
-    Everything above the main diagonal is `True`. This table is called a **mask**.
+    Everything strictly above the main diagonal is `True`. This table is called a **mask**.
 
     ## By hand: the mask
 
-    For a text of 5 words, how many looks does the mask block? And how many words can word 2 see, itself included? (Words are numbered from 0.)
+    For a 5-word text, how many future positions does the mask block in total? And how many words can word 2 see, itself included? (Words are numbered from 0.)
     """)
     return
 
@@ -164,7 +164,7 @@ def _():
     - `S.masked_fill(mask, 99.0)` is a copy of `S` with 99 stored wherever `mask` is `True`.
     ///
 
-    Write `future_mask(n)`, giving the table above for `n` words: `n` rows, `n` columns, `True` exactly where a word would look at a later word.
+    Write `future_mask(n)`, returning the mask table above for `n` words: `n` rows, `n` columns, `True` exactly where a word would look at a later word.
     """)
     return
 
@@ -193,16 +193,16 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    To apply the mask, we set the blocked scores to minus infinity before softmax. Since $e^{-\infty}$ is 0, a blocked word gets a
-    share of exactly 0, and the other shares still add up to 1. PyTorch writes minus infinity as `-torch.inf`.
+    To apply the mask, we set every blocked score to minus infinity before softmax. Since $e^{-\infty} = 0$, a blocked word gets
+    weight 0, and the remaining weights still add up to 1. PyTorch writes minus infinity as `-torch.inf`.
 
-    ## Change 3: keeping the scores in scale
+    ## Change 3: scaling scores by $\sqrt{d}$
 
-    A dot product of two vectors of $d$ numbers is a sum of $d$ parts. By chapter 09's rule,
-    variances add, so for numbers of ordinary size its typical size grows with $\sqrt{d}$. With 128 numbers per word, scores are far bigger than with 4.
+    A dot product of two vectors of length $d$ adds $d$ products together. By chapter 09's rule,
+    variances add when independent terms are summed (variance is the square of typical size: adding $d$ terms makes the variance $d$ times larger, so taking the square root makes the typical size $\sqrt{d}$ times larger). With 128 numbers per word, dot-product scores are far larger than with 4.
 
-    Why does that matter? Softmax turns big gaps between scores into shares near 0 and 1. The cell below measures it. For each size `d`, it makes a random query and 8 random keys,
-    200 times over, and notes the largest of the 8 shares: once with plain scores, once with the scores divided by $\sqrt{d}$. Each row shows `d`, then the two averages.
+    Why does that matter? When the gaps between scores grow large, softmax pushes the weights toward 0 and 1. The cell below measures this directly. For each vector size `d`, it generates a random query and 8 random keys
+    200 times, and records the largest of the 8 attention weights: once with raw scores, and once with scores divided by $\sqrt{d}$. Each row shows `d`, then the two averages.
     """)
     return
 
@@ -227,10 +227,10 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    With plain scores, the biggest share climbs from under 0.3 to nearly 0.9: at 512 numbers, one key takes nearly everything before any training has happened.
-    That's bad for learning. When one share is near 1, softmax is flat, and almost no blame reaches the other words (chapter 07).
+    With raw scores, the largest weight climbs from under 0.3 to nearly 0.9: at 512 numbers, one random key grabs almost all the attention before any training has even happened.
+    That hurts learning. Remember chapter 07: when one probability is close to 1 (and the rest are near 0), the softmax curve flattens out — nudging a score barely changes the probabilities, so almost no gradient reaches the other words.
 
-    Divided by $\sqrt{d}$, the biggest share stays near 0.2 at every size. So that's what self-attention does:
+    Divided by $\sqrt{d}$, the largest weight stays near 0.2 at every size. So self-attention scales every score by $\sqrt{d}$:
 
     > $$\text{scores} = \frac{Q K^\top}{\sqrt{d}}$$
 
@@ -238,17 +238,19 @@ def _():
 
     /// admonition | 🧰 Toolbox: counting dimensions from the end
     `dim=-1` means the last dimension, and `-2` the one before it. `M.transpose(-2, -1)` swaps the last two dimensions, however many come before them,
-    and `M.shape[-1]` is the last size. Code written this way works on `(batch, words, d)` and also on tensors with an extra dimension in the middle, which we'll need for change 4.
+    and `M.shape[-1]` is the last size. Code written this way works on 3D `(batch, words, d)` tensors and also on 4D tensors with an extra `heads` dimension in the middle, which we'll need for change 4.
     ///
 
-    Write `attend(Q, K, V, mask)`. It's chapter 15's `attend` with changes 2 and 3, and it gives back the blend and the shares, as before:
+    Write `attend(Q, K, V, mask)`. It's chapter 15's `attend` with changes 2 and 3, returning the blended values and the attention weights:
 
-    1. The scores: every query against every key, divided by $\sqrt{d}$, where $d$ is the last size of `K`. `np.sqrt` works on a plain number.
-    2. Wherever `mask` is `True`, the score becomes `-torch.inf`.
-    3. The shares `A`: softmax along the last dimension.
-    4. The blend of the values with those shares.
+    1. **Scores:** every query dotted with every key, divided by $\sqrt{d}$, where $d$ is the last size of `K` (`np.sqrt` works on a plain number).
+    2. **Mask:** wherever `mask` is `True`, replace the score with `-torch.inf`.
+    3. **Weights `A`:** softmax along the last dimension.
+    4. **Blend:** multiply the weights `A` by `V`, and return both the blend and `A`.
 
-    Count every dimension from the end, so that it also works for `Q`, `K` and `V` of shape `(batch, heads, words, d)`.
+    Count every dimension from the end so that `attend` works for both 3D `(batch, words, d)` and 4D `(batch, heads, words, d)` inputs.
+
+    **Note on mask shape (2D to 4D broadcasting):** `future_mask(n)` returns a 2D table of shape `(words, words)`. In multi-head mode, `scores` is 4D with shape `(batch, heads, words, words)`. You don't need to reshape the mask: `masked_fill` aligns dimensions from the right and automatically **broadcasts** that 2D mask across every sequence in the batch and every head.
     """)
     return
 
@@ -269,7 +271,7 @@ def _():
 def _():
     hand.stuck([
         r"""Four lines. Lines 1, 3 and 4 are chapter 15's three lines with `-2` and `-1` in place of `1` and `2`. Line 2 uses `masked_fill` from the Toolbox box of exercise 1.""",
-        r"""The mask goes on the scores, before softmax. If you mask after softmax, the shares no longer add up to 1. If the check says only the sizes of the numbers are off, look at the division by `np.sqrt(K.shape[-1])`.""",
+        r"""The mask goes on the scores, before softmax. If you mask after softmax, the weights no longer add up to 1. If the check says only the sizes of the numbers are off, look at the division by `np.sqrt(K.shape[-1])`.""",
     ], LOCALE)
     return
 
@@ -277,16 +279,16 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## Change 4: many heads
+    ## Change 4: multiple heads
 
-    One round of attention gives each word one blend. But a word may want several things at once: who is the subject? what
-    tense are we in? So we run several rounds side by side, called **heads**, each with its own queries, keys and values.
+    One round of attention gives each word a single blend. Yet a word often wants several kinds of information at once: who is the subject? what
+    tense are we in? So we run several rounds side by side, called **heads**, each working on its own slice of queries, keys, and values.
 
-    It costs nothing extra in size. With 128 numbers per word and 4 heads, each vector is cut into 4 pieces of 32 numbers, each head works on
-    its own piece, and the 4 results are joined again at the end.
+    This costs nothing extra in vector size. With 128 numbers per word and 4 heads, each word's vector is sliced into 4 pieces of 32 numbers, each head attends using
+    its own piece, and the 4 results are stitched back together at the end.
 
-    The cutting is done with shapes alone. Follow a tiny example: 1 text, 2 words, 4 numbers per word, cut for 2 heads.
-    `torch.arange(8.0)` is the tensor of the numbers 0.0, 1.0, up to 7.0, like `range`. The cell shows the tensor, then the
+    The slicing is done with tensor shapes alone. Follow a tiny example: 1 text, 2 words, 4 numbers per word, split across 2 heads.
+    `torch.arange(8.0)` creates the tensor of numbers 0.0, 1.0, up to 7.0, like `range`. The cell shows the original tensor, then the
     tensor after `reshape`, then after `transpose`:
     """)
     return
@@ -307,16 +309,20 @@ def _():
     Read the three results one after the other.
 
     1. At the start, the shape is `(1, 2, 4)`. Word 0 is `[0, 1, 2, 3]` and word 1 is `[4, 5, 6, 7]`.
-    2. `reshape(1, 2, 2, 2)` cuts each word in two. The shape is now `(batch, words, heads, piece)`: word 0 holds the pieces `[0, 1]` and `[2, 3]`.
-    3. `transpose(1, 2)` swaps `words` and `heads`. The shape is now `(batch, heads, words, piece)`: head 0 holds `[0, 1]` from word 0 and `[4, 5]` from word 1,
-       which are the first halves of both words. Head 1 holds the second halves.
+    2. `reshape(1, 2, 2, 2)` slices each word in two. The shape is now `(batch, words, heads, piece)`: word 0 holds `[0, 1]` and `[2, 3]`, and word 1 holds `[4, 5]` and `[6, 7]`.
+    3. `transpose(1, 2)` swaps `words` and `heads`. The shape is now `(batch, heads, words, piece)`: head 0 holds `[0, 1]` from word 0 and `[4, 5]` from word 1
+       (the first half of each word), while head 1 holds `[2, 3]` and `[6, 7]` (the second half).
 
-    Why the swap? `@` works on the last two dimensions and treats all the ones before them as a batch. With `heads` moved up front, next to `batch`,
-    your `attend` runs each head as if it were a separate text, with no change at all. That's why exercise 2 counted dimensions from the end.
+    **Why can't we skip `transpose` and `reshape` straight to `(batch, heads, words, piece)`?** Because `reshape` never reorders numbers — it only regroups them in sequence.
+    If you jump straight to `reshape(1, 2, 2, 2)` and treat axis 1 as `heads`, head 0 swallows the entire word 0 (`[0, 1, 2, 3]`) and head 1 swallows word 1 (`[4, 5, 6, 7]`), instead of head 0 getting the first half of every word (`[0, 1]` and `[4, 5]`)!
+    So you must always slice each word first (`reshape` to `(batch, words, heads, piece)`), then move `heads` forward (`transpose(1, 2)`).
+
+    Why move `heads` forward at all? Matrix multiplication (`@`) acts on the last two dimensions and treats all leading dimensions as a batch. With `heads` moved up front next to `batch`,
+    your `attend` runs every head in parallel as if it were a separate text — and broadcasts the 2D mask to every head automatically — with no change at all. That's why exercise 2 counted dimensions from the end.
 
     ## By hand: the shapes
 
-    A tensor of shape `(1, 6, 12)`, one text of 6 words with 12 numbers each, is split for 3 heads. Fill in the four sizes of the result, in order.
+    A tensor of shape `(1, 6, 12)` — one text of 6 words with 12 numbers each — is split for 3 heads. Fill in the four sizes of the result, in order.
     """)
     return
 
@@ -343,10 +349,10 @@ def _():
     mo.md(r"""
     ## Exercise 3: split_heads
 
-    Write `split_heads(x, heads)` for `x` of shape `(batch, words, d)`, giving back shape `(batch, heads, words, d // heads)`, as in the example.
-    (`//` is chapter 11's division that gives a whole number.)
+    Write `split_heads(x, heads)` for `x` of shape `(batch, words, d)`, returning shape `(batch, heads, words, d // heads)`, as in the example.
+    (`//` is integer division, e.g. `12 // 3` is `4`.)
 
-    `batch, words, d = x.shape` gives the three sizes their names.
+    `batch, words, d = x.shape` unpacks and names the three sizes.
 
     On the example above, `split_heads(x_trace, 2)` must give the third result.
     """)
@@ -379,12 +385,12 @@ def _():
     mo.md(r"""
     ## Exercise 4: join_heads
 
-    After attention, the heads have to be joined again. Write `join_heads(x)`, which undoes `split_heads`: it takes shape
-    `(batch, heads, words, piece)` and gives back `(batch, words, heads * piece)`.
+    After attention, the heads have to be stitched back together. Write `join_heads(x)`, which undoes `split_heads`: it takes shape
+    `(batch, heads, words, piece)` and returns `(batch, words, heads * piece)`.
 
-    Undo the two steps in the opposite order: first the swap, then the cut. `batch, heads, words, piece = x.shape` names the four sizes.
+    Undo the two steps in reverse order: first undo the swap, then undo the slice. `batch, heads, words, piece = x.shape` unpacks and names the four sizes.
 
-    On the example, `join_heads` of the third result must give back the first.
+    On the example, `join_heads` on the third result must give back the first.
     """)
     return
 
@@ -415,19 +421,19 @@ def _():
     mo.md(r"""
     ## Exercise 5: the whole layer
 
-    Now put the four changes together. Write `self_attention_step(x, to_query, to_key, to_value, mix, heads)`.
+    Now put all four changes together. Write `self_attention_step(x, to_query, to_key, to_value, mix, heads)`.
     `x` has shape `(batch, words, d)`. The next four inputs are layers, and you call a layer like a function: `to_query(x)`.
 
-    1. Make the queries, keys and values: each is its layer applied to `x`, then split into heads.
-    2. Run `attend` on them, with the mask for this number of words. The number of words is `x.shape[1]`.
-    3. Join the heads of the blend, and pass the result through `mix`, a last layer that lets the heads' findings combine.
-    4. Give back that result and the shares.
+    1. Build the queries, keys, and values: pass `x` through each layer, then split into heads.
+    2. Run `attend` on them with the mask for this number of words (`x.shape[1]`).
+    3. Rejoin the heads of the blended values, and pass the result through `mix`, a final layer that combines what the different heads found.
+    4. Return that result and the attention weights.
 
     | | shape |
     |---|---|
     | `x` | `(batch, words, d)` |
     | queries, keys, values | `(batch, heads, words, d // heads)` |
-    | shares | `(batch, heads, words, words)` |
+    | attention weights | `(batch, heads, words, words)` |
     | result | `(batch, words, d)` |
     """)
     return
@@ -448,8 +454,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""Every piece is a function you've written in this chapter: `split_heads`, `future_mask`, `attend`, `join_heads`. Five lines will do: three for the roles, one for `attend`, one to give back.""",
-        r"""`attend` gives back a pair, the blend and the shares. Only the blend is joined and mixed. The shares are given back as they are.""",
+        r"""Every piece is a function you've written in this chapter: `split_heads`, `future_mask`, `attend`, `join_heads`. Five lines will do: three for the roles, one for `attend`, one to return.""",
+        r"""`attend` returns a pair: the blend and the attention weights. Only the blend is joined and passed through `mix`; the weights are returned as they are.""",
     ], LOCALE)
     return
 
@@ -457,9 +463,9 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Here is the layer as a PyTorch module. Its knobs are the three role matrices and `mix`, and its `forward` is your function. It keeps the latest shares in
-    `self.shares`, so we can look at them in chapter 17. The cell after it runs a fresh layer on one text of 5 words with 8 numbers each, split over 2 heads, and shows two shapes.
-    Until all five exercises pass, the cells after it show an error. That's normal.
+    Here is the layer wrapped as a PyTorch module. Its trainable parameters are the three role matrices and `mix`, and its `forward` simply calls your function. It saves the latest attention weights in
+    `self.shares` so we can inspect them in chapter 17. The cell after it runs a fresh layer on one text of 5 words with 8 numbers each, split across 2 heads, and shows two shapes.
+    Until all five exercises pass, the cells below will show an error — that's normal.
     """)
     return
 
@@ -495,13 +501,13 @@ def _(SelfAttention):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `[1, 5, 8]` and `[1, 2, 5, 5]`: the output has the shape of the input, so layers can be stacked. The shares are one table of 5 by 5 for each of the 2 heads.
+    `[1, 5, 8]` and `[1, 2, 5, 5]`: the output has the exact same shape as the input, so layers can be stacked one on top of another. The attention weights form one 5-by-5 table for each of the 2 heads.
 
-    ## Attention can't count
+    ## Attention doesn't know word order
 
-    One thing is missing, and it's easy to overlook. Take those five word vectors and run attention with the mask off. Then reverse the words, run attention again,
-    and reverse the answer back. Each word asked the same questions of the same words, so it should get the same blend. The cell
-    prints the biggest difference between the two answers:
+    One thing is still missing, and it's easy to overlook. Take those five word vectors and run attention with the mask turned off. Then reverse the order of the words, run attention again,
+    and reverse the output back. Each word asked the same questions of the same words, so it should get the same blend. The cell
+    prints the largest difference between the two outputs:
     """)
     return
 
@@ -521,22 +527,22 @@ def _(layer_demo, x_demo):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Something like `1e-07`, that is 0.0000001: only rounding, so they're the same. To attention, `the dog bit the man` and `the man bit the dog` are the same bag of words.
-    An LSTM got order for free, by reading in order. Here we'll have to supply it.
+    Something like `1e-07` (that is, 0.0000001): just floating-point rounding, so the two outputs are identical. Without a mask, `the dog bit the man` and `the man bit the dog` look like the exact same bag of words to attention.
+    An LSTM got word order for free by reading one word after another. Here we'll have to supply position information explicitly.
 
     ## What's next
 
     You have the layer. **Chapter 17** tells it where each word stands, keeps its numbers steady through many layers, stacks it into
-    a tiny GPT with about a million knobs, and trains it on the stories.
+    a tiny GPT with about a million parameters, and trains it on the stories.
 
     ## What you can do now
 
-    - say why a word needs a separate query, key and value
-    - block the future with a mask
-    - say why scores are divided by $\sqrt{d}$
-    - split vectors into heads and join them again, and say why that costs no extra size
-    - build a self-attention layer from those pieces
-    - explain why attention alone ignores word order
+    - explain why each word needs a separate query, key, and value
+    - block future words with a mask and understand how a 2D mask broadcasts to 4D scores
+    - explain why scores are divided by $\sqrt{d}$
+    - split vectors into heads and rejoin them (and why a single-step `reshape` scrambles the numbers)
+    - assemble a full multi-head self-attention layer from those pieces
+    - explain why attention alone cannot tell word order
 
     ---
 

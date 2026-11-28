@@ -236,8 +236,9 @@ def _(rows):
 def _():
     mo.md(r"""
     `X` has shape `(8, 3)`: 8 rows, 3 columns. `y`, the sales, has shape `(8,)`: a vector of 8
-    numbers. (A shape with one number, written with a trailing comma, is a vector.) By habit, a
-    matrix gets a capital letter.
+    numbers. (The comma in `(8,)` isn't a typo—in Python, a tuple with just one item must include
+    a trailing comma, here marking a 1D array of length 8.) By habit, a matrix gets a capital
+    letter.
 
     ### Maths on every number at once
 
@@ -433,20 +434,20 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    With knobs `w = [10, 0, 0]` and $b = -60$, rain and weekend are switched off and the model is
-    chapter 01's line $10 \times t - 60$. Its loss is 177.5, the same number you found in chapter 01.
-    With `[12, -8, 4]` and `-105` the loss is 4.
+    With knobs `w = [10, 0, 0]` and $b = -60$, rain and weekend are switched off, so the model
+    reduces to the simple temperature-only line $10 \times t - 60$, giving a loss of 177.5. Switch
+    them on with `[12, -8, 4]` and `-105`, and the loss drops all the way to 4.
 
     ## The gradient for many knobs
 
-    Now the slopes. Chapter 03 worked them out for one day of the line: with
+    Now the slopes. Recall how they work for one day of a single-input line: with
     $e = w \times t + b - s$ and day loss $e \times e$, the blame of $e$ is $2 \times e$, and
 
     - the slope for $w$ is $2 \times e \times t$ (the local slope from $e$ to $w$ is $t$, the input $w$
       multiplies);
     - the slope for $b$ is $2 \times e$ (the local slope from $e$ to $b$ is 1).
 
-    The gradient of the mean loss was the **mean** of these over all days.
+    The gradient of the mean loss is the **mean** of these over all days.
 
     With three inputs, one day's error is $e = w_t \times t + w_r \times r + w_k \times k + b - s$. Nothing new
     happens. Nudge $w_r$ while the other knobs stay still: only the $w_r \times r$ part of the sum
@@ -457,12 +458,15 @@ def _():
     - slope for $b$ = $2 \times e$.
 
     So **each knob's slope is $2 \times e$ times that knob's own input**, averaged over the days. For
-    $w_r$ that is: take the vector of 8 values $2 \times e$, multiply it in pairs with the rain
-    column, add up, divide by 8. "Multiply in pairs and add up" is a dot product: the dot
-    product of $2 \times e$ with the **rain column**.
+    $w_r$, writing out all 8 days gives:
 
-    Here it is with real numbers, at chapter 01's line ($w_t = 10$, $w_r = 0$, $w_k = 0$,
-    $b = -60$), day by day:
+    > $$(2 e_0 r_0 + 2 e_1 r_1 + \dots + 2 e_7 r_7) \div 8$$
+
+    Look inside the brackets: that's the 8 values of $2 \times e$ multiplied in pairs with the rain
+    column and added up—their **dot product**—and then divided by 8.
+
+    Here it is with real numbers, for that same temperature-only line ($w_t = 10$, $w_r = 0$,
+    $w_k = 0$, $b = -60$), day by day:
     """)
     return
 
@@ -493,8 +497,17 @@ def _():
 
     ### `vector @ matrix`: one dot product per column
 
-    `@` also works the other way round. `vector @ matrix` takes the dot product of the vector with
-    **every column** of the matrix, and gives back one number per column:
+    Earlier, `X @ w` dotted a vector with every **row** of a matrix. Now we need the opposite: to
+    dot a vector with every **column**. Good news: `@` works both ways. A 1D NumPy array has no
+    fixed horizontal or vertical direction of its own—its role depends purely on which side of `@`
+    you put it:
+
+    - On the **right** (`X @ w`, `(8, 3) @ (3,)` → `(8,)`): it stands vertically to match each
+      **row** of `X` (giving 8 daily guesses).
+    - On the **left** (`(2 * e) @ X`, `(8,) @ (8, 3)` → `(3,)`): it lies horizontally to match each
+      **column** of `X` (combining 8 days of errors into 3 knob gradients).
+
+    Here is `vector @ matrix` on a small example first:
     """)
     return
 
@@ -580,6 +593,10 @@ def _():
        number of days: `len` works on arrays too.)
     3. `grad_b = np.mean(2 * e)`: the slope for `b`.
     4. `return grad_w, grad_b`
+
+    (Why `/ len(y)` for `grad_w` but `np.mean` for `grad_b`? Because `@` has already summed across
+    the 8 days, so it only needs `/ len(y)`; `2 * e` hasn't been summed yet, so `np.mean` sums and
+    divides in one step.)
     """)
     return
 
@@ -599,11 +616,12 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    At the line's knobs (`[10, 0, 0]`, `-60`), the slopes for $w_t$ and $b$ are -94 and 2.5:
-    exactly chapter 03's gradient, because the extra knobs are switched off. The two new slopes
-    say where the extra knobs should go: the slope for $w_r$ is 6.25 (positive, so the step rule
-    $\text{knob} - \text{rate} \times \text{slope}$ moves $w_r$ **down**: rain lowers sales) and the slope for $w_k$ is
-    -2.75 (negative, so $w_k$ moves **up**: weekends raise them).
+    At the temperature-only knobs (`[10, 0, 0]`, `-60`), `gradient_np` gives slopes of -94 for $w_t$
+    and 2.5 for $b$—just what a single-input line needs, since the rain and weekend knobs are
+    switched off at 0. The two new slopes say where the extra knobs should go: the slope for $w_r$
+    is 6.25 (positive, so the step rule $\text{knob} - \text{rate} \times \text{slope}$ moves $w_r$
+    **down**: rain lowers sales) and the slope for $w_k$ is -2.75 (negative, so $w_k$ moves **up**:
+    weekends raise them).
 
     ## Checking it by nudging
 
@@ -667,24 +685,25 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Same guesses, same maths. NumPy runs the loops inside its own fast machinery instead of one
-    Python step at a time. That speed is what makes training on lots of data possible.
+    Same guesses, same maths. NumPy runs those loops in compiled low-level code instead of stepping
+    through Python one instruction at a time. That speed is what makes training on lots of data
+    possible.
 
     ## The payoff: fitting all four knobs
 
-    Now gradient descent, as in chapters 02 and 03, but for all knobs at once: we **fit** the
-    model, which means finding good values for its knobs. One detail first,
-    which you met in chapter 04: temperatures (14 to 33) are much bigger than the rain and
-    weekend values (0 or 1), so one learning rate wouldn't suit all knobs. We measure temperature
-    from 25 °C in tens of degrees again, and leave the other two columns alone:
+    Now gradient descent, as before, but for all knobs at once: we **fit** the model, which means
+    finding good values for its knobs. One detail first: temperatures (14 to 33) are much bigger
+    than the rain and weekend values (0 or 1), so one learning rate wouldn't suit all knobs. We
+    measure temperature from 25 °C in tens of degrees, and leave the other two columns alone:
 
     > `Xs = (X - np.array([25, 0, 0])) / np.array([10, 1, 1])`
 
-    This uses one more NumPy habit. `X` has shape `(8, 3)`, but `np.array([25, 0, 0])` has shape
-    `(3,)`: a single row. NumPy uses that row against **every** row of `X`: from each day it
-    subtracts 25 from the temperature and 0 from the rest. Then `/ np.array([10, 1, 1])` divides
-    each day's temperature by 10 and the rest by 1. Using a smaller array against every row (or
-    a single number against every position) is called **broadcasting**. On the first three days:
+    This uses one more handy NumPy feature. `X` has shape `(8, 3)`, while `np.array([25, 0, 0])` has
+    shape `(3,)`: a single row. NumPy automatically applies that row to **every** row of `X`: for
+    each day it subtracts 25 from the temperature and 0 from the rest. Then `/ np.array([10, 1, 1])`
+    divides each day's temperature by 10 and the rest by 1. Automatically stretching a smaller array
+    across every row (or a single number across every position) is called **broadcasting**. On the
+    first three days:
     """)
     return
 

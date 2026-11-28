@@ -46,9 +46,10 @@ def _():
 def _():
     mo.md(r"""
     Networks work on numbers, so our first problem is how to turn a word into numbers. The obvious
-    way is chapter 07's one-hot rows: with 2,000 known words, each word is a row of 2,000 numbers
-    with a single 1. But that tells the network nothing. The dot product of any two
-    different one-hot rows is 0, so `dog` is as unlike `cat` as it is unlike `yesterday`.
+    way is chapter 07's one-hot rows (like `[0, 1, 0, 0]` for the second of four words): with 2,000
+    known words, each word is a row of 2,000 numbers with a single 1. But that tells the network
+    nothing. The dot product of any two different one-hot rows is 0, so `dog` is as unlike `cat` as
+    it is unlike `yesterday`.
 
     We want something better: a short **word vector**, say 32 numbers, chosen so that words with
     similar meanings get similar vectors. Nobody could write those numbers by hand. But there's a
@@ -410,8 +411,10 @@ def _():
     ## A probability from one score
 
     A yes-or-no question needs a probability from one score $s$. Take softmax over two scores, $s$
-    for "real" and 0 for "fake". (Why 0? Softmax only cares about differences between scores, as chapter 07's shift
-    showed, so one of them may as well be 0.) Anything to the power 0 is 1, so $e^0 = 1$, and the share of "real" is
+    for "real" and 0 for "fake". (Why 0? Softmax only depends on differences between scores—adding or
+    subtracting the same constant from every score leaves the probabilities unchanged, as chapter 07
+    showed—so we can pin one of them to 0.) Anything to the power 0 is 1, so $e^0 = 1$, and the
+    probability of "real" is
 
     > $$\sigma(s) = \frac{e^s}{e^s + e^0} = \frac{e^s}{e^s + 1}$$
 
@@ -431,21 +434,38 @@ def _():
 def _():
     mo.md(r"""
     It's near 1 for a big $s$, exactly 0.5 for $s = 0$, and near 0 for a very negative $s$.
-    The curve also has a symmetry: the share of "fake" is $1 - \sigma(s)$,
-    which equals $\sigma(-s)$. On the chart, $\sigma(2)$ is as far below 1 as $\sigma(-2)$ is above 0.
-    (Check it: $\sigma(-s) = e^{-s} / (e^{-s} + 1)$. Multiply top and bottom by $e^s$, remembering that
-    $e^{-s} \times e^s = e^0 = 1$, and you get $1 / (1 + e^s)$, which is exactly $1 - e^s / (e^s + 1)$.)
+    The curve also has a symmetry: the probability of "fake" is $1 - \sigma(s)$,
+    which equals $\sigma(-s)$.
+
+    Try a concrete number first: when $s = 2$, the probability of "real" is $\sigma(2) \approx 0.88$,
+    so the probability of "fake" is $1 - 0.88 = 0.12$—which is right where $\sigma(-2)$ sits on the
+    chart ($\sigma(2)$ is as far below 1 as $\sigma(-2)$ is above 0).
+
+    To check why this holds for every $s$, multiply the top and bottom of $\sigma(-s)$ by $e^s$
+    (remembering that $e^{-s} \times e^s = e^0 = 1$):
+
+    > $$\sigma(-s) = \frac{e^{-s}}{e^{-s} + 1} = \frac{e^{-s} \times e^s}{(e^{-s} + 1) \times e^s} = \frac{1}{1 + e^s}$$
+
+    Now put $1 - \sigma(s)$ over a common denominator:
+
+    > $$1 - \sigma(s) = 1 - \frac{e^s}{e^s + 1} = \frac{(e^s + 1) - e^s}{e^s + 1} = \frac{1}{e^s + 1}$$
+
+    Both sides give the exact same fraction, so $1 - \sigma(s) = \sigma(-s)$ always holds.
 
     ## The loss for one pair
 
-    The loss is chapter 07's surprise, $-\log$ of the share given to the right answer, added up
-    for one real word and $k$ noise words. For the real word, the right answer is "real", with share
-    $\sigma(u \cdot v)$. For a noise word $n$, the right answer is "fake", with share $\sigma(-u \cdot n)$:
+    The loss is chapter 07's surprise, $-\log p$ of the probability given to the right answer (the
+    smaller the probability, the larger $-\log p$ is), added up for one real word and $k$ noise words.
+    For the real word, the right answer is "real", with probability $\sigma(u \cdot v)$. For a noise
+    word $n$, the right answer is "fake", with probability $1 - \sigma(u \cdot n) = \sigma(-u \cdot n)$:
 
     > $$\text{loss for one pair} = -\log \sigma(u \cdot v) - \log \sigma(-u \cdot n_1) - \ldots - \log \sigma(-u \cdot n_k)$$
 
-    The first term pulls $u$ towards its real neighbour. The others push it away from the fakes.
-    Here's the surprise $-\log \sigma(s)$ for a few scores:
+    Notice what the two minus signs in each noise term do: the **inner minus** flips a high noise
+    score into a low one (so a lower noise score gives a higher "fake" probability $\sigma(-u \cdot n)$),
+    and the **outer minus** turns the negative logarithm into a positive loss (since the $\log$ of any
+    probability between 0 and 1 is negative). The first term pulls $u$ towards its real neighbour;
+    the others push it away from the fakes. Here's the surprise $-\log \sigma(s)$ for a few scores:
 
     | $s$ | −2 | −1 | 0 | 1 | 2 |
     |---|---|---|---|---|---|
@@ -495,10 +515,12 @@ def _():
     /// admonition | 🧰 Toolbox: dot products in bulk
     - `torch.sum(x * y, dim=1)` for two tensors of shape `(b, d)` multiplies position by position, then adds
       along each row: one dot product per row, shape `(b,)`.
-    - `x.unsqueeze(1)` (chapter 11) puts in a dimension of size 1: `(b, d)` becomes `(b, 1, d)`. In arithmetic, a
-      dimension of size 1 is repeated to match the other side, so `(b, 1, d)` times `(b, k, d)` works, and
-      gives `(b, k, d)`: row 0 of `x` meets each of the `k` vectors that belong to row 0.
-    - `F.logsigmoid(s)` computes $\log \sigma(s)$ for every number of a tensor, safely for big scores, in the spirit of chapter 07's softmax shift.
+    - `x.unsqueeze(1)` (chapter 11) inserts a dimension of size 1, turning `(b, d)` into `(b, 1, d)`.
+      During multiplication, a dimension of size 1 is automatically broadcast (stretched to match `k`
+      on the other side), so `(b, 1, d)` times `(b, k, d)` gives `(b, k, d)`: each pair's centre
+      vector is multiplied element by element with each of its `k` noise vectors.
+    - `F.logsigmoid(s)` computes $\log \sigma(s)$ for every number of a tensor safely even for large
+      scores, using the same shift trick as chapter 07's softmax to avoid overflow.
     ///
 
     The cell below tries the first two on 2 rows of 3 numbers and a stack of shape `(2, 4, 3)`, and shows three shapes.
@@ -521,7 +543,20 @@ def _():
     ## Exercise 4: pair_loss
 
     Write `pair_loss(u, v, n)` with the shapes above. It gives back one number, a tensor with no dimensions:
-    the mean, over the `b` pairs, of the loss for one pair. On the way there:
+    the mean, over the `b` pairs, of the loss for one pair.
+
+    To picture how the noise shapes flow, imagine a tiny batch with `b = 2` pairs, `k = 3` noise
+    words per pair, and `d = 2` numbers per vector:
+
+    - `u` has shape `(2, 2)`, and `u.unsqueeze(1)` adds a middle axis to give `(2, 1, 2)`;
+    - multiplying with `n` of shape `(2, 3, 2)` broadcasts to `(2, 3, 2)`;
+    - summing along `dim=2` adds each vector's `d = 2` products into one dot product, giving shape
+      `(2, 3)`—that is, `(b, k)`, one noise score per noise word;
+    - after taking `F.logsigmoid` of the negated noise scores, summing along `dim=1` adds each
+      pair's `k = 3` noise terms together, giving shape `(2,)`—that is, `(b,)`, ready to add to the
+      real-word loss.
+
+    On the way there:
 
     | what | shape |
     |---|---|
@@ -577,10 +612,11 @@ def _():
     dominant, and rarer words get to be noise too. `torch.multinomial(noise, m, replacement=True)`
     draws `m` ids with those chances.
 
-    `train_vectors` is `train` from chapter 10 with `pair_loss` in place of cross-entropy. It reads like this: two
-    tables, Adam over both, and for each batch, look up `u`, `v` and `n`, then clear, backward, step.
+    `train_vectors` is `train` from chapter 10 with `pair_loss` in place of cross-entropy. It builds two
+    tables (given small random starting values by `nn.init.normal_`), hands both to Adam, and for each
+    batch looks up `u`, `v` and `n`, then runs the three training steps: clear old gradients
+    (`zero_grad`) → backpropagate (`backward`) → update the weights (`step`).
     It gives back the centre table as a NumPy array, one row per word, and we drop the context table.
-    `nn.init.normal_` gives the tables a small random start.
     """)
     return
 

@@ -31,8 +31,8 @@ def _():
     the model often wouldn't even fit in one device's memory. This chapter is about how the work is split up.
 
     You don't have thousands of GPUs, and you don't need them to understand the ideas. Your computer's processor has several
-    **cores**, and the operating system can run several **processes**, separate running programs that don't share memory, exactly like separate
-    GPUs. By the end, you'll have trained a network on several processes at once, and checked that it learns exactly what one process would.
+    **cores**, and the operating system can run several **processes** — separate running programs whose memory is completely isolated from each other, just like separate
+    GPUs. Because one process cannot directly read or write another process's variables, they have to communicate by sending numbers back and forth. By the end, you'll have trained a network across several processes at once, and checked that it learns exactly what one process would.
 
     There are two problems to solve, and they have different answers:
 
@@ -44,11 +44,11 @@ def _():
     Recall what one step does: compute the loss on a batch, which is a **mean** over its examples, then the slopes, then move the knobs.
     Now give 4 devices a full copy of the model each, and a quarter of the batch each. Each computes the slopes of the mean over *its* quarter.
 
-    Here's the key fact. When the quarters are the same size, the mean of the four quarter-means is the mean of the whole batch: each quarter-mean is its total divided by 32,
+    Here's the key fact. When the four quarters are the same size — say a batch of 128 examples split into four quarters of 32 — the mean of the four quarter-means is the mean of the whole batch: each quarter-mean is its total divided by 32,
     and $\frac{1}{4}\big(\frac{a}{32} + \frac{b}{32} + \frac{c}{32} + \frac{d}{32}\big) = \frac{a + b + c + d}{128}$, where $a, b, c, d$ are the quarters' totals. Slopes follow the loss (chapter 02's sum and scale rules), so **averaging the four devices' slopes gives exactly the slopes of the
     whole batch**. If every device then applies the same step to the same knobs, the copies stay identical, step after step.
 
-    This is **data parallelism**. The only communication: after each backward pass, every device must end up with the average of all the slopes.
+    This is **data parallelism**. The only communication needed: after each backward pass, every device must end up with the average of all the slopes.
 
     ## By hand: two halves and the whole
 
@@ -82,12 +82,20 @@ def _():
 
     ## Exercise 1: average_slopes
 
-    Write `average_slopes(slopes)`. `slopes` is a list with one entry per device, and each entry is itself a list of tensors, one per knob: `slopes[0][1]` is device 0's slopes for knob 1.
-    All devices have the same knobs, so the inner lists have the same length, and matching tensors have the same shape. It gives back one list of tensors: for each knob, the mean over the devices.
+    Write `average_slopes(slopes)`. `slopes` is a nested list: the **outer** list has one entry per device, and each **inner** list holds that device's slope tensors, one per knob — so `slopes[0][1]` is device 0's slopes for knob 1.
+    All devices have the same knobs, so the inner lists have the same length, and matching tensors have the same shape. Return one list of tensors: for each knob, the mean across the devices.
 
-    With 2 devices and 2 knobs, `[[[1, 2], [[0]]], [[3, 6], [[4]]]]` as tensors gives `[[2, 4], [[2]]]`.
+    With 2 devices and 2 knobs, the input and output look like this (where each inner entry is a tensor):
 
-    You have the tools: `torch.stack(tensors, dim=0)` (chapter 14) piles tensors of the same shape up along a new first dimension, and `torch.mean(..., dim=0)` takes the mean along it.
+    ```python
+    slopes = [
+        [tensor([1., 2.]), tensor([[0.]])],  # device 0: [knob 0, knob 1]
+        [tensor([3., 6.]), tensor([[4.]])],  # device 1: [knob 0, knob 1]
+    ]
+    # returns: [tensor([2., 4.]), tensor([[2.]])]
+    ```
+
+    You have the tools: `torch.stack(tensors, dim=0)` (chapter 14) piles tensors of the same shape along a **new** first dimension (unlike `torch.cat`, which glues them together along an existing dimension), and `torch.mean(..., dim=0)` takes the mean along that new dimension.
     """)
     return
 
@@ -148,8 +156,8 @@ def _():
 
     ## Gradient accumulation: the same trick on one device
 
-    The same fact helps on a single device that can't fit a big batch in memory: run the quarters one after another, and add up their
-    slopes in `.grad`. PyTorch adds there by itself, remember chapter 10's trap: this time the trap is what we want. One thing is left: adding four quarter-means gives four times too much. So each quarter's loss is divided by 4 *before* going backward, and
+    The same fact helps on a single device that can't fit a big batch in memory: run the quarters one after another, and let their
+    slopes add up in `.grad`. Remember the trap from chapter 10: if you don't clear old gradients in `.grad`, calling `backward()` multiple times automatically adds the new slopes onto the old ones instead of replacing them. Here, that exact behavior is what we want! One thing is left: adding four quarter-means gives four times too much. So each quarter's loss is divided by 4 *before* going backward, and
     the slopes that pile up are those of the mean of the four. This is called **gradient accumulation**, and it makes any
     batch size possible on any device, at the cost of time.
 
@@ -222,19 +230,19 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Each device cuts its slopes into as many chunks as there are devices, $n$ of them. All devices pass at the same moment, one chunk each, a different chunk each,
-    and each adds what it receives to its own copy of that chunk. After $n - 1$ such passes, the first lap, each device holds the full sum of one chunk. In a second lap of $n - 1$ passes, the finished chunks travel round so everyone gets them all.
+    Each device cuts its slopes into $n$ chunks, one per device. In every pass, all devices send at the same time — each passing a different chunk to its next neighbour — and add whatever arrives onto their own copy of that chunk. After $n - 1$ passes (the first lap), each device holds the complete sum of one chunk. In a second lap of $n - 1$ passes, those finished chunks travel around the ring so everyone ends up with all of them.
 
-    Here's the first lap for 3 devices whose slopes are 3 numbers, one number per chunk. A starts with $[1, 2, 3]$, B with $[10, 20, 30]$ and C with $[100, 200, 300]$:
+    Here's the first lap for 3 devices whose slopes are 3 numbers, one number per chunk. A starts with $[1, 2, 3]$, B with $[10, 20, 30]$, and C with $[100, 200, 300]$. The bold chunk is the one each device just updated:
 
-    | pass | A sends to B | B sends to C | C sends to A |
-    |---|---|---|---|
-    | 1 | its chunk 0, which is 1 | its chunk 1, which is 20 | its chunk 2, which is 300 |
-    | 2 | the chunk 2 it has just added up | the chunk 0 it has just added up | the chunk 1 it has just added up |
+    | stage | sent around the ring | A holds | B holds | C holds |
+    |---|---|---|---|---|
+    | start | — | $[1, 2, 3]$ | $[10, 20, 30]$ | $[100, 200, 300]$ |
+    | pass 1 | A → B: chunk 0 ($1$); B → C: chunk 1 ($20$); C → A: chunk 2 ($300$) | $[1, 2, \mathbf{3 + 300}]$ | $[\mathbf{10 + 1}, 20, 30]$ | $[100, \mathbf{200 + 20}, 300]$ |
+    | pass 2 | A → B: its updated chunk 2; B → C: its updated chunk 0; C → A: its updated chunk 1 | $[1, \mathbf{2 + 200 + 20}, 3 + 300]$ | $[10 + 1, 20, \mathbf{30 + 3 + 300}]$ | $[\mathbf{100 + 10 + 1}, 200 + 20, 300]$ |
 
     ## By hand: one lap of the ring
 
-    Follow the table. After pass 1, what does B hold in chunk 0? After pass 2, what does C hold in chunk 0, A in chunk 1, and B in chunk 2?
+    Read the sums off the table. After pass 1, what number does B hold in chunk 0? After pass 2, what number does C hold in chunk 0, A in chunk 1, and B in chunk 2?
     The second lap then takes 2 more passes, each device sending one finished chunk along each time. Over all four passes, how many numbers does each device send?
     """)
     return
@@ -398,8 +406,7 @@ def _():
 
     > `shard(10, 4, 2)` gives `(6, 8)`, and `shard(10, 4, 0)` gives `(0, 3)`
 
-    Every device gets `count // devices` knobs, and the first `count % devices` devices get one more. A device's start is everything the devices before it took:
-    their plain shares, plus one for each of them that took an extra. `min(a, b)` (chapter 12) and `a if test else b` (chapter 18) are useful here.
+    Every device gets `count // devices` knobs, and the first `count % devices` devices get one more. Look back at 10 knobs on 4 devices: each gets a base share of 2, and 2 extras go to the first two devices. Their starting positions are `0, 3, 6, 8`. Subtract each device's base offset `rank * 2` (`0, 2, 4, 6`), and the differences are `0, 1, 2, 2` — it climbs with `rank` and stops at the number of extras (`2`). That's why `min(a, b)` (chapter 12) fits the start, and `a if test else b` (chapter 18) adds the extra 1 to the stop when this device gets one.
     """)
     return
 
@@ -518,8 +525,12 @@ def _():
 
     ## Splitting one layer
 
-    For the very largest models, even one layer's matrix is split. Recall that `X @ W` computes each column of the result from one column of `W`. So split `W` by columns:
-    with two devices, device 0 holds the left half and computes the left half of the result, device 1 the right half, and the halves are joined side by side. This is **tensor parallelism**.
+    For the very largest models, even one layer's matrix is split. Recall that in `X @ W`, each column of the result depends only on the matching column of `W`. Look at a tiny $2 \times 2$ example:
+
+    > $$\begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix} \begin{bmatrix} 5 & 6 \\ 7 & 8 \end{bmatrix} = \begin{bmatrix} 1 \times 5 + 2 \times 7 & 1 \times 6 + 2 \times 8 \\ 3 \times 5 + 4 \times 7 & 3 \times 6 + 4 \times 8 \end{bmatrix} = \begin{bmatrix} 19 & 22 \\ 43 & 50 \end{bmatrix}$$
+
+    The left column of the answer ($19, 43$) uses only the left column of `W` ($5, 7$), and the right column ($22, 50$) uses only the right column of `W` ($6, 8$). So split `W` by columns:
+    with two devices, device 0 holds the left half and computes the left half of the result, device 1 holds the right half and computes the right half, and the halves are joined side by side. This is **tensor parallelism**.
 
     ## Exercise 6: split_product
 

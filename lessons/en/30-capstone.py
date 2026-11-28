@@ -26,13 +26,13 @@ def _():
     mo.md(r"""
     # 30 · Capstone: guess, then check
 
-    This is the last chapter of the main course, and it's optional. It uses everything from Part 4 for one more speed-up, one that sounds like it can't work: writing several tokens per run of the model **without changing a single token of the answer**.
+    This is the last chapter of the main course, and it's optional. Building on the real model and KV cache from chapters 27 and 28, it adds one more speed-up for single-request decoding — one that sounds impossible at first: writing several tokens per run of the model **without changing a single token of the answer**.
 
     The idea is called **speculative decoding**. Something cheap **guesses** the next few tokens. The real model then **checks** all the guesses in one run, keeps the ones it agrees with, and corrects the first one it doesn't.
 
     Two facts from chapters 28 and 29 make it pay:
 
-    - a decode step costs about the same whether it's fed 1 token or a few, because fetching the knobs is most of the cost;
+    - a decode step takes about the same time whether it's fed 1 token or a few, because fetching the knobs is most of the cost;
     - one run on several new tokens gives the scores after **each** of them, not only after the last.
 
     **From earlier chapters.** The folded cells below hold the model code of chapter 28: your file reader, `share_heads`, `rms_norm`, `rope`, `attend_new`, `remember`, `block_step`, `empty_caches`, `qwen_step`, `generate_cached` and `time_it`. The cell after them loads the model.
@@ -200,18 +200,26 @@ def _(knobs, tokenizer):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    On the test machine: 0.14 seconds for 1 token, 0.14 for 2, 0.23 for 5, 0.28 for 9 and 0.33 for 17. Seventeen tokens for less than two and a half times the price of one. On a GPU, where arithmetic is even cheaper next to fetching, the curve is flatter still.
+    On the test machine: 0.14 seconds for 1 token, 0.14 for 2, 0.23 for 5, 0.28 for 9 and 0.33 for 17. Seventeen tokens take less than two and a half times as long as one. On a GPU, where arithmetic is even cheaper next to fetching, the curve is flatter still.
 
     ## Checking guesses
 
-    Say the text so far ends with the token `"the"`, and a guesser proposes the next four tokens: `" cat" " sat" " on" " a"`. Feed all five, `"the"` and the four guesses, in one run. The five rows of scores say what the model would write:
+    Say the text so far ends with the token `"the"`, and a guesser proposes the next four tokens: `" cat" " sat" " on" " a"`. Feed all five — `"the"` plus the four guesses — in one run. The model gives back five rows of scores, and taking the top choice of each row gives five tokens `best[0..4]`. Lining them up with the four guesses `draft[0..3]` shows what each row checks:
 
-    - row 0, after `"the"`: the model's choice for the first new token. Compare it with the first guess.
-    - row 1, after `"the cat"`: the model's choice for the second. It means something only if the first guess was right, because it was computed as if `" cat"` were in the text.
-    - and so on, to row 4, after all four guesses.
+    | Position | 0 | 1 | 2 | 3 | 4 |
+    | --- | --- | --- | --- | --- | --- |
+    | **5 tokens fed in** | `"the"` (last confirmed) | `" cat"` | `" sat"` | `" on"` | `" a"` |
+    | **Model output `best[0..4]`** | `best[0]` | `best[1]` | `best[2]` | `best[3]` | `best[4]` |
+    | **Guesses to check `draft[0..3]`** | `draft[0]` (`" cat"`) | `draft[1]` (`" sat"`) | `draft[2]` (`" on"`) | `draft[3]` (`" a"`) | bonus if all right |
 
-    So walk the guesses in order. While a guess equals the model's own greedy choice at that place, it's exactly what plain decoding would have written: keep it. At the first guess that differs, stop: the model's own choice there is the next token, and every guess after it is thrown away.
-    If all guesses are right, the last row gives one more token for free.
+    Read column by column:
+
+    - column 0, after `"the"`: `best[0]` is the model's choice for the first new token. Compare it with `draft[0]`.
+    - column 1, after `"the cat"`: `best[1]` is the model's choice for the second. It means something only if `draft[0]` was right, because it was computed assuming `" cat"` was in the text.
+    - and so on, to column 4, after all four guesses.
+
+    So walk the guesses in order. While a guess equals the model's own greedy choice at that column, it's exactly what plain decoding would have written: keep it. At the first guess that differs, stop: the model's own choice there is the next token, and every guess after it is thrown away.
+    If all four guesses are right, the last column `best[4]` gives one more token for free.
 
     Either way, **every run adds at least one token**, the one plain decoding would have added, and the tokens are exactly the ones plain greedy decoding writes.
 
@@ -245,8 +253,9 @@ def _():
     mo.md(r"""
     ## Exercise 1: accept
 
-    Write `accept(draft, best)`. `draft` is a list of guessed tokens. `best` is a list one longer: the model's greedy choice after each prefix, `best[0]` before any guess and `best[i]` after the first $i$ guesses.
-    It gives back the tokens to add: the guesses up to, not including, the first one that differs from `best` at its place, followed by `best` at that place. If no guess differs, that's all the guesses followed by the last entry of `best`.
+    Write `accept(draft, best)`. `draft` is a list of guessed tokens, and `best` is one item longer: the model's greedy choice after each prefix, with `best[0]` before any guess and `best[i]` after the first $i$ guesses.
+
+    Walk `draft` and `best` from the start: keep every matching guess up to the first mismatch, then append `best` at that position. If every guess matches, return all of `draft` followed by the last entry of `best`.
 
     `accept([5, 9, 2, 7], [5, 9, 4, 1, 8])` must give `[5, 9, 4]`, and with no guesses, `accept([], [6])` must give `[6]`.
     """)
@@ -279,14 +288,16 @@ def _():
     mo.md(r"""
     ## Taking back the wrong guesses
 
-    One run fed the last token and every guess, so every block's cache now holds keys and values for all of them, the wrong guesses too. Those must go, or the next run would attend to tokens that aren't in the text.
+    One run fed the last token and every guess, so every block's cache now holds keys and values for all of them, including the wrong guesses. Those must go, or the next run would attend to tokens that aren't in the text.
 
-    Keep this rule: **the caches hold every token of the text except the last.** The last token is always fed in the next run, together with the next guesses. After a run, the text has grown by the tokens `accept` gave back, so the caches must hold
+    Keep this rule: **the caches always hold every token of the text except the last.** Why leave the last token out? In chapter 28, each step fed only 1 brand-new token; here, the next run feeds the last confirmed token together with the new guesses, so if that last token were already in the cache, it would be stored twice!
+
+    After a run, the text has grown by the tokens `accept` gave back, so the caches must keep
     $\text{tokens before the run} + \text{tokens added} - 1$ entries, and the rest are cut off.
 
     ## By hand: how much to keep
 
-    The text has 31 tokens, so the caches hold 30. A run feeds the last token and 4 guesses. How many tokens do the caches hold after the run? `accept` gives back 3 tokens: how long is the text now, and how many entries should the caches keep?
+    The text has 31 tokens, so the caches hold 30. A run feeds the last token and 4 guesses. How many entries do the caches hold after the run? `accept` gives back 3 tokens: how long is the text now, and how many entries should the caches keep?
     """)
     return
 
@@ -379,7 +390,7 @@ def _(lookup_boxes):
 def _():
     mo.md(r"""
     /// admonition | 🧰 Toolbox: counting down, and comparing lists
-    - `range(5, -1, -1)` counts 5, 4, 3, 2, 1, 0: chapter 09's step of `range` can be negative. The stop is still left out, so −1 makes it end at 0.
+    - `range(5, -1, -1)` counts 5, 4, 3, 2, 1, 0: chapter 09's step of `range` can be negative. The stop is still left out, so `-1` makes it end at 0.
     - `[4, 7] == [4, 7]` is `True`: two lists are equal when they hold the same items in the same order. `ids[-2:]` is the last 2 items, as chapter 17's `words[-32:]` was the last 32.
     ///
 
@@ -523,24 +534,38 @@ def _():
     On the test machine:
 
     - **Copying a story:** the same 65 tokens in 11 runs instead of 65, 3.6 seconds instead of 9.3. Nearly every guess was right.
-    - **Answering a question about it:** the same 14 tokens, about the same time. The answer reuses a few phrases of the story, but not many.
-    - **Counting to 20:** the same 70 tokens, and **slower**, 12.6 seconds against 9.3. The text repeats `", "` all the time, so the lookup keeps finding the wrong copy and guessing 8 wrong tokens, and every run pays for feeding 9.
+    - **Answering a question about it:** the same 14 tokens, in about the same time. The answer reuses a few phrases from the story, but not many.
+    - **Counting to 20:** the same 70 tokens, and **slower**, 12.6 seconds against 9.3. The text repeats `", "` all the time, so the lookup keeps landing on the wrong earlier copy and proposing 8 wrong tokens, making every run pay for feeding 9.
 
-    The answers were the same in every case, as promised. Speed is the only thing that guessing changes.
+    The answers were identical in every case, as promised. Speed is the only thing that guessing changes.
 
     ## When it pays
 
-    Say each guess is right with a chance $a$, independently of the others, and the guesser proposes $k$. A run always adds its first token; it adds a second if the first guess was right, a third if the first two were, and so on. On average a run adds
+    Say each guess is right with probability $a$, independently of the others, and the guesser proposes $k$ tokens.
+
+    Try concrete numbers first: $k = 2$ guesses, each right with probability $a = 0.5$. There are only three outcomes for a run:
+
+    - **1st guess wrong** (chance $0.5$): adds 1 token;
+    - **1st right, 2nd wrong** (chance $0.5 \times 0.5 = 0.25$): adds 2 tokens;
+    - **both right** (chance $0.5 \times 0.5 = 0.25$): adds both guesses plus the bonus token, 3 in all.
+
+    The average number of tokens added per run is
+
+    > $$1 \times 0.5 + 2 \times 0.25 + 3 \times 0.25 = 1.75$$
+
+    Notice that this is the same as $1 + 0.5 + 0.5^2 = 1.75$! Viewed token by token, that's no coincidence: a run always adds its 1st token (chance $1$), adds a 2nd if the first guess is right (chance $a$), and adds a 3rd if the first two are both right (chance $a^2$).
+
+    For $k$ guesses in general, a run adds on average
 
     > $$1 + a + a^2 + \dots + a^k$$
 
-    tokens. Whether that's worth it depends on the price of a run fed $k + 1$ tokens, which you measured at the top of the page: about one plain step for $k = 1$, and about 2.4 plain steps at $k = 16$ on the test machine.
+    tokens. Whether that's worth it depends on how long a run fed $k + 1$ tokens takes, which you measured at the top of the page: about one plain step for $k = 1$, and about 2.4 plain steps at $k = 16$ on the test machine.
 
     ## Exercise 5: expected_tokens
 
     Write `expected_tokens(a, k)`: the sum above, $1 + a + a^2 + \dots + a^k$, which has $k + 1$ terms.
 
-    `expected_tokens(0.5, 2)` must give 1.75, and with `k = 0`, no guesses, it's 1 whatever `a` is.
+    `expected_tokens(0.5, 2)` must give 1.75, and with `k = 0` (no guesses), it's 1 whatever `a` is.
     """)
     return
 

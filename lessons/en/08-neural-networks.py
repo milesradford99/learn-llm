@@ -482,7 +482,7 @@ def _():
 
     ## Slopes through two layers
 
-    Now the gradient. The loss depends on the knobs through a chain of steps
+    Now the gradient. The loss depends on the weights through a chain of steps
     (`W1` → `Z` → `H` → `S` → loss), and chapter 03 tells us what to do with a chain: walk it
     backwards, passing blame. We take it one step at a time, starting from the end.
 
@@ -493,7 +493,10 @@ def _():
     is chapter 07's $G = (P - Y) / n$, with $P = \operatorname{softmax}(S)$.
 
     **`W2` and `b2`.** `S = H @ W2 + b2` is exactly chapter 07's `X @ W + b`, with `H` in place of
-    `X`. So the same result holds: $dW_2 = H^\top G$, and $db_2$ is the sum down each column of $G$.
+    `X`. (Quick recap of why chapter 07 gave `X.T @ G`: each weight's slope pairs its input column
+    across all pictures with the score's blame column across all pictures, and transposing turns
+    columns into rows so `@` computes every dot product at once.) So the same result holds here:
+    $dW_2 = H^\top G$ (in code, `H.T @ G`), and $db_2$ is the sum down each column of $G$.
 
     **$H$.** This one is new: chapter 07 never needed the slope for its *inputs*. Take one hidden
     value, `H[i, j]` (picture $i$, detector $j$). It appears in all ten scores of picture $i$:
@@ -506,20 +509,48 @@ def _():
     That's row `i` of `G` dotted with row `j` of `W2`, which is row `i` of `G` dotted with
     **column** `j` of `W2.T`. Since entry `[i, j]` of `A @ B` is row `i` of `A` dotted with
     column `j` of `B`, that's entry `[i, j]` of `G @ W2.T`. For every `i` and `j` at once:
-    `dH = G @ W2.T`, with shape
-    `(n, 10) @ (10, 64) = (n, 64)`, the same shape as `H`.
+    $dH = G W_2^\top$ (`G @ W2.T`), with shape `(n, 10) @ (10, 64) = (n, 64)`, the same shape as `H`.
 
-    **The bend.** `H = relu(Z)`, position by position. The slope of $\operatorname{relu}(z)$: where $z$ is
+    Here it is on a tiny example with 2 pictures, 2 detectors and 2 digits (using the tiny network's
+    $W_2 = \begin{bmatrix} 1 & 0 \\ 2 & 1 \end{bmatrix}$, so $W_2^\top = \begin{bmatrix} 1 & 2 \\ 0 & 1 \end{bmatrix}$).
+    Row 0 of `G` (blue) dotted with column 1 of `W2.T` (red) lands in `dH[0, 1]`: $1 \times 2 + (-1) \times 1 = 1$.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    grids([
+        {"name": "G (2, 2)", "values": [[1, -1], [0, 2]],
+         "rows": ["picture 0", "picture 1"], "cols": ["digit 0", "digit 1"],
+         "marks": {(0, 0): "blue", (0, 1): "blue"}},
+        "@",
+        {"name": "W2.T (2, 2)", "values": [[1, 2], [0, 1]],
+         "rows": ["digit 0", "digit 1"], "cols": ["det 0", "det 1"],
+         "marks": {(0, 1): "red", (1, 1): "red"}},
+        "=",
+        {"name": "dH (2, 2)", "values": [[1, 1], [0, 2]],
+         "rows": ["picture 0", "picture 1"], "cols": ["det 0", "det 1"],
+         "marks": {(0, 1): "box"}},
+    ], "Row 0 of G (blue) dotted with column 1 of W2.T (red) gives dH[0, 1]: 1 times 2 plus -1 times 1 equals 1")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    **The bend (ReLU).** `H = relu(Z)`, position by position. The slope of $\operatorname{relu}(z)$: where $z$ is
     positive, $\operatorname{relu}(z) = z$, slope 1; where $z$ is negative, $\operatorname{relu}(z) = 0$, slope 0. (Exactly at
     0 there's a corner; we take slope 0 there.) So the bend passes blame straight through where
     $Z > 0$ and blocks it everywhere else:
 
     > `dZ = dH * (Z > 0)`
 
-    $Z > 0$ gives `True`/`False` for each position, and multiplying by it counts `True` as 1 and
-    `False` as 0. An array like this, used to let some values through and block others, is called
-    a **mask**. A detector that was silent for a picture takes no blame for it: nudging its
-    knobs a tiny bit wouldn't change anything. For two pictures and three detectors:
+    Notice that `*` here is **element-by-element** multiplication, not matrix multiplication `@`.
+    `Z > 0` gives `True`/`False` at each position, and multiplying treats `True` as `1` and
+    `False` as `0` automatically. An array like this, used to let some values through and block
+    others, is called a **mask**. A detector that was silent for a picture takes no blame for it:
+    nudging its weights a tiny bit wouldn't change anything. For two pictures and three detectors:
     """)
     return
 
@@ -551,10 +582,10 @@ def _():
     blame in `dH` stops there. Everywhere else it passes through unchanged.
 
     **`W1` and `b1`.** `Z = X @ W1 + b1` is chapter 07's step once more, with `dZ` as the blame:
-    $dW_1 = X^\top dZ$, and $db_1$ is the sum down each column of $dZ$.
+    $dW_1 = X^\top dZ$ (`X.T @ dZ`), and $db_1$ is the sum down each column of $dZ$.
 
     That's backpropagation through a whole network. Every step is chapter 03's rule; the
-    matrices only do it for all pictures and all knobs at once.
+    matrices only do it for all pictures and all weights at once.
     """)
     return
 
@@ -624,12 +655,12 @@ def _():
     | step | formula | shape |
     |---|---|---|
     | blame of the scores | $G = (P - Y) / n$, with $P = \operatorname{softmax}(S)$ and $n$ the number of pictures, `len(X)` | `(n, 10)` |
-    | second layer | $dW_2 = H^\top G$, and $db_2$ is the sum of $G$ down each column | `(64, 10)` and `(10,)` |
-    | hidden values | $dH = G W_2^\top$ | `(n, 64)` |
-    | the bend | $dZ$ is $dH$ times the mask `Z > 0` | `(n, 64)` |
-    | first layer | $dW_1 = X^\top dZ$, and $db_1$ is the sum of $dZ$ down each column | `(784, 64)` and `(64,)` |
+    | second layer | $dW_2 = H^\top G$, and $db_2$ is the sum of $G$ down each column | `(64, n) @ (n, 10)` → `(64, 10)`; `(10,)` |
+    | hidden values | $dH = G W_2^\top$ | `(n, 10) @ (10, 64)` → `(n, 64)` |
+    | the bend (ReLU) | $dZ$ is $dH$ times the mask `Z > 0` (element-by-element `*`, not `@`) | `(n, 64) * (n, 64)` → `(n, 64)` |
+    | first layer | $dW_1 = X^\top dZ$, and $db_1$ is the sum of $dZ$ down each column | `(784, n) @ (n, 64)` → `(784, 64)`; `(64,)` |
 
-    In code, $M^\top$ is `M.T`, and the sum down each column is `np.sum(M, axis=0)` (chapter 07).
+    In code, matrix multiplication $A B$ is `A @ B`, transpose $M^\top$ is `M.T` (so $H^\top G$ is `H.T @ G` and $G W_2^\top$ is `G @ W2.T`), and the sum down each column is `np.sum(M, axis=0)` (chapter 07). Notice how the middle dimensions always cancel in `@`: `(64, n) @ (n, 10)` gives `(64, 10)`, while `(n, 10) @ (10, 64)` gives `(n, 64)`—an easy self-check for which matrix gets `.T` and in what order.
     """)
     return
 
@@ -660,11 +691,12 @@ def _():
     mo.md(r"""
     ## Checking it by nudging
 
-    A whole network's worth of new formulas deserves a check. At the start, nudge one knob of the
+    A whole network's worth of new formulas deserves a check. At the start, nudge one weight of the
     first layer, `W1[406, 0]` (from pixel 406, row 14 and column 14: the middle of the picture,
     into detector 0),
-    and see how the loss moves; then do the same for a knob of the second layer, `W2[5, 3]`.
-    (This cell needs all three exercises.)
+    and see how the loss moves; then do the same for a weight of the second layer, `W2[5, 3]`.
+    (This cell needs all three exercises. Since `forward` returns `(Z, H, S)` and Python counts
+    from 0, `forward(...)[2]` below picks out the third return value, the scores `S`.)
     """)
     return
 

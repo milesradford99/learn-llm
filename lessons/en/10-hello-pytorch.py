@@ -151,7 +151,10 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    476 and 34, the same as yours. Compare it with what you wrote:
+    476 and 34, the same as yours. Recall the autograd engine you built in chapter 04: every
+    addition or multiplication wrote its inputs and local slopes into a book. When you ran
+    `backward`, the engine read that book in reverse, multiplying slopes back along the chain and
+    adding them into each parameter's `.grad`. Compare what you wrote with PyTorch:
 
     | your engine (chapter 04) | PyTorch |
     |---|---|
@@ -198,7 +201,7 @@ def _():
     is the step for `e * e` written as a power; the last card, `AccumulateGrad`, is the step that
     **adds** the arriving blame into `w.grad`. Keep that word "adds" in mind.)
 
-    Your engine had one trap: blame is *added* to a box, so it must start at 0. PyTorch does the
+    Your engine had one trap: blame is *added* into a tensor's `.grad`, so it must start at 0. PyTorch does the
     same thing, on purpose. Below, we build the loss again and go backward a second time, without
     clearing `.grad`:
     """)
@@ -463,9 +466,11 @@ def _():
     and a vector of biases. They're already random, with `requires_grad=True`.
     (`torch.manual_seed(0)` makes the random numbers repeatable, like `default_rng(0)`.)
 
-    One thing is the other way round from our habit: our `W1` was `(784, 64)`, with a column for each
-    detector, while PyTorch stores `(64, 784)`, with a row for each detector. It's the same numbers on
-    their side. With 3 inputs and 2 detectors it looks like this; detector 1's knobs are marked:
+    One convention is the other way round from our habit: when you create `nn.Linear(784, 64)`, the
+    arguments are `(inputs, outputs)`, yet PyTorch stores `layer.weight` transposed as `(64, 784)`
+    — `(outputs, inputs)`. Our `W1` was `(784, 64)`, with a column for each detector, while PyTorch
+    keeps a row for each detector. It's the same numbers on their side. With 3 inputs and 2
+    detectors it looks like this; detector 1's knobs are marked:
     """)
     return
 
@@ -485,8 +490,9 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    So `layer.weight.T` is our `W`. Calling `layer(X)` computes `X @ layer.weight.T + layer.bias`, our `Z`. Calling
-    an object like a function looks odd, but it's only a shortcut for running its calculation.
+    So `layer.weight.T` is our `W`. Calling `layer(X)` computes `X @ layer.weight.T + layer.bias`, our `Z`.
+    In Python, objects can be called like functions; here `layer(X)` looks a little unusual at first,
+    but it's simply PyTorch's clean shorthand for running the layer's calculation on `X`.
 
     `nn.Sequential(...)` chains layers: each one's output is the next one's input.
     `nn.ReLU()` is the bend, as a layer with no knobs.
@@ -806,11 +812,18 @@ def accuracy(S, labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    /// admonition | 🧰 Toolbox: two tools for measuring
-    - `.float()` turns `True`/`False` values into 1s and 0s with a point. `accuracy` above needs it,
-      because `torch.mean` only averages numbers with a point.
-    - The indented lines under `with torch.no_grad():` run without keeping the books. Measuring
-      needs no blame, so this saves time and memory.
+    /// admonition | 🧰 Toolbox: unpacking `accuracy` and `with torch.no_grad():`
+    The one-liner in `accuracy` above nests four steps. Reading it from the inside out:
+
+    1. `torch.argmax(S, dim=1)` picks the column with the highest score in each row — the predicted digit;
+    2. `== labels` compares those predictions against the true labels, giving a tensor of `True`/`False`;
+    3. `.float()` turns `True`/`False` into `1.0`/`0.0` (because `torch.mean` only averages numbers with a decimal point);
+    4. `torch.mean(...).item()` averages those `1.0`s and `0.0`s into the fraction correct, and `.item()` pulls it out as a plain Python number.
+
+    In the cell below, you'll also see `with torch.no_grad():`. Python's `with` block temporarily
+    turns on a mode and automatically restores normal behaviour once the indented block ends — here
+    it switches off book-keeping while measuring on the test set, which needs no blame and saves
+    time and memory.
     ///
 
     The cell below turns the data into 32-bit tensors, trains for 10 epochs with Adam at rate 0.002,

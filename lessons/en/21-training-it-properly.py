@@ -138,11 +138,13 @@ def _():
     mo.md(r"""
     ## 1. AdamW
 
-    In chapter 09 you added weight decay to the slope: $\text{slope} + \text{decay} \times w$. With plain steps, that shrinks every weight a little. But Adam then divides
-    the whole thing by each knob's typical slope size, so a knob with big slopes barely shrinks, and one with small slopes shrinks a lot. That's not what decay is meant to do.
+    In chapter 09 you added weight decay to the slope: $\text{slope} + \text{decay} \times w$. With plain gradient descent, that shrinks every weight by the same fraction. But Adam divides the whole thing by each knob's typical slope size, so a knob with big slopes barely shrinks while one with small slopes shrinks a lot. That defeats the point of weight decay.
 
-    **AdamW** keeps the decay out of Adam's averages and applies it directly to the knob, at the same rate for every knob. This one change is the "W".
-    Chapter 09's Adam is unchanged in its first two lines, and only the step is new:
+    **AdamW** (the "W" stands for *Weight decay*) keeps weight decay out of Adam's running averages and applies it directly to the knob, at the same rate for every knob.
+
+    *Quick reminder of the symbols:* $g$ is the current slope, $m$ and $v$ are the running averages of $g$ and $g^2$ (both starting at 0), and $t$ is the step count from 1.
+
+    Chapter 09's first two lines stay the same; only the final update changes:
 
     > $$m = 0.9 \times m + 0.1 \times g \qquad v = 0.999 \times v + 0.001 \times g^2$$
 
@@ -152,8 +154,7 @@ def _():
 
     ## By hand: one step, three ways
 
-    A knob sits at $w = 2$. It's the very first step, the slope is $g = 0.5$, the rate is 0.1 and the decay is 0.5. Chapter 09 showed that on the first step $\hat{m} / \sqrt{\hat{v}}$ is
-    exactly $+1$ for a positive slope, whatever its size. Work out the knob after one step, three ways:
+    A knob sits at $w = 2$. It's the very first step ($t = 1$), the slope is $g = 0.5$, the rate is 0.1, and the decay is 0.5. Notice why $\hat{m} / \sqrt{\hat{v}}$ is always $\pm 1$ on step 1: since $m$ and $v$ start at 0, we get $m = 0.1g$ and $v = 0.001g^2$, and the bias correction divides those exact factors back out, leaving $\hat{m} = g$ and $\hat{v} = g^2$ — so $\hat{m} / \sqrt{\hat{v}} = g / |g| = +1$ for any positive slope. Work out the knob after one step, three ways:
 
     - plain **Adam**, with no decay at all;
     - Adam with decay **added to the slope**, chapter 09's way: the slope becomes $g + \text{decay} \times w$, and then Adam runs as usual;
@@ -256,20 +257,21 @@ def _():
     mo.md(r"""
     It has two parts:
 
-    - **warmup**: for the first steps, here 100, the rate grows in a straight line from 0 to its peak:
+    - **warmup**: for the first steps (here 100), the rate climbs in a straight line from 0 to its peak:
 
     > $$\text{rate} = \text{peak} \times \frac{\text{step}}{\text{warmup}}$$
 
-    - then **cosine decay**: it falls smoothly towards a floor, following half a wave of cosine. Call **progress** the share of the steps after warmup that are done, from 0 to 1.
-      As progress goes from 0 to 1, $\cos(\pi \times \text{progress})$ goes from 1 to −1 (chapter 20's table), so $\tfrac{1}{2}(1 + \cos(\pi \times \text{progress}))$ goes from 1 to 0:
+    - then **cosine decay**: the rate eases smoothly down toward a floor, following half a cosine wave. Call **progress** the share of post-warmup steps completed (from 0 to 1). We split the formula into two easy steps: first compute a **wave** factor that glides from 1 down to 0, then map it to the range $[0.1, 1.0]$ and multiply by the peak:
 
-    > $$\text{progress} = \frac{\text{step} - \text{warmup}}{\text{total} - \text{warmup}} \qquad \text{rate} = \text{peak} \times \Big(0.1 + 0.9 \times \tfrac{1}{2}\big(1 + \cos(\pi \times \text{progress})\big)\Big)$$
+    > $$\text{progress} = \frac{\text{step} - \text{warmup}}{\text{total} - \text{warmup}} \qquad \text{wave} = \frac{1}{2}\big(1 + \cos(\pi \times \text{progress})\big)$$
 
-    The 0.1 is the floor: the rate never falls below a tenth of its peak. The 0.9 is the rest, $1 - 0.1$.
+    > $$\text{rate} = \text{peak} \times (0.1 + 0.9 \times \text{wave})$$
+
+    As progress goes from 0 to 1, $\cos(\pi \times \text{progress})$ goes from $1$ to $-1$ (chapter 20's table), so $\text{wave}$ goes smoothly from 1 to 0. The 0.1 is the floor (the rate never drops below a tenth of its peak), and 0.9 is the remaining span ($1 - 0.1$).
 
     ## By hand: four points on the curve
 
-    For the chart's run (1,000 steps, warmup 100, peak 0.003), work out the rate at steps 50, 100, 550 and 1,000. Halfway round the half wave, $\cos(\pi / 2) = 0$.
+    For the chart's run (1,000 steps, warmup 100, peak 0.003), work out the rate at steps 50, 100, 550 and 1,000. Halfway through the decay, $\cos(\pi / 2) = 0$, so $\text{wave} = 0.5$.
     Check each answer against the chart.
     """)
     return
@@ -285,9 +287,9 @@ def _():
 def _(rate_boxes):
     hand.marked(rate_boxes, {'step 50': 0.0015, 'step 100': 0.003, 'step 550': 0.00165, 'step 1000': 0.0003}, {
         'step 50': r"""still in warmup: half of the 100 steps are done, so half the peak""",
-        'step 100': r"""warmup is over, and progress is 0: $\cos 0 = 1$, so the bracket is $0.1 + 0.9 = 1$""",
-        'step 550': r"""progress is $450 / 900 = 0.5$, the cosine is 0, and the bracket is $0.1 + 0.9 \times 0.5$""",
-        'step 1000': r"""progress is 1, $\cos\pi = -1$, and the bracket is 0.1""",
+        'step 100': r"""warmup is over, progress is 0: $\cos 0 = 1$, so $\text{wave} = 1$ and the multiplier is $0.1 + 0.9 = 1$""",
+        'step 550': r"""progress is $450 / 900 = 0.5$, $\cos(\pi / 2) = 0$, so $\text{wave} = 0.5$ and the multiplier is $0.1 + 0.9 \times 0.5 = 0.55$""",
+        'step 1000': r"""progress is 1, $\cos\pi = -1$, so $\text{wave} = 0$ and the multiplier is 0.1""",
     }, LOCALE, tolerance=1e-7)
     return
 
@@ -333,8 +335,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""An `if` for the warmup case, with a `return` inside it, as in the Toolbox. Below it, a line for `progress` and a `return` for the cosine formula.""",
-        r"""It's 4 lines. The last is `peak` times a bracket: 0.1, plus 0.9 times 0.5 times `(1 + np.cos(np.pi * progress))`. Count your brackets.""",
+        r"""Start with an `if` for the warmup case and `return` early, as in the Toolbox. Below it, compute `progress`, then `wave`, and return the scaled rate.""",
+        r"""Compute `wave = 0.5 * (1 + np.cos(np.pi * progress))`, then return `peak * (0.1 + 0.9 * wave)` — or combine them on one line if you prefer.""",
     ], LOCALE)
     return
 
@@ -514,7 +516,7 @@ def per_word_perplexity(model, X, Y, word_count):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Before every step, `train_modern` sets the rate for that step from your `learning_rate`.
+    Before every step, `train_modern` sets the rate for that step from your `learning_rate`. Right before `optimizer.step()`, `nn.utils.clip_grad_norm_(model.parameters(), 1.0)` performs **gradient clipping**: if a batch ever produces abnormally huge slopes, it scales them back down so one step can't blow up training.
     `per_word_perplexity` adds up the surprise over all test tokens (`reduction="sum"` gives the total instead of the mean) and divides by the **words**, as chapter 20 promised. Windows are 64 tokens long, a little over 60 words, since a token
     is nearly a word.
 
@@ -547,7 +549,7 @@ def _():
     mo.md(r"""
     So the very first step doesn't move the knobs at all, and the second moves them by a hundredth of the peak rate. That's warmup doing its job.
 
-    One honest detail: cutting the text into windows drops a few tokens at the very end, so the words are counted over the tokens actually scored. The difference is a few tokens out of 167,000.
+    One honest detail: cutting the test tokens into 64-token windows drops a few leftover tokens at the very end. In the training cell below, `scored_words = word_count * Y_test_np.size / (len(test_tokens) - 1)` scales the total word count by the exact fraction of test tokens that landed inside those windows, so the denominator matches the tokens actually scored. (In practice, the difference is only a few tokens out of 167,000.)
 
     ## The run
 

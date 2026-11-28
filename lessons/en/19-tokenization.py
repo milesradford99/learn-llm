@@ -136,7 +136,7 @@ def _():
 
     > `count_pairs([1, 2, 1, 2, 3])` gives `{(1, 2): 2, (2, 1): 1, (2, 3): 1}`
 
-    It's chapter 13's way of pairing a list with itself, with chapter 12's way of counting.
+    Quick reminder: `zip(xs, xs[1:])` pairs each item in a list with the next (chapter 13), and `d.get(key, 0)` looks up a count defaulting to 0 when the key isn't in the dictionary yet (chapter 12).
     """)
     return
 
@@ -170,7 +170,7 @@ def _():
     Now the replacement. A `for` loop goes one step at a time, but the merge sometimes needs to jump two: after replacing a pair, it must skip both halves.
 
     /// admonition | 🧰 Toolbox: while, and, else
-    - `while test:` repeats its indented lines for as long as the test holds. Nothing moves on by itself: the lines inside must change something, or the test holds forever.
+    - `while test:` repeats its indented lines for as long as the test holds. Nothing advances automatically: the lines inside must update what the test checks, or the loop runs forever.
     - `a and b` holds only if both tests hold. Python checks `a` first, and if it fails, never looks at `b`.
     - `else:` lined up with an `if` runs its indented lines when the `if` test did *not* hold.
     ///
@@ -212,7 +212,15 @@ def _():
     - if the pair starts at position `i`, meaning `ids[i]` is the pair's first id and the next item is its second, add `new_id` to the new list and **jump two**;
     - otherwise copy `ids[i]` to the new list and move one.
 
-    At the last position there is no next item, and asking for it would be an error. So check that there *is* a next item before looking at it.
+    Here is how `i` moves on `ids = [1, 1, 1]` when merging `(1, 1) -> 256` (notice `i` goes `0 → 2 → 3`, *not* `0 → 1 → 2`):
+
+    | round | `i` | what we check | action | result so far | next `i` |
+    |---|---|---|---|---|---|
+    | 1 | `0` | `i < 2` and `ids[0], ids[1]` is `(1, 1)` ✓ | append `256`, jump two | `[256]` | `2` |
+    | 2 | `2` | `i < 2` is false (last item, no next item) | append `ids[2]` (`1`), step one | `[256, 1]` | `3` |
+    | 3 | `3` | `i < len(ids)` is false | loop stops | `[256, 1]` | — |
+
+    At the last position there is no next item, so reading `ids[i + 1]` would crash with an error. Put `i < len(ids) - 1` **first** in the `and` check: when it fails, Python stops right away and never looks at `ids[i + 1]`.
     """)
     return
 
@@ -294,15 +302,20 @@ def _():
     mo.md(r"""
     ## Encoding and decoding
 
-    To **encode** new text, turn it into bytes and replay every merge, in the order they were learned.
+    To **encode** new text, turn it into bytes and replay every merge in the exact order they were learned. Order matters: in the example above, `(256, 97) -> 257` cannot run before `(97, 97) -> 256`, because until `(97, 97)` is merged there isn't even a `256` in the sequence yet.
 
-    To **decode**, we need the bytes behind each id. Build a table: ids below 256 are single bytes, and each merged id is its two parts joined. Since a pair's parts always have smaller ids, going through the merges in order always finds them ready.
+    To **decode**, we need the bytes behind each id. Build a lookup table: ids `0` to `255` hold single bytes, and each merged id joins the bytes of its two parts. Going through the merges in order, both parts are always already in the table. For example, starting from `table[97] = b'a'`:
+
+    - merge `(97, 97) -> 256`: `table[256] = table[97] + table[97] = b'aa'`
+    - merge `(256, 97) -> 257`: `table[257] = table[256] + table[97] = b'aaa'`
+
+    One detail about UTF-8: a Chinese character takes 3 bytes, and a single byte split out on its own cannot be displayed as a character, so UTF-8 shows the replacement mark � instead. Passing `errors="replace"` lets `.decode` show � rather than crashing.
 
     /// admonition | 🧰 Toolbox: pairs from a dictionary, and joining bytes
     - `d.items()` goes through a dictionary's pairs of key and value, so `for name, age in ages.items():` gives both at once.
     - `+` joins bytes: `bytes([104]) + bytes([105])` is `b'hi'`.
-    - `b''.join(pieces)` joins a list of bytes into one, with nothing between them. It's chapter 12's `join`, for bytes.
-    - `.decode("utf-8", errors="replace")` shows a broken sequence as a � mark, instead of stopping with an error.
+    - `b''.join(pieces)` joins a list of bytes into one with nothing between them, like `b''.join([b'hi', b'!'])` -> `b'hi!'` (chapter 12's `join`, for bytes).
+    - `.decode("utf-8", errors="replace")` turns bytes into text, showing any incomplete byte sequence as � instead of stopping with an error.
     ///
 
     ## Exercise 5: encode
@@ -316,7 +329,7 @@ def _():
     Write `decode(ids, merges)`, the way back: it gives the text as a string.
 
     1. Make the table as a list: position $i$ holds the single byte $i$, for $i$ from 0 to 255.
-    2. Go through the merges in order. Each adds one entry at the end of the table: the entry of the pair's first id joined to the entry of its second. (The first merge's id is 256, which is exactly the next free position, so the list stays in step with the ids.)
+    2. Go through the merges in order. For each pair, join the table entries of its two ids and append the result to the table. (The first merge gets id 256, which is the next free slot, so each id matches its position in the list.)
     3. Join the entries of all the `ids`, and decode the result as UTF-8, replacing broken sequences.
 
     > with the same merges, `decode([258, 100, 258, 97, 99], merges)` gives `"aaabdaaabac"`
@@ -444,11 +457,11 @@ def _():
 
     ## Choosing the vocabulary size
 
-    The number of merges is a hyperparameter (chapter 13). More merges mean fewer tokens for the same text, so a model with room for 32 tokens sees further back, but a bigger table with rarer tokens to learn. Models for English commonly use tens of thousands.
+    The number of merges is a hyperparameter (a setting we choose before training, chapter 13). More merges mean fewer tokens for the same text, so a model with room for 32 tokens sees further back, at the cost of a larger table with rarer tokens to learn. Models for English commonly use tens of thousands.
 
     ## Keeping the leaderboard fair
 
-    Perplexity so far has been *per word*. With tokens, a model takes more steps per word, and each step is easier, so perplexity per token isn't comparable with the leaderboard. So when we retrain on tokens, we'll add up the total surprise over a story and divide by the number of *words*, as before, to keep the leaderboard honest.
+    Perplexity so far (perplexity = $e^{\text{average surprise}}$, chapter 13) has been *per word*. With tokens, a model takes more steps per word, and each step is easier, so perplexity per token isn't comparable with the leaderboard. When we retrain on tokens, we'll still add up the total surprise over a story and divide by the number of *words*, as before, so the leaderboard stays fair.
 
     ## What's next
 

@@ -67,9 +67,11 @@ def _():
 
     > $$p(\text{answer}) = p(\text{first digit}) \times p(\text{second digit, after the first})$$
 
-    Chances multiply, so their logs add (chapter 13). The log of a chance is called a **log-probability**. It's never above 0, and the closer to 0, the likelier. It's also chapter 07's surprise with a minus sign: $\text{surprise} = -\log p$.
+    Chances multiply, so their logs add (chapter 13). The log of a chance is called a **log-probability**:
 
     > $$\log p(\text{answer}) = \log p(\text{first digit}) + \log p(\text{second digit, after the first})$$
+
+    Keep one sign rule in mind for the whole chapter: probabilities lie between 0 and 1, so **log-probabilities are always negative**, and the closer to 0 the more likely. Meanwhile, training tries to make the loss as *small* as possible, so turning a log-probability into a loss always puts a minus sign in front (just like chapter 07's $\text{surprise} = -\log p$).
 
     ## By hand: one answer
 
@@ -192,7 +194,7 @@ def _():
 
     > $$\text{margin} = \text{gain}(\text{better}) - \text{gain}(\text{worse})$$
 
-    We want every margin large. Chapter 12 had the right loss for "make this number large": $-\log \sigma(\ldots)$, which is big when the number is negative and fades to 0 as it grows. So:
+    We want every margin to be large and positive. Chapter 12 had the exact loss for making a number large: $-\log \sigma(\ldots)$, which is big when the number is negative and fades to 0 as it grows. Three anchor values give you a feel for it (with $\beta = 1$): at $\text{margin} = -2$ the loss is about `2.13` (pushing hard), at $\text{margin} = 0$ it is about `0.69` (even), and at $\text{margin} = +2$ it drops to about `0.13` (nearly done). So:
 
     > $$\text{loss} = \text{mean of } -\log \sigma(\beta \times \text{margin})$$
 
@@ -390,17 +392,18 @@ def _():
 
     > $$r_1 \times \text{slope of } p_1 + r_2 \times \text{slope of } p_2 + \ldots$$
 
-    We can't compute that sum: it runs over every possible answer, and for a real model those are all possible texts. One step of algebra fixes it. Chapter 07 found that the slope of $\log p$ is the slope of $p$ divided by $p$. Turn that around:
-    the slope of $p$ is $p$ times the slope of $\log p$. Put it in:
+    We can't compute that sum directly: it runs over every possible answer, and for a real model that means every possible text. One step of algebra fixes it. Chapter 07 found that the slope of $\log p$ is the slope of $p$ divided by $p$. Turn that around:
+    the slope of $p$ is $p$ times the slope of $\log p$. (Quick numerical check: when $p = 0.5$, raising $\log p$ by `0.02` raises $p$ by $0.5 \times 0.02 = 0.01$.) Put it in:
 
     > $$p_1 \times \big(r_1 \times \text{slope of } \log p_1\big) + p_2 \times \big(r_2 \times \text{slope of } \log p_2\big) + \ldots$$
 
-    Compare this with the expected reward above. It has the same form: chances times something. So it's also an average: the expected value of $r \times \text{slope of } \log p$. And an average over chances is something we can estimate without visiting every answer.
-    **Draw a few answers from the model, and average over those.** That's all. In PyTorch terms: draw answers, look up their rewards, and go backward from
+    Compare this with the expected reward above. It has the same form: probabilities times something. So it's also an average over the model's own probabilities—which we can estimate without visiting every answer. Why? Draw 100 answers from the model's current probabilities and an answer with probability `0.5` naturally shows up about 50 times, so simply averaging over the drawn samples automatically weights each one by $p_i$!
+
+    **Draw a batch of answers from the model, check their rewards, and average over those.** In PyTorch terms: draw answers, compute their rewards, and run backpropagation from:
 
     > $$\text{loss} = \text{mean of } -r \times \log p(\text{drawn answer})$$
 
-    with the rewards treated as plain numbers. The minus sign is there because we walk downhill and want the reward to go up. This result is the **policy gradient**. Read the loss in words:
+    Here the reward $r$ (or advantage, in a moment) is treated as a plain number with no gradient of its own, so gradients flow *only* through $\log p$. The minus sign is there because gradient descent walks downhill while we want reward to go up. This result is the **policy gradient**. In plain words:
     make the answers you tried more likely, each in proportion to its reward.
 
     ## Better or worse than what?
@@ -512,7 +515,7 @@ def _():
 def _():
     mo.md(r"""
     The training function below puts the pieces together. Each step, `sample_answers` draws a group of 16 answers per prompt from the model as it is now. It gives back the prompts repeated 16 times, and the answers beside them, 1,600 rows each.
-    `score_samples` runs **your** `reward` on every row, as text. (An answer that isn't two digits, like `=3`, gets 0 without your checker being asked.) Your `advantages` then compares within each prompt's group, which is why the rewards are reshaped to (100, 16) and back.
+    `score_samples` runs **your** `reward` on every row, as text. (An answer that isn't two digits, like `=3`, gets 0 without your checker being asked.) Your `advantages` then compares within each prompt's group, which is why the rewards are reshaped to `(100, 16)` and back—here `-1` in `reshape(-1, 16)` and `.reshape(-1)` tells PyTorch to infer that dimension's length automatically (`1600 / 16 = 100`, then back to `1600`).
     """)
     return
 

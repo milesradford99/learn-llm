@@ -110,16 +110,16 @@ def _():
 
     ## Each step on its own is easy
 
-    Look at one arrow at a time and ask the chapter 02 question: if the value at the start of the
-    arrow got a tiny nudge, how much would the value at the end move, **per unit** of the nudge?
-    (Everything else stays still.) That's the **local slope** of the arrow. Every one of them is a
-    rule you already have:
+    Look at one arrow at a time and ask the chapter 02 question: holding everything else still, if
+    the value at the start of the arrow changes by a tiny amount, how many times as much does the
+    value at the end move? That multiplier is the arrow's **local slope**. Every one of them uses
+    a rule you already know:
 
-    | step | nudge this | the result moves, per unit | why (chapter 02 rule) | here |
+    | step | change this | result moves by (local slope) | why (chapter 02 rule) | here |
     |---|---|---|---|---|
     | $L = e \times e$ | $e$ | $2 \times e$ | slope of $x \times x$ is $2 \times x$ | $2 \times 17 = \boldsymbol{34}$ |
-    | $e = g - s$ | $g$ | `1` | $g$ goes up by h, so $e$ goes up by h | **1** |
-    | $g = p + b$ | $p$ | `1` | $p$ goes up by h, so $g$ goes up by h | **1** |
+    | $e = g - s$ | $g$ | `1` | $g$ goes up by $h$, so $e$ goes up by $h$ | **1** |
+    | $g = p + b$ | $p$ | `1` | $p$ goes up by $h$, so $g$ goes up by $h$ | **1** |
     | $g = p + b$ | $b$ | `1` | same, for $b$ | **1** |
     | $p = w \times t$ | $w$ | $t$ | slope of $c \times x$ is $c$ (here $c$ is $t$, which stays fixed) | **14** |
 
@@ -131,36 +131,22 @@ def _():
     through a chain, the rates **multiply**.
     ///
 
-    The local slopes are exactly such rates: "per unit of this, that many units of that". Follow a
-    tiny nudge `h` of `w` all the way to `L`:
+    Local slopes work just like exchange rates: each arrow tells you how many units the next box
+    moves for each tiny change in the previous one. Follow a tiny change $h$ in $w$ all the way to $L$:
 
-    | value | moves by |
+    | value | changes by |
     |---|---|
-    | `w` | `h` |
-    | $p$ | $14 \times h$ (rate 14) |
-    | $g$ | $1 \times 14 \times h$ = $14 \times h$ (rate 1) |
-    | $e$ | $1 \times 14 \times h$ = $14 \times h$ (rate 1) |
-    | $L$ | about $34 \times 14 \times h$ = $476 \times h$ (rate 34; the tiny leftover is explained below) |
+    | $w$ | $h$ |
+    | $p$ | $14 \times h$ (local slope 14) |
+    | $g$ | $1 \times 14 \times h = 14 \times h$ (local slope 1) |
+    | $e$ | $1 \times 14 \times h = 14 \times h$ (local slope 1) |
+    | $L$ | about $34 \times 14 \times h = 476 \times h$ (local slope 34) |
 
     So $L$ moves 476 times as much as $w$: the slope of $L$ with respect to $w$ is
     **$14 \times 1 \times 1 \times 34 = 476$**. Multiplying local slopes along the path is called the
     **chain rule**.
 
-    Is it really exact? Look at where a leftover could come from. The first three steps are
-    "straight-line" steps ($\times 14$, $+ b$, $- s$): for those, the change is **exactly** the rate
-    times the nudge, with nothing left over (like $7 \times (x + h) = 7 \times x + 7 \times h$ in chapter 02).
-    So $e$ moves by exactly $14 \times h$. Only the last step, the square, leaves something over. Use
-    chapter 02's square picture with side $e = 17$, nudged by $14 \times h$ instead of $h$: it grows by
-    two strips of $17 \times 14 \times h$ (together $2 \times 17 \times 14 \times h$ = $476 \times h$) plus the small corner
-    $(14 \times h) \times (14 \times h)$ = $196 \times h \times h$. Divide by $h$:
-
-    > $$\text{measured slope} = 476 + 196 \times h$$
-
-    The same pattern as $2 \times x + h$ in chapter 02: as the nudge shrinks, the measurements close in
-    on **476**. (What if a bending step sits in the middle, with a straight-line step after it?
-    Take $3 \times (x \times x)$. The square leaves a corner $h \times h$; the $\times 3$ afterwards makes it $3 \times h \times h$;
-    divided by $h$ that's $3 \times h$, which still vanishes as $h$ shrinks. Straight-line steps only
-    scale a leftover, they never stop it vanishing.) Check it by nudging:
+    Let's check that 476 with `nudge_slope` from chapter 02:
     """)
     return
 
@@ -177,36 +163,71 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Nudging with $h = 0.0001$ gives about `476.0196` (the long tail of digits after that is the
-    computer's rounding noise), which is $476 + 196 \times 0.0001$: exactly the chain rule's 476, plus
-    the leftover we just predicted. Smaller nudges get closer still:
+    With $h = 0.0001$, `nudge_slope` gives about `476.0196` (the long tail of digits after that is
+    computer rounding noise) — right next to the chain rule's **476**. As the step $h$ shrinks,
+    the measurements close in on **476**:
 
-    | nudge h | 0.1 | 0.01 | 0.001 | 0.0001 |
+    | step $h$ | 0.1 | 0.01 | 0.001 | 0.0001 |
     |---|---|---|---|---|
     | measured slope | 495.6 | 477.96 | 476.196 | 476.0196 |
+    """)
+    return
 
+
+@app.cell(hide_code=True)
+def _():
+    mo.accordion({
+        "Want to see why the chain rule is exact? (optional)": mo.md(r"""
+        With $h = 0.0001$, nudging gave `476.0196` — off by `0.0196`. Where did that tiny leftover come from?
+
+        The first three steps ($\times 14$, $+ b$, $- s$) only scale or shift their input, so they leave
+        nothing over: $e$ moves by **exactly** $14 \times h$. Only the last step, squaring ($L = e \times e$),
+        leaves a corner behind. Using chapter 02's square with side $e = 17$, growing both sides by
+        $14 \times h$ adds two strips ($2 \times 17 \times 14 \times h = 476 \times h$) plus a tiny corner
+        $(14 \times h) \times (14 \times h) = 196 \times h \times h$. Divide by $h$:
+
+        > $$\text{measured slope} = 476 + 196 \times h$$
+
+        Plug in $h = 0.0001$ and you get $476 + 0.0196 = 476.0196$. Just like $2 \times x + h$ in chapter 02,
+        as $h$ shrinks, $196 \times h$ vanishes, so the exact slope is **476**.
+
+        What if a squaring step sits in the middle, followed by $\times 3$, as in $3 \times (x \times x)$?
+        The square leaves a corner $h \times h$; multiplying by 3 turns it into $3 \times h \times h$; dividing
+        by $h$ leaves $3 \times h$, which still vanishes as $h$ shrinks. So the chain rule is exact no matter
+        what order the steps appear in.
+        """)
+    })
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ## Working backwards: blame
 
-    We could follow a nudge forward from `w`, then again from `b`, and so on for every knob. But
-    there's a smarter order. Start at the end and give every box a **blame**: how much `L` moves
-    per unit that this box moves. Then walk backwards, arrow by arrow. ("Per unit" here is a rate
-    for a tiny nudge, as in chapter 02, not a jump of a whole 1: moving `e` from 17 to 18 would
-    move `L` by 35, the 34 plus the square's leftover.)
+    We could trace a small change forward from `w`, then again from `b`, and so on for every knob.
+    With a million knobs, that would mean a million forward trips. There's a much smarter order:
+    **start at the end (`L`) and walk backwards**.
 
-    - `L` itself: moving `L` by 1 moves `L` by 1. Blame **1**.
-    - $e$: one unit of $e$ moves $L$ by 34 (the local slope), and each unit of $L$ is worth 1.
-      Blame $34 \times 1 = \boldsymbol{34}$.
-    - $g$: one unit of $g$ moves $e$ by 1, and each unit of $e$ is worth 34. Blame $1 \times 34 = \boldsymbol{34}$.
-    - $p$: one unit of $p$ moves $g$ by 1. Blame $1 \times 34 = \boldsymbol{34}$.
-    - $b$: one unit of $b$ also moves $g$ by 1. Blame $1 \times 34 = \boldsymbol{34}$.
-    - $w$: one unit of $w$ moves $p$ by 14, and each unit of $p$ is worth 34. Blame $14 \times 34 = \boldsymbol{476}$.
+    Give every box a **blame**: how many times as much `L` moves when that box moves by a tiny
+    amount. (As in chapter 02, this is a rate for a tiny change, not a jump of a whole 1 — jumping
+    $e$ from 17 to 18 moves $L$ by 35, which includes the square's leftover.)
+
+    One single rule works for every box on the way back:
+
+    > **blame of a box = how much it moves the next box (local slope) $\times$ blame of the next box**
+
+    Walk backwards from `L`, applying that rule one arrow at a time:
+
+    - **`L` (the end)**: moving `L` by 1 moves `L` by 1. Blame = **1**.
+    - **$e \to L$**: local slope is $2 \times 17 = 34$, next box `L` has blame 1 $\to$ blame of $e$ = $34 \times 1 = \boldsymbol{34}$.
+    - **$g \to e$**: local slope is 1, next box $e$ has blame 34 $\to$ blame of $g$ = $1 \times 34 = \boldsymbol{34}$.
+    - **$p \to g$**: local slope is 1, next box $g$ has blame 34 $\to$ blame of $p$ = $1 \times 34 = \boldsymbol{34}$.
+    - **$b \to g$**: local slope is 1, next box $g$ has blame 34 $\to$ blame of $b$ = $1 \times 34 = \boldsymbol{34}$.
+    - **$w \to p$**: local slope is 14, next box $p$ has blame 34 $\to$ blame of $w$ = $14 \times 34 = \boldsymbol{476}$.
 
     (Blames can be negative too. A negative blame means raising that box *lowers* the loss; the
     step rule's minus then pushes the knob up, which is downhill.)
-
-    One rule did all of it:
-
-    > blame of a box = local slope of its arrow $\times$ blame of the box the arrow points to
 
     Here are the blames, in red, under each box:
     """)
@@ -223,16 +244,16 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The blame of $w$ is its slope, 476, the same as the chain rule's answer. That's no coincidence:
+    The blame of $w$ is its slope, 476 — the same answer the chain rule gave. That's no coincidence:
     forwards we multiplied $14 \times 1 \times 1 \times 34$, backwards $34 \times 1 \times 1 \times 14$, the same numbers in the
-    other order, and the order of a multiplication doesn't change its result. The blame of $b$ is
+    opposite order, and multiplication order doesn't change the result. The blame of $b$ is
     its slope, 34. This backward walk is called **backpropagation**: the blame for the loss flows
     backwards through the graph to every knob.
 
     Why backwards? Notice that `w` and `b` share the end of the path (`g` → `e` → `L`). Going
     backwards, that shared part is worked out **once**, and every knob reuses it. The backward walk
     visits each box once, one multiplication per arrow, just like the forward walk does. So a model
-    with a billion knobs gets all billion slopes for about the cost of working out the loss once
+    with a billion knobs gets all billion slopes for about the cost of computing the loss once
     more. Compare that with nudging: two loss calculations for **every** knob.
 
     The slopes of the loss for all the knobs together are called the **gradient**. That's where
@@ -295,19 +316,26 @@ def _():
     mo.md(r"""
     ## When a value is used twice, blames add
 
-    One more case. Take a step $a \times c$ where **both** sides are values that can move. Nudging only
-    $a$ (holding $c$ still) moves the result by $c$ per unit; nudging only $c$ moves it by $a$ per
-    unit. That's the $c \times x$ rule from chapter 02, once for each side.
+    One more case. Take a step $a \times c$ where **both** sides are values that can change. Changing
+    only $a$ (holding $c$ still) moves the result by $c$ times as much; changing only $c$ moves it by
+    $a$ times as much. That's the $c \times x$ rule from chapter 02, once for each side.
 
-    What if both sides move at the same time, each by $h$? Picture a rectangle with sides $a$ and
+    What if both sides increase at the same time, each by $h$? Picture a rectangle with sides $a$ and
     $c$, like chapter 02's square. Growing both sides by $h$ adds a strip $c \times h$ along one side, a
     strip $a \times h$ along the other, and a tiny corner $h \times h$:
 
     > $$(a + h) \times (c + h) = a \times c + \boldsymbol{c \times h} + \boldsymbol{a \times h} + h \times h$$
 
+    Try concrete numbers to see this right away: let $a = 3$, $c = 5$, and $h = 0.01$. The original
+    area is $3 \times 5 = 15$; after growing both sides by $0.01$, it becomes
+    $3.01 \times 5.01 = 15.0801$. The extra $0.0801$ splits cleanly into three pieces:
+
+    - from $a$ growing: $5 \times 0.01 = 0.05$
+    - from $c$ growing: $3 \times 0.01 = 0.03$
+    - the tiny corner: $0.01 \times 0.01 = 0.0001$ (negligible compared to the strips, and vanishes as $h$ shrinks)
+
     The strip $c \times h$ is the effect through the first arrow (from $a$), and $a \times h$ is the effect
-    through the second arrow (from $c$). They sit side by side in the total, so they **add**. The
-    corner $h \times h$ is the usual leftover that vanishes as $h$ shrinks.
+    through the second arrow (from $c$). They sit side by side in the total, so they **add**.
 
     Now take $x \times x$: the **same** box feeds both sides, so $a$ and $c$ are both $x$ and both move
     together. The rule gives:
@@ -315,12 +343,15 @@ def _():
     > blame of $x$ = (through the first arrow) + (through the second arrow) = $x + x$ = **$2 \times x$**
 
     That's exactly the slope of $x \times x$ from chapter 02, as it must be: with $a = c = x$, this
-    rectangle *is* chapter 02's square. The general rule: when a value feeds several arrows, the
-    blames arriving through each of them add up.
+    rectangle *is* chapter 02's square. This gives the second core rule of backpropagation: **when a
+    value feeds several arrows, the blames arriving through each of them add up**.
 
     The same thing happens in Mia's full loss. The loss is the **mean** over 8 days, and `w` is
-    used on every day. So `w` collects blame from all 8 days, added up, then divided by 8 (the
-    mean divides by 8, and "c times a function" gives c times its slope). In short:
+    used on every day. So `w` collects blame from all 8 days, and those 8 blames add up to the
+    slope of the *total* loss. To take the mean, we then divide by 8 — and **dividing by 8 is the
+    same as multiplying by $\frac{1}{8}$**. By chapter 02's constant-multiple rule (multiplying a
+    function by $c$ multiplies its slope by $c$), the slope of the mean loss is $\frac{1}{8}$ of the
+    sum of the 8 daily slopes. In short:
 
     > $$\text{the slope of the mean loss} = \text{the mean of the slopes of each day}$$
 

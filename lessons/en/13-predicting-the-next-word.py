@@ -190,7 +190,8 @@ def _():
     ## The trouble with zero
 
     To turn a row of counts into chances, divide by the row's total. But any pair never seen in
-    training then gets a chance of exactly 0, and chapter 07's surprise, $-\log 0$, is infinite. One unseen pair
+    training then gets a chance of exactly 0. Remember chapter 07's surprise, $-\log p$: the smaller $p$ gets,
+    the larger the surprise, and as $p$ approaches $0$, $-\log p$ shoots off to $\infty$. One unseen pair
     in the test stories would make the whole score infinite, as if the model had called it impossible.
 
     The usual fix is to pretend every pair was seen a small number of extra times, $k$. This is called
@@ -239,7 +240,8 @@ def _():
     > `bigram_probs(np.array([[1.0, 3.0], [0.0, 0.0]]), 0.5)` gives `[[0.3, 0.7], [0.5, 0.5]]`
 
     The first row becomes $[1.5, 3.5]$, with total 5. The second row had no counts at all, and smoothing gives it equal chances.
-    You'll need one total per row, kept in a shape that divides row by row: chapter 07's `softmax` did the same.
+    To divide each row by its own total, sum across rows with `axis=1` and `keepdims=True` (just as in chapter 07's `softmax`):
+    keeping the column shape makes `(3, 2) / (3, 1)` divide row by row, whereas a flat `(3,)` would divide across columns instead.
     """)
     return
 
@@ -394,9 +396,18 @@ def _():
 
     > $$\text{perplexity} = e^{\text{mean surprise}}$$
 
-    Here's what that number means. Suppose a model knows nothing, and gives each of $N$ words the chance $1 / N$. Since $\log(1 / N) = \log 1 - \log N = -\log N$,
+    Even without memorising log rules, a four-row lookup shows what $e^{\square}$ turns surprise back into:
+
+    | Chance $p$ | Surprise $-\log p$ | $e^{-\log p} = 1 / p$ | Feels like |
+    |---|---|---|---|
+    | 1 | 0 | 1 | certain (1 choice) |
+    | 0.5 | 0.69 | 2 | guessing among 2 words |
+    | 0.1 | 2.30 | 10 | guessing among 10 words |
+    | 0.01 | 4.61 | 100 | guessing among 100 words |
+
+    In general, suppose a model knows nothing, and gives each of $N$ words the chance $1 / N$. Since $\log(1 / N) = \log 1 - \log N = -\log N$,
     every surprise is $\log N$, so the mean is $\log N$, and the perplexity is $e^{\log N} = N$. So
-    **a perplexity of N means the model is as unsure as if it were choosing among N equally likely words.**
+    **a perplexity of $N$ means the model is as unsure as if it were choosing among $N$ equally likely words.**
     A perfect model scores 1. Lower is better.
 
     ## By hand: a perplexity
@@ -485,7 +496,14 @@ def _():
     - **Know-nothing:** $1 / 2002$ for every word.
     - **Unigram:** just how common each word is, ignoring what came before. The total of row `a` of `C`
       counts how many times `a` was followed by something, which is how often `a` appears, so the row totals give what we need.
-    - **Bigram:** `P[test_ids[:-1], test_ids[1:]]` looks up one chance for each neighbouring pair of the test text.
+    - **Bigram:** `P[test_ids[:-1], test_ids[1:]]` looks up one chance for each neighbouring pair of the test text. Line the two slices up on a tiny `test_ids = [3, 7, 2, 9]` to see how they pair:
+
+      ```
+      test_ids[:-1]  =  [3, 7, 2]   # previous word (row)
+      test_ids[1:]   =  [7, 2, 9]   # next word (column)
+      ```
+
+      Reading down each column, `P[test_ids[:-1], test_ids[1:]]` pulls out `[P[3, 7], P[7, 2], P[2, 9]]`.
     """)
     return
 

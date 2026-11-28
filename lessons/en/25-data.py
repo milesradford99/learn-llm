@@ -28,8 +28,8 @@ def _():
     mo.md(r"""
     # 25 · Data
 
-    Every model in this course was trained on clean text: a few thousand stories, each one different, each one good English. Text gathered for a real model is nothing like that.
-    It's collected by programs that visit billions of web pages and keep whatever they find. The same article appears on a hundred sites. Every page carries menus and notices. A good share is not language at all.
+    Every model in this course was trained on clean text: a few thousand stories, each one different, each one well-written English. Text gathered for a real model is nothing like that.
+    It's collected by programs that crawl billions of web pages and keep whatever they find. The same article appears on a hundred sites. Every page carries navigation menus and notices. A good share is not real language at all.
 
     A model learns what it reads. Chapter 24 measured what more text buys. This chapter is about what the text is worth, and how to turn a raw pile into data worth training on, in three steps:
 
@@ -80,8 +80,8 @@ def _():
 
     To find copies, the obvious way is to compare every text with every other one. For 2,000 texts that's two million comparisons. For a billion pages it's out of the question.
 
-    The standard tool is a **hash function**: a fixed recipe that turns any text into a number. The same text always gives the same number. So instead of comparing texts, we work out each text's number once and look for numbers that appear twice.
-    Looking a number up in a set takes the same short time however big the set is (chapter 20).
+    The standard tool is a **hash function**: a fixed recipe that turns any text into a whole number (its **hash value**). The same text always produces the same hash value. So instead of comparing texts pair by pair, we compute each text's hash once and look for values we have already seen.
+    Checking whether a value is in a set takes the same short time no matter how big the set grows (chapter 20: a set stores items by hash, so it jumps straight to the right slot instead of scanning).
 
     ## By hand: a toy hash
 
@@ -109,7 +109,7 @@ def _(hash_boxes):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    `cab` and `abc` are different words with the same hash. That's a **collision**, and it's the price of squeezing a text into a number: there are more texts than numbers.
+    `cab` and `abc` are different words with the same hash. That's a **collision**, and it's the price of squeezing any text into a finite number: there are more possible texts than numbers.
     Our toy has two faults. It has only 10 possible answers, and it ignores the order of the letters. A real hash function mixes every byte with its position so thoroughly that changing one letter changes the whole number, and it has billions of possible answers.
     Two different texts then collide about once in four billion pairs. For cleaning data, that's good enough: now and then a good text is thrown out by mistake.
 
@@ -117,7 +117,8 @@ def _():
 
     /// admonition | 🧰 Toolbox: words, and a real hash
     - `text.split()` cuts a text at every run of spaces or line breaks and gives the pieces as a list: `"a  b\nc".split()` is `["a", "b", "c"]`.
-    - `zlib.crc32(data)` is a real hash function, the one that checks zip files. It takes bytes (chapter 19) and gives a whole number from 0 to about 4 billion: `zlib.crc32(b"hi")` is 3633523372. `zlib` is already loaded.
+    - `" ".join(words)` glues a list of strings back together with single spaces (chapter 12): `" ".join(["hi", "there"])` is `"hi there"`.
+    - `zlib.crc32(data)` is a real hash function, the one that checks zip files. It takes bytes (turn a string into bytes with `.encode("utf-8")`, chapter 19) and gives a whole number from 0 to about 4 billion: `zlib.crc32(b"hi")` is 3633523372. `zlib` is already loaded.
     ///
 
     ## Exercise 1: normalise
@@ -144,7 +145,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""Cut the lower-case text into words, then glue the words back together. Chapter 12 had the tool for gluing.""",
+        r"""Cut the lower-case text into words, then glue the words back together with `" ".join(...)` (from chapter 12).""",
         r"""It's one line: `" ".join(...)` around the list that `.split()` gives.""",
     ], LOCALE)
     return
@@ -277,7 +278,7 @@ def _():
     /// admonition | 🧰 Toolbox: more about sets
     - A set can be written with curly brackets: `{1, 2, 3}`. `set(a_list)` makes one from a list, dropping repeats.
     - `a & b` is the set of items in both, and `a | b` the set of items in at least one: `{1, 2, 3} & {2, 3, 4}` is `{2, 3}`, and `{1, 2, 3} | {2, 3, 4}` is `{1, 2, 3, 4}`. `len` counts a set's items.
-    - A list can't be put in a set, because it could change later. `tuple(a_list)` makes a fixed copy that can: `tuple(["a", "b"])` is `("a", "b")`.
+    - A list can't be put in a set because its contents can change later — if it changed, its hash would change too, and the set could no longer find it. `tuple(a_list)` makes a fixed copy that can go in a set: `tuple(["a", "b"])` is `("a", "b")`.
     ///
 
     ## Exercise 4: shingles
@@ -304,7 +305,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""A run of `n` words starting at position `i` is a slice (chapter 09). Where can the last run start? In the example, 4 words and runs of 2 give starts 0, 1 and 2.""",
+        r"""A run of `n` words starting at position `i` is a slice `words[i:i + n]` (chapter 09). Where can the last run start? In the example, 4 words and runs of 2 give starts 0, 1 and 2.""",
         r"""It's 1 to 4 lines. Either start from an empty set and `add` each `tuple(words[i:i + n])` in a loop over `range(len(words) - n + 1)`, or build the list of tuples in square brackets and wrap it in `set(...)`.""",
     ], LOCALE)
     return
@@ -348,17 +349,18 @@ def _():
     mo.md(r"""
     ## MinHash: a set in a few numbers
 
-    Jaccard brings back the problem we started with. It compares two texts, and there are too many pairs. Worse, each comparison now handles two whole sets of shingles. We'd like what the fingerprint gave us: a little to remember for each text, and a quick comparison.
+    Jaccard brings back the problem we started with. It compares two texts at a time, and there are too many pairs. Worse, each comparison now handles two whole sets of shingles. We'd like what the fingerprint gave us: a little to remember for each text, and a quick comparison.
 
-    Here's the idea, one of the neatest in computing. Hash every shingle of a set, and keep only the **smallest** hash. Call it the set's minimum. Now ask: when do two sets $A$ and $B$ have the same minimum?
+    Here's the idea, one of the neatest in computing. Hash every shingle of a set, and keep only the **smallest** hash — call it the set's minimum. Now ask: when do two sets $A$ and $B$ have the same minimum?
 
-    Look at all the shingles that are in at least one of the sets, and at the one among them with the smallest hash of all. A good hash scatters numbers as if at random, so each of those shingles is equally likely to be that one.
+    Think of it as a fair lottery. Suppose the union of $A$ and $B$ has 5 shingles in all: 3 shared by both sets, and 2 that belong to only one. A good hash scatters numbers as if at random, so picking the smallest hash is just like drawing 1 winning ticket at random from those 5 shingles:
 
-    - If that shingle is in **both** sets, it's the minimum of each: the two minimums are equal.
-    - If it's in only one set, that set's minimum is smaller than the other's: they differ.
+    - If the winner is one of the 3 **shared** shingles, both sets have it, so it is the smallest in each — the two minimums match.
+    - If the winner is one of the 2 **unshared** shingles, only one set has it, so that set's minimum is smaller than the other's — they differ.
 
-    So the chance that the two minimums are equal is the share of shingles that are in both: **exactly the Jaccard similarity**. One number per set answers "equal or not", which is a rough answer.
-    For a finer one, use many different hash functions and keep the minimum under each. That list is the set's **signature**, and the share of positions where two signatures agree is an estimate of the Jaccard similarity. This is **MinHash**.
+    So the chance that the two minimums match is $3 / 5$ — the share of all shingles that are in both sets, which is **exactly the Jaccard similarity**!
+
+    With just one hash function, each set gets one number, which only answers "match or not" — too rough an estimate. For a finer one, run many different hash functions and keep the minimum under each. That list of minimums is the set's **signature**, and the share of positions where two signatures agree estimates their Jaccard similarity. This is **MinHash**.
 
     ## By hand: three hash functions
 
@@ -513,8 +515,11 @@ def _():
     About 0.75 and 0.91. The estimate is rough: 32 numbers can only agree in steps of $\frac{1}{32}$, and luck decides each one, so being off by 0.1 is ordinary. It doesn't need to be exact.
     Two unrelated stories have a similarity under 0.01, and no amount of luck confuses 0.01 with 0.75.
 
-    The next cell goes through the texts in order and keeps one only if its signature agrees with no earlier kept one in half the positions or more. The line with `np.mean` is your `agreement`, done by NumPy against all the kept signatures at once:
-    `signatures[unique] == signatures[i]` compares each kept row with row `i`, and the mean along each row is the share that agrees.
+    The next cell walks through the texts in order and keeps a text only if its signature agrees with every earlier kept text in less than half the positions ($< 0.5$). The `np.mean` line does the same job as your `agreement`, except NumPy compares against all kept signatures at once using broadcasting:
+
+    - Suppose we have kept $k$ texts so far: `signatures[unique]` has shape `(k, 32)` (one 32-number row per kept text), while `signatures[i]` has shape `(32,)`;
+    - `signatures[unique] == signatures[i]` compares that `(32,)` row against every one of the $k$ rows element by element, giving a `(k, 32)` table of `True`/`False` values;
+    - averaging along each row (`axis=1`, where `True` counts as 1 and `False` as 0) gives all $k$ agreement shares in one shot.
     """)
     return
 
@@ -619,7 +624,7 @@ def _():
     We could now pick two thresholds by eye. But real piles need dozens of features, and nobody can tune dozens of thresholds by eye. Chapters 06 to 10 solved exactly this: let a **classifier** learn the rule from examples.
     Somebody reads a few hundred texts and labels each as good or junk, a classifier is trained on those, and it then judges the millions nobody will ever read. This is called a **quality classifier**.
 
-    Below, the first 200 texts play the labelled ones, with their labels taken from our planted answers: 1 for junk, 0 for a story. The model is chapter 10's smallest: one layer from the 2 features to 2 scores.
+    Below, the first 200 texts play the labelled ones, with their labels taken from our planted answers: 1 for junk, 0 for a story. The model is chapter 10's smallest: one linear layer (`nn.Linear(2, 2)`) mapping the 2 features to 2 scores.
     """)
     return
 
@@ -662,10 +667,10 @@ def _(guesses, labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Every piece of junk caught, no story lost: a precision and a recall of 1. Be suspicious of a result that clean. Our junk was planted, and planted junk is easy.
-    Real junk shades into real text: a page that's half advertisement, a text translated by a bad machine, a story that makes no sense. Real pipelines use the same method with larger classifiers and richer features.
-    One feature is a language model's own perplexity on the text, since text a model finds very surprising is often not language.
-    They also settle for a precision and a recall below 1, and choose which mistake costs more.
+    Every piece of junk caught, no story lost: both precision (what share of what it cut was real junk) and recall (what share of all real junk it caught) are 1. Be suspicious of a result that clean. Our junk was planted, and planted junk is easy to spot.
+    Real junk shades into real text: a page that's half advertisement, clunky machine-translated text, a story that makes no sense. Real pipelines use the same method with larger classifiers and richer features.
+    One feature is a language model's own perplexity on the text, since text a model finds very surprising is often not real language.
+    They also settle for precision and recall below 1, and choose which mistake costs more.
 
     Keep the texts the classifier calls good:
     """)

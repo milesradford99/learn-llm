@@ -41,8 +41,7 @@ def _():
     model which animal the story is about. It must work it out from clues like `barked` or `swam`. (Only those exact words are blanked, so a `dogs` can still slip through.)
 
     /// admonition | 🧰 Toolbox: choosing between two values
-    `a if test else b` is an expression: it gives `a` when the test holds, and `b` otherwise. It fits inside a list-building
-    expression, to choose each item: `[0 if x < 0 else x for x in [3, -1, 2]]` gives `[3, 0, 2]`.
+    `a if test else b` is an expression: it gives `a` when the test holds, and `b` otherwise. It fits inside a list comprehension (chapter 12), to choose each item: `[0 if x < 0 else x for x in [3, -1, 2]]` gives `[3, 0, 2]`.
     ///
 
     ## Exercise 1: blank_out
@@ -70,7 +69,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""One list-building expression over `ids`. Each item is either `blank` or the id itself, and the test is whether the id is `in hidden`.""",
+        r"""One list comprehension over `ids`. Each item is either `blank` or the id itself, and the test is whether the id is `in hidden`.""",
         r"""It's one line, shaped like the Toolbox example: `return [... if ... else ... for i in ids]`.""",
     ], LOCALE)
     return
@@ -441,7 +440,7 @@ def _():
     is the truth plus some luck, and we need to know how big the luck can be.
 
     Picture each story as a coin that lands "right" (1) with chance $p$, and otherwise "wrong" (0). One such result has variance
-    $p \times (1 - p)$, which you can take on trust. Chapter 09 gave two rules for the rest: variances add, so $n$ stories add up to variance $n \times p \times (1 - p)$; and dividing by $n$ to get the mean divides the variance by $n^2$. That leaves $p \times (1 - p) / n$, and its square root tells how far a measured score tends to stray from the truth.
+    $p \times (1 - p)$, which you can take on trust. Chapter 09 gave two rules for the rest: variances add, so $n$ stories add up to variance $n \times p \times (1 - p)$; and dividing by $n$ to get the mean divides the variance by $n^2$ (since variance squares the deviations, dividing by $n$ divides the squared deviations by $n^2$). That leaves $p \times (1 - p) / n$, and its square root tells how far a measured score tends to stray from the truth.
 
     Twice that size covers about 95% of cases, another fact to take on trust, so this is the usual **margin of error**:
 
@@ -517,7 +516,7 @@ def _():
     mo.md(r"""
     About 0.95, as promised: 19 scores in 20 fall within the margin, and 1 in 20 falls outside it.
 
-    For $p = 0.6$ and $n = 265$ the margin is about 0.06, or 6 points. When comparing two scores, each has its own noise, and by adding variances the margin for the difference is about 1.4 times bigger: about 8.5 points here. So two models at 58% and 61% on this test can't be told apart.
+    For $p = 0.6$ and $n = 265$ the margin is about 0.06, or 6 points. When comparing two scores, each has its own noise, so the margin for their difference is about 1.4 times bigger (adding two independent variances doubles the variance, and taking the square root scales the margin by $\sqrt{2} \approx 1.4$): about 8.5 points here. So two models at 58% and 61% on this test can't be told apart.
     """)
     return
 
@@ -580,7 +579,7 @@ def _():
     ## With no labels at all
 
     A language model can try this task without a single label. At each blank, ask for the chance of each of the four animals as the next word, add up
-    the logs across the story's blanks, and take the best. The cell shows the share correct, with its margin.
+    the logs across the story's blanks, and take the best. Two things to note in the code below: GPT predicts the word at position `t` from the previous position `t - 1`, so a blank at `t` reads `chances[t - 1]`; and adding log-probabilities across multiple blanks is the same as multiplying their probabilities (chapter 13). The cell after it shows the majority baseline, the share correct, and its margin.
     """)
     return
 
@@ -625,7 +624,7 @@ def _():
     | **frozen body** | pretrained, not trained | random start, trained |
     | **fine-tuned** | pretrained, trained gently | random start, trained |
 
-    To freeze a knob, set its `requires_grad` to `False` (chapter 10), so no blame reaches it and no optimizer moves it.
+    To freeze a knob, set its `requires_grad` to `False` (chapter 10's switch for whether PyTorch tracks gradients on a tensor), so no blame reaches it and no optimizer moves it.
 
     ## Exercise 6: freeze
 
@@ -845,7 +844,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""Start as `leaky_split` does, so you have the two parts. Then build the training list again, keeping only the texts that are `not in` the test part: chapter 12's list-building expression with an `if` at the end.""",
+        r"""Start as `leaky_split` does, so you have the two parts. Then build the training list again, keeping only the texts that are `not in` the test part: chapter 12's list comprehension with an `if` at the end.""",
         r"""It can be 4 lines: the cut, the test part, the filtered training part, and the `return`. The filter is `[t for t in ... if t not in test]`.""",
     ], LOCALE)
     return

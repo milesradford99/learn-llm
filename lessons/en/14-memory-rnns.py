@@ -33,14 +33,14 @@ def _():
     update what you have in mind. By the end of a paragraph you still know who it's about, without
     having stored any exact word sequence.
 
-    A **recurrent neural network** (RNN) does the same. It keeps a vector of numbers, its **memory**, and
+    A **recurrent neural network** (RNN) does the same. Now we're back to PyTorch and vectors: an RNN keeps a vector of numbers, its **memory**, and
     updates it with each word it reads. This chapter builds one, finds out why it forgets, and fixes that with the
     **LSTM**, the design that led language modelling through most of the 2010s.
 
-    ## A new bend: tanh
+    ## A new activation: tanh
 
-    Memory passes through the same step again and again, so it must not grow without limit. ReLU has no ceiling. For
-    memory we use a bend that squashes every number into the range −1 to 1. It's called **tanh** (say "tanch"):
+    Memory passes through the same step again and again, so its numbers must not grow without limit. ReLU (which turns negative numbers to 0 and leaves positive numbers alone) has no ceiling. For
+    memory we use an activation function that squashes every number into the range $-1$ to $1$: **tanh** (say "tanch"):
     """)
     return
 
@@ -56,7 +56,7 @@ def _():
 def _():
     mo.md(r"""
     What matters is its shape: close to $x$ near 0, and flattening out towards
-    +1 and −1 for large numbers. In PyTorch it's `torch.tanh`. Below, 0.1 stays at about 0.1, while 5 is squashed to almost 1:
+    $+1$ and $-1$ for large numbers. In PyTorch it's `torch.tanh`. Below, 0.1 stays at about 0.1, while 5 is squashed to almost 1:
     """)
     return
 
@@ -72,12 +72,14 @@ def _():
     mo.md(r"""
     ## One step of memory
 
-    Say $x$ is the vector of the current word (chapter 12's idea), and $h$ is the memory so far, of size $m$. The new memory combines the two:
+    Say $x$ is the vector of the current word (size $d$, from chapter 12's embeddings), and $h$ is the memory so far (size $m$). One recurrent step combines the two with matrix multiplication:
 
-    > $$\text{new } h = \tanh(x \cdot W_x + h \cdot W_h + b)$$
+    > $$\text{new } h = \tanh(x \times W_x + h \times W_h + b)$$
 
-    $W_x$ turns a word into memory-sized numbers, $W_h$ carries the old memory forward, and $b$ is the usual
-    bias. It's chapter 08's layer, with one twist: part of its input is its own previous output. "Recurrent" just means it comes back round.
+    Here $\times$ is matrix multiplication (`@` in PyTorch, not the dot product $\cdot$ from chapter 12): $W_x$ turns a word into memory-sized numbers, $W_h$ carries the old memory forward, and $b$ is the usual
+    bias. It's chapter 08's layer, with one twist: part of its input is its own previous output. "Recurrent" just means it loops back round.
+
+    A quick shape recap before writing PyTorch again: for a batch of texts, matrix multiplication matches the inner dimension—`(batch, d) @ (d, m)` gives `(batch, m)`, and `(batch, m) @ (m, m)` gives `(batch, m)`. Adding the bias `(m,)` broadcasts across every row in the batch, so the whole sum has shape `(batch, m)`.
 
     Here's the step used three times, to read `the dog ran`. The memory starts as zeros, and each arrow is the same step with the same knobs,
     fed a different word:
@@ -169,7 +171,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""It's chapter 08's layer with two inputs instead of one. The $\cdot$ between a batch and a matrix of knobs is `@`.""",
+        r"""It's chapter 08's layer with two inputs instead of one. Matrix multiplication ($\times$ in the formula) is `@` in PyTorch.""",
         r"""One line: a `return` with `torch.tanh` around the whole sum. The bias goes inside the tanh.""",
     ], LOCALE)
     return
@@ -396,11 +398,12 @@ def _():
 
     ## The LSTM: a memory with gates
 
-    The trouble is that the plain step *replaces* the memory every time, through a tanh. The **LSTM** ("long short-term memory")
-    keeps a second memory vector $c$, the **cell**, and changes it only by **adding**. That's chapter 11's $x + f(x)$:
-    addition keeps a clear road for blame. (The LSTM is the older idea: it dates from 1997.)
+    The trouble is that a plain step *overwrites* the memory every time, through a tanh. The **LSTM** ("long short-term memory")
+    splits the state into two vectors: think of $c$, the **cell**, as a **long-term notebook** (updated by adding and subtracting rather than rewriting the whole page),
+    and $h$ as the **short-term summary** handed to the next step. Updating $c$ by **adding** is chapter 11's residual connection $x + f(x)$:
+    because the derivative of addition is 1, blame (gradients) flows back along $c$'s addition highway without getting squashed by repeated multiplications. (The LSTM is actually the older idea: it dates from 1997.)
 
-    To control the cell it uses **gates**. A gate is a vector of numbers between 0 and 1, made with chapter 12's sigmoid,
+    To control the cell it uses **gates**. A gate is a vector of numbers between 0 and 1, made with chapter 12's sigmoid ($\sigma$),
     multiplied position by position with something else: 0 blocks, 1 lets through. There are three gates, and one more
     value, the candidate new content $n$. All four look at the same thing, the current word and the previous $h$ side by side,
     which we'll call "both". Each has its own layer of knobs:
@@ -533,8 +536,8 @@ def _():
     its forget gates sit near 0.5: at every word, the cell is cut roughly in half, and half of a half of a half soon fades to nothing.
 
     The difference is that an LSTM has a dial for this, and a plain RNN doesn't. A big bias in the forget gate makes $f$ close to 1. Let's set it by hand.
-    PyTorch stacks the four gates' biases in one vector. With 64 numbers per gate, the forget gate's are positions 64 to 127.
-    A bias of 3 gives $\sigma(3)$, about 0.95. (Storing into a knob must happen under `torch.no_grad()`, so it isn't written in the book.)
+    Inside `nn.LSTM`, PyTorch packs the four gates' biases end to end into one vector of length `4 * 64` in the order `i, f, g, o` (input, forget, candidate, output), so the second slice `[64:128]` belongs to the forget gate `f`.
+    A bias of 3 gives $\sigma(3) \approx 0.95$. (Storing into a knob must happen under `torch.no_grad()`, so PyTorch doesn't track it as a training step.)
     """)
     return
 
@@ -809,6 +812,12 @@ def _():
 
     Two words have the scores $[1, 0]$. Chapter 12 showed that with two scores, softmax gives the first one the share $\sigma$ of the
     gap between them, and here are three values: $\sigma(0.5) = 0.62$, $\sigma(1) = 0.73$, $\sigma(2) = 0.88$.
+
+    Before taking softmax, divide both scores by the temperature:
+    - at temperature `1`, the scores stay $[1, 0]$;
+    - dividing by temperature `0.5` doubles the scores to $[2, 0]$;
+    - dividing by temperature `2` halves the scores to $[0.5, 0]$.
+
     What's the first word's share at temperature 1? At temperature 0.5? At temperature 2?
     """)
     return
