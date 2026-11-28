@@ -86,7 +86,7 @@ def _():
       rows with a list is explained under Small batches.)
     - `np.sqrt` is the square root: `np.sqrt(9)` is 3, since $3 \times 3 = 9$.
     - `np.abs` removes minus signs: `np.abs(np.array([-2, 5]))` is `[2, 5]`. So `np.max(np.abs(W))`
-      is the size of the biggest number in `W`, whatever its sign.
+      is the largest absolute value in `W`, whatever its sign.
     ///
 
     ## How spread out? Variance
@@ -193,8 +193,9 @@ def _():
 
     **Why not zeros?** If every knob starts at 0, every hidden detector computes exactly the same
     thing (all zeros), receives exactly the same blame, and gets exactly the same update. They
-    stay identical forever. Worse: with `W2` at 0 too, chapter 08's `dH = G @ W2.T` is all zeros,
-    so no blame reaches `W1` at all. Think of 64 workers who start in the same place, get the
+    stay identical forever. Worse: during backpropagation, the hidden layer's blame is chapter 08's
+    `dH = G @ W2.T` (where `G` is the output error). With `W2` at 0 too, `dH` is all zeros, so no
+    gradient reaches `W1` or `b1` at all. Think of 64 workers who start in the same place, get the
     same instructions and are given the same corrections: they'll never end up doing different
     jobs. The cell below trains a network started at zero for 100
     steps:
@@ -216,7 +217,7 @@ def _(X, X_test, Y, test_labels):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    The largest first-layer knob is still exactly 0 (`np.max(np.abs(...))` is the biggest size), and the test accuracy is about 12%: only `b2`,
+    The largest first-layer knob is still exactly 0 (`np.max(np.abs(...))` is the largest absolute value), and the test accuracy is about 12%: only `b2`,
     the scores' starting heights, learned (no blame reaches `b1` either), so it answers the same digit for every picture, about as good as guessing. Random starting knobs break the tie: every detector starts out different.
 
     **How big?** Look at one detector's sum for one picture, $z = w_0 \times x_0 + w_1 \times x_1 + \ldots$ over
@@ -224,8 +225,9 @@ def _():
     typical size 0.05, variance $0.05^2$). The knobs are **independent**: each is drawn on its own,
     without looking at the others. A useful fact about sums of independent random parts: **their
     variances add**. Each part $w \times x$ (the picture is fixed; only the knobs are random)
-    has variance $s^2 \times x^2$ (scaling a random number by $x$
-    scales its spread by $x$, so the variance by $x^2$).
+    has variance $s^2 \times x^2$: scaling a random number by $x$ scales its spread by $x$, so the
+    variance scales by $x^2$. Check it in two seconds: take `[-1, +1]` (variance 1), multiply each
+    number by 3 to get `[-3, +3]`, square them to get `[9, 9]`, and the variance becomes $9 = 3^2$.
 
     "Variances add" sounds abstract, so check it on the smallest example: coins. A coin is worth
     $+1$ for heads and $-1$ for tails. One coin has mean 0 and variance
@@ -301,8 +303,10 @@ def _():
     About 0.14 measured, 0.135 predicted: the rule holds (the small difference is the luck of
     2,000 draws). Then the bend. The `z`s are centred on 0 (each knob is as
     likely to be + as −), so about half of them are negative, and their mean square is their
-    variance. ReLU sets the negative half to 0 and keeps the positive half, so the mean of the
-    squares should be cut in half:
+    variance. Once ReLU sets the negative half to 0, the mean is no longer 0 (so strictly
+    speaking the mean square is no longer the variance), but what we care about is the signal's
+    overall magnitude (the mean of the squares)—and zeroing out half the values cuts it right in
+    half:
     """)
     return
 
@@ -543,8 +547,9 @@ def _():
 def _():
     mo.md(r"""
     Here is a full training function built from these pieces. It starts with He sizes, and for
-    each epoch takes one step per batch. (Ignore `decay` for now; it's 0 until the last section.
-    `len(X)` on a matrix is its number of rows.)
+    each epoch takes one step per batch. (Ignore `decay * W1` and `decay * W2` for now—`decay`
+    is explained in the final section and defaults to 0 until then. Also, `len(X)` on a matrix
+    is its number of rows.)
 
     The cell after it trains for 5 epochs and times it with `time.perf_counter()`, a clock in
     seconds.
@@ -619,9 +624,11 @@ def _():
 
     ## Momentum: remember the direction
 
-    Back to chapter 02's problem. On Mia's raw temperatures the slope for `w` is huge (each error is
-    multiplied by the temperature, which is in the tens) and the slope for `b` is small, so a learning rate small enough for `w` makes
-    `b` crawl. Let's pack both knobs into one vector `k = [w, b]` and watch plain steps from
+    Back to chapter 02's problem. Recall Mia's ice-cream shop: we fit a line `w * temp + b` to
+    predict sales from temperature, and the best line is around $w \approx 11.9, b \approx -107$.
+    On Mia's raw temperatures the slope for `w` is huge (each error is multiplied by the temperature,
+    which is in the tens) and the slope for `b` is small, so a learning rate small enough for `w`
+    makes `b` crawl. Let's pack both knobs into one vector `k = [w, b]` and watch plain steps from
     chapter 02's start, `[6, 0]`, at about the largest learning rate that doesn't blow up (0.0016):
     """)
     return
@@ -784,11 +791,14 @@ def _():
     1.0; on the way there, $b$ passes about −42 at step 100 and −99 at step 300. That is exactly what we did by hand when we rescaled temperatures in chapters 04 and
     05, now done automatically, knob by knob.
 
-    One detail: both averages start at 0, so in the first steps they're too small (after one step
-    the average slope is only $0.1 \times \text{slope}$). Adam corrects this by dividing by $1 - 0.9^t$ and
-    $1 - 0.999^t$ (in code, powers are `**`: `0.9 ** t`), where $t$ counts the steps from 1: after step 1 that divides by 0.1 and 0.001,
-    which undoes the shrinking exactly; as $t$ grows, the correction fades to dividing by 1. (The
-    `1e-8`, that is 0.00000001, is there so we never divide by zero.)
+    One detail: both averages start at 0, so in the first steps they're too small. Suppose the
+    slope is $g$ at every step: after step 1, $m_1 = 0.1g = (1 - 0.9^1)g$; after step 2,
+    $m_2 = 0.9 \times 0.1g + 0.1g = 0.19g = (1 - 0.9^2)g$. You can see the pattern right away: at
+    step $t$, $m$ is shrunk by a factor of $1 - 0.9^t$. Adam corrects this by dividing by
+    $1 - 0.9^t$ and $1 - 0.999^t$ (in code, powers are `**`: `0.9 ** t`), where $t$ counts the
+    steps from 1. That undoes the cold start exactly; as $t$ grows, $0.9^t$ shrinks towards 0 and
+    the correction fades to dividing by 1. (The `1e-8`, that is 0.00000001, is there so we never
+    divide by zero.)
     """)
     return
 

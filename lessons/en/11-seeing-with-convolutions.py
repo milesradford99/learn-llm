@@ -179,10 +179,13 @@ def _():
 
     Slide it one step right (columns 1–3): $(-1 \times 0) + (0 \times 1) + (1 \times 1) = 1$ in each row, again **3**.
 
-    A patch of only 0s, or only 1s, would give 0, since the −1s and +1s cancel. So
+    A patch of only 0s, or only 1s, would give 0, since the $-1$s and $+1$s cancel. So
     the result is big exactly where the numbers change from left to right: this kernel is a
     **vertical edge detector**. A $3 \times 3$ kernel fits in 2 positions across and 2 down on a $4 \times 4$ picture,
-    so the output is $2 \times 2$. In general, a picture of height $h$ gives $h - k + 1$ rows for a kernel of size $k$.
+    so the output is $2 \times 2$. Why 2? On a row of width 4, a kernel of width 3 can only place its left edge
+    at column 0 (covering columns 0–2) or column 1 (covering columns 1–3) — counting from 0 up to
+    $4 - 3 = 1$ gives $1 + 1 = 2$ positions. In general, a picture of height $h$ gives $h - k + 1$ rows
+    for a kernel of size $k$ (and width $w$ gives $w - k + 1$ columns).
     """)
     return
 
@@ -417,10 +420,11 @@ def _():
 
     /// admonition | 🧰 Toolbox: convolution, ready-made
     In PyTorch, a convolution with a kernel of knobs is the layer `nn.Conv2d(1, 1, 3)`, read as
-    "1 map in, 1 map out, kernel size 3". Pictures must arrive with a shape of four numbers:
-    **(pictures, maps, height, width)**. The extra number is how many maps each picture has. A grey
-    digit has one map. `X.unsqueeze(1)` inserts a new dimension of size 1 at position 1, so
-    `(10000, 40, 40)` becomes `(10000, 1, 40, 40)`.
+    "1 input channel, 1 output channel, kernel size 3". Pictures must arrive with a 4D shape:
+    **(pictures, channels, height, width)**. A **channel** is one 2D grid (one feature map) per
+    picture: a greyscale digit has 1 channel, and when a convolution layer produces 8 feature maps,
+    the next layer receives 8 channels. `X.unsqueeze(1)` inserts a new dimension of size 1 at
+    position 1, turning `(10000, 40, 40)` into `(10000, 1, 40, 40)`.
     ///
 
     To be sure PyTorch does what you just wrote, let's load your kernel into its layer and
@@ -446,18 +450,33 @@ def _():
     The shape ends in $26 \times 26$, as our formula says ($28 - 3 + 1$), and the second number is the largest
     difference from your map: 0, or as near as rounding allows. Two more pieces, and we can build a network.
 
-    **Many kernels.** One layer learns many kernels at once, each giving its own map.
-    `nn.Conv2d(1, 8, 3)` has 8 kernels and turns 1 map into 8. The next layer takes those 8 maps
-    in: `nn.Conv2d(8, 16, 3)` has 16 kernels of size $3 \times 3 \times 8$, each looking at the same small patch across all 8 maps. That's how a later kernel can
-    say "a vertical edge just left of a horizontal edge". Counting knobs: each of the 16 kernels has
-    $3 \times 3 \times 8 = 72$ weights and 1 bias, so $16 \times 73 = 1{,}168$.
+    **Many channels, many kernels.** One layer learns many kernels at once, each producing its own
+    output channel (feature map). `nn.Conv2d(1, 8, 3)` has 8 kernels and turns 1 input channel into
+    8 output channels.
 
-    **Keeping the size.** `padding=1` adds a one-pixel margin of zeros around the map first, so a
+    What happens when the next layer, `nn.Conv2d(8, 16, 3)`, takes those 8 channels in? Imagine the
+    8 channels as 8 transparent sheets stacked directly on top of one another. The 1st kernel is not
+    a single flat $3 \times 3$ grid — it is a **stack of 8 slices**, each $3 \times 3$ (so
+    $8 \times 3 \times 3 = 72$ weights in all). At any single position, it lays its 8 slices over
+    the same $3 \times 3$ patch across all 8 input channels, computes the dot product on each slice,
+    and **adds all 8 results together into a single number** (plus 1 bias). That one number goes
+    into 1 cell of the 1st output feature map. Because the layer has **16** such 8-slice kernels,
+    it produces **16** output channels — and that's how a later kernel can say "a vertical edge just
+    left of a horizontal edge".
+
+    | piece in `nn.Conv2d(8, 16, 3)` | shape | what it means |
+    |---|---|---|
+    | input (one picture) | `(8, H, W)` | 8 stacked feature maps (8 channels) from the previous layer |
+    | 1 kernel | `(8, 3, 3)` + 1 bias | 8 slices of $3 \times 3$, summed into 1 output cell ($72 + 1 = 73$ knobs) |
+    | all 16 kernels (`weight`) | `(16, 8, 3, 3)` + 16 biases | 16 independent kernels ($16 \times 73 = 1{,}168$ knobs total) |
+    | output (one picture) | `(16, H', W')` | 16 new feature maps (16 channels), one per kernel |
+
+    **Keeping the size.** `padding=1` adds a one-pixel margin of zeros around each channel first, so a
     $3 \times 3$ kernel gives an output of the same height and width as its input, and only pooling shrinks it.
 
     And for the end of the network, `nn.AdaptiveMaxPool2d(1)` keeps just the single largest number of
-    each whole map, whatever its size. It answers "was this feature anywhere in the picture?"
-    After it, the 32 maps have become 32 numbers (`nn.Flatten()` tidies the shape), which a final
+    each whole channel, whatever its size. It answers "was this feature anywhere in the picture?"
+    After it, the 32 channels have become 32 numbers (`nn.Flatten()` tidies the shape), which a final
     `nn.Linear` turns into 10 scores. Since almost nothing about the position survives, a digit
     scores nearly the same wherever it is. (`nn.MaxPool2d(2)`, in the list below, is the $2 \times 2$ pooling you just wrote.)
     """)
@@ -473,30 +492,30 @@ def _():
 
     | stage | what it does |
     |---|---|
-    | 1 | a convolution from 1 map to 8 maps, a bend, $2 \times 2$ max pooling |
-    | 2 | a convolution from 8 maps to 16, a bend, $2 \times 2$ max pooling |
-    | 3 | a convolution from 16 maps to 32, a bend |
-    | 4 | the largest number of each whole map, flatten, a linear layer from 32 numbers to 10 scores |
+    | 1 | a convolution from 1 channel to 8 channels, a bend, $2 \times 2$ max pooling |
+    | 2 | a convolution from 8 channels to 16, a bend, $2 \times 2$ max pooling |
+    | 3 | a convolution from 16 channels to 32, a bend |
+    | 4 | the largest number of each whole channel, flatten, a linear layer from 32 numbers to 10 scores |
 
     Every convolution has $3 \times 3$ kernels and `padding=1`, so it keeps the height and width.
 
     ## By hand: follow one picture
 
-    One picture goes in with shape `(1, 40, 40)`: 1 map, 40 high, 40 wide. Fill in what comes out of stage 1 and stage 2. Then count the knobs of the first and the last convolution, the way the text counted 1,168 for the middle one.
+    One picture goes in with shape `(1, 40, 40)`: 1 channel, 40 high, 40 wide. Fill in what comes out of stage 1 and stage 2. Then count the knobs of the first and the last convolution, the way the table counted 1,168 for the middle one.
     """)
     return
 
 
 @app.cell(hide_code=True)
 def _():
-    stage_boxes = hand.boxes(['stage 1: maps', 'stage 1: height', 'stage 2: height', 'knobs, first convolution', 'knobs, last convolution'])
+    stage_boxes = hand.boxes(['stage 1: channels', 'stage 1: height', 'stage 2: height', 'knobs, first convolution', 'knobs, last convolution'])
     return (stage_boxes,)
 
 
 @app.cell(hide_code=True)
 def _(stage_boxes):
-    hand.marked(stage_boxes, {'stage 1: maps': 8, 'stage 1: height': 20, 'stage 2: height': 10, 'knobs, first convolution': 80, 'knobs, last convolution': 4640}, {
-        'stage 1: maps': r"""the convolution of stage 1 gives 8 maps, and pooling doesn't change the number of maps""",
+    hand.marked(stage_boxes, {'stage 1: channels': 8, 'stage 1: height': 20, 'stage 2: height': 10, 'knobs, first convolution': 80, 'knobs, last convolution': 4640}, {
+        'stage 1: channels': r"""the convolution of stage 1 gives 8 channels, and pooling doesn't change the number of channels""",
         'stage 1: height': r"""padding keeps 40, then pooling halves it""",
         'stage 2: height': r"""halved once more""",
         'knobs, first convolution': r"""8 kernels, each with $3 \times 3 \times 1$ weights and 1 bias""",
@@ -511,7 +530,7 @@ def _():
     ## Exercise 3: make_cnn
 
     Write `make_cnn()`, giving back the network of the table as one `nn.Sequential`. It has 11 layers, and all of them appeared in the text above:
-    `nn.Conv2d` with its two numbers of maps, the kernel size and `padding=1`; `nn.ReLU()`; `nn.MaxPool2d(2)`; `nn.AdaptiveMaxPool2d(1)`; `nn.Flatten()`; `nn.Linear`.
+    `nn.Conv2d` with its input and output channel counts, the kernel size and `padding=1`; `nn.ReLU()`; `nn.MaxPool2d(2)`; `nn.AdaptiveMaxPool2d(1)`; `nn.Flatten()`; `nn.Linear`.
 
     Put one stage on each line, with a comma after every layer.
     """)
@@ -533,8 +552,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""Stage 1 is `nn.Conv2d(1, 8, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),`. Stages 2 and 3 follow the same pattern with other numbers of maps, and stage 3 has no pooling.""",
-        r"""Each convolution's maps in must equal the previous one's maps out: 1 to 8, 8 to 16, 16 to 32. The last three layers are `nn.AdaptiveMaxPool2d(1)`, `nn.Flatten()` and `nn.Linear(32, 10)`.""",
+        r"""Stage 1 is `nn.Conv2d(1, 8, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),`. Stages 2 and 3 follow the same pattern with different channel counts, and stage 3 has no pooling.""",
+        r"""Each convolution's input channels must equal the previous one's output channels: 1 to 8, 8 to 16, 16 to 32. The last three layers are `nn.AdaptiveMaxPool2d(1)`, `nn.Flatten()` and `nn.Linear(32, 10)`.""",
     ], LOCALE)
     return
 
@@ -577,8 +596,10 @@ def _():
     The training and test scores are now close together: there's little memorising going on,
     because each knob is reused at every position and has to be useful everywhere.
 
-    Below, once training is done, are the 8 kernels of the first layer. Nobody told it about edges, but several of
-    them compare one side with the other, as your hand-made one does:
+    Below, once training is done, are the 8 kernels of the first layer (`cnn[0].weight` has shape
+    `(8, 1, 3, 3)` — 8 output channels, 1 input channel, $3 \times 3$; `[:, 0]` selects the
+    $3 \times 3$ kernel for input channel 0 of each output channel). Nobody told it about edges,
+    but several of them compare one side with the other, as your hand-made one does:
     """)
     return
 
@@ -601,18 +622,19 @@ def _():
     If those multiplications tend to shrink it, then the blame fades away, the same fading you saw
     in chapter 09's table.
 
-    The fix is almost too simple. Instead of a block that replaces its input,
+    The fix is almost too simple. A plain block replaces its input with a new output:
 
     > `out = f(x)`
 
-    use a block that **adds** to it:
+    Instead, use a block that **adds** to its input:
 
     > `out = x + f(x)`
 
     `f` now only has to learn a *correction* to `x`, called a **residual**. Look at the slope. By
-    chapter 02's sum rule, the slope of `x + f(x)` is `1 + f'`, where `f'` is the slope of `f`. Even when
-    `f'` is tiny, the slope stays near 1, so blame passes through the block nearly undimmed. The
-    `x +` is a direct road for the blame, which is often called a **skip connection**.
+    chapter 02's sum rule, the slope of $x + f(x)$ is $1 + f'$ (here $f'$ is mathematical shorthand
+    for the slope of $f(x)$). Even when $f'$ is tiny, the slope stays near 1, so blame passes
+    through the block nearly undimmed. The `x +` is a direct road for the blame, which is often
+    called a **skip connection**.
     """)
     return
 
@@ -719,17 +741,17 @@ def _():
 def _():
     mo.md(r"""
     /// admonition | 🧰 Toolbox: a layer of your own
-    - `class Block(nn.Module):` means "a `Block` is a kind of `nn.Module`", PyTorch's kind of layer. It
-      inherits everything a layer can do. That's why PyTorch can find the knobs of a `Block`.
-    - `super().__init__()` runs `nn.Module`'s own setup first. It's always the first line.
+    - Quick recap of `class` (chapter 04): `__init__` runs automatically when an object is created, and `self.xxx` attaches data to that object itself.
+    - `class Block(nn.Module):` says that `Block` is a kind of `nn.Module`, PyTorch's base type for layers. Building on `nn.Module` is how PyTorch automatically finds all the knobs inside a `Block`.
+    - `super().__init__()` runs `nn.Module`'s own setup first. It always goes on the first line.
     - `forward` is the calculation. Calling `block(x)` runs `block.forward(x)`, which explains
       how `layer(X)` worked in chapter 10.
     ///
 
-    In this `Block`, `step` is a function kept in a slot (chapter 02: functions are values), so the same class can
-      run your `residual_block`, or `plain_block`, which does the same work without the `x +`.
+    In this `Block`, `step` is a function stored on the object (chapter 02: functions are values), so the same class can
+    run your `residual_block`, or `plain_block`, which does the same work without the `x +`.
 
-    `deep_model(blocks, step)` stacks that many blocks, two convolutions each. To compare fairly,
+    `deep_model(blocks, step)` stacks `blocks` copies of `Block` in a row, two convolutions each. To compare fairly,
     we use the same network, the same pictures and one backward pass, and look at how much blame reaches the
     very first layer: the mean size of its slopes, with 10 blocks:
     """)
@@ -830,7 +852,7 @@ def _():
     <!-- go-deeper -->
     **Go deeper (optional):** mathematicians would call what we computed a *cross-correlation*; a true
     convolution flips the kernel first, a difference that doesn't matter when kernels are learned.
-    Real ResNets also use *batch normalisation*, and colour pictures start with 3 maps (red, green,
+    Real ResNets also use *batch normalisation*, and colour pictures start with 3 channels (red, green,
     blue). The standard practice sets for this chapter's ideas are *CIFAR-10* and *ImageNet*, and
     the original paper is *Deep Residual Learning for Image Recognition* (He et al., 2015): the
     same He as chapter 09's start.
