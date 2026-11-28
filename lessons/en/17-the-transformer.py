@@ -102,7 +102,7 @@ def _():
     a second `nn.Embedding`, with one learned vector for each **position**. Position 0 has a vector,
     position 1 has another, and so on. Add it to the word's vector, and the same word at two different places no longer has the same vector.
 
-    It also sets a limit. A table with 32 positions has nothing to say about position 33, so our model can see only the latest 32 words.
+    It also sets a limit. A table with 32 rows covers positions 0 to 31, so a 33rd word (index 32) is out of range—our model can see at most the latest 32 words at once.
     (Chapter 20 shows a smarter way.)
 
     ## Exercise 1: embed
@@ -258,16 +258,16 @@ def _():
     mo.md(r"""
     ## Piece 3: the block
 
-    Attention lets words talk to each other. Then each word needs time to think about what it heard. So a **block** has two
-    parts: a self-attention layer, and after it a small network from chapter 08, applied to each word separately, with a hidden layer four times as wide.
+    Self-attention lets words exchange information with one another. Next, each word's vector is processed on its own by a small two-layer network from chapter 08
+    (`Linear -> ReLU -> Linear`), with a hidden layer four times as wide. Together, these two parts form a **block**.
 
-    Both parts sit on chapter 11's road for blame, `x + f(x)`, with the normalising done just before each part:
+    Both parts sit on chapter 11's residual road, `x + f(x)`, with layer normalisation done just before each part:
 
     > $$x \leftarrow x + \text{attention}(\text{norm}_1(x))$$
 
     > $$x \leftarrow x + \text{think}(\text{norm}_2(x))$$
 
-    The arrow means "`x` becomes". Here is the same thing as a picture. The blue roads carry `x` past each part, untouched, and each part only adds its contribution.
+    The arrow means "`x` becomes". Notice that you add back the original `x` *before* normalisation—don't overwrite `x` with `norm1(x)` first (`norm1(x)` only feeds into `attention`, while the main road carries `x` untouched). Here is the same flow as a picture: the blue roads carry `x` past each part, and each part only adds its contribution.
     """)
     return
 
@@ -412,8 +412,8 @@ def _(SelfAttention):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Here are the block and the model as PyTorch modules. Each holds its layers, and each `forward` is one of your functions.
-    `[Block(d, heads) for i in range(layers)]` builds the blocks, and the `*` in front hands them to `nn.Sequential` one by one (chapter 09).
+    Above are the block and the model as PyTorch modules. Each holds its layers, and each `forward` calls one of your functions.
+    `[Block(d, heads) for i in range(layers)]` builds a list of blocks, and the `*` in front unpacks that list into separate arguments for `nn.Sequential`—just as `f(*[a, b])` is the same as `f(a, b)`.
 
     ## By hand: where the knobs are
 
@@ -459,7 +459,7 @@ def _(TinyGPT):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    1,066. Your four parts make 754 of them. The rest are the attention layer (three matrices of $8 \times 8$, and `mix` with 72) and three normalisations with 16 knobs each.
+    1,066. Your four parts make 754 of them. The rest are the attention layer (three bias-free $8 \times 8$ matrices, plus `mix` with 72) and three layer norms with 16 knobs each (one scale and one shift for each of the 8 dimensions).
 
     Keep an eye on the two tables with one row per vocabulary word, the word table and `out`. In the small model they hold 170 of 1,066 knobs.
     With a real vocabulary they become the biggest parts of the model, as you'll see in a moment.
@@ -706,7 +706,7 @@ def _(index, model):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    (This is the first of the 4 heads.) Each row adds up to 1. Don't expect each head to mean something tidy: patterns like these are often hard to read, and that's normal.
+    (This is the first of the 4 heads.) Each row adds up to 1. Don't expect each head to mean something tidy: learned attention patterns like these are often hard to interpret, and that's normal.
 
     ## What's next
 
