@@ -30,7 +30,7 @@ def _():
     Part 4 is about the other half of a model's life: **serving** it, which means running a finished model for the people who use it, quickly and cheaply.
 
     This chapter starts with the plainest form of serving. You'll take a real model, published by the laboratory that trained it, and run it with code you wrote. Not with a library that hides it: you'll open the file, read the numbers out of it yourself,
-    and feed them through chapter 20's `rms_norm`, `rope`, `swiglu` and `attend`. If the course has done its job, it will answer you.
+    and feed them through chapter 20's `rms_norm`, `rope`, `swiglu` and `attend`. If everything we've built holds up, it will answer you.
 
     The model is **Qwen3-0.6B**, from Alibaba's Qwen team: about 600 million knobs, small for a published model and five hundred times bigger than yours.
 
@@ -38,16 +38,20 @@ def _():
 
     Training ends with a set of knobs, and chapter 21 saved them with `torch.save`. To publish a model, a laboratory puts the knobs in a file and anyone can download it. People call the knobs of a finished model its **weights**, and the file a **weight file**.
 
-    The usual format is called *safetensors*, and it's simple enough to read by hand. The file has three parts, one after another:
+    The usual format is called *safetensors*, and it's simple enough to read by hand. The file has three parts, laid out one after another:
 
     1. **8 bytes** that hold one whole number, $n$;
     2. **a header** of $n$ bytes: text that lists every tensor in the file with its name, its kind of number, its shape, and where its bytes are;
     3. **the data**: the numbers of all the tensors, one tensor after another, with nothing between them.
 
+    ```
+    [0..7: length n] | [8..8+n-1: JSON header] | [8+n..: tensor data (data_offsets start at 0 here)]
+    ```
+
     ## Bytes into a number
 
     Chapter 19 said a byte is a whole number from 0 to 255. Bigger numbers take several bytes, read like the digits of a number, except that each place is worth 256 times the one before instead of 10 times.
-    And in nearly all files today the **first** byte is the smallest place, an order called **little-endian**. So the bytes 5, 2 mean $5 + 2 \times 256 = 517$.
+    And in nearly all files today the **first** byte is the smallest place, an order called **little-endian**. So the two bytes 5, 2 mean $5 + 2 \times 256 = 517$. Any further bytes are multiplied by $256^2, 256^3, \dots$ in turn—and any byte that is 0 adds nothing to the total.
 
     ## By hand: read a length
 
@@ -119,11 +123,11 @@ def _():
     {"gain": {"dtype": "BF16", "shape": [3], "data_offsets": [0, 6]}}
     ```
 
-    One entry per tensor. `dtype` is the kind of number, `shape` is the shape, and `data_offsets` says where the tensor's bytes start and stop, **counted from the beginning of the data part**, not of the file.
+    One entry per tensor. `dtype` is the kind of number, `shape` is the shape, and `data_offsets` says where the tensor's bytes start and stop—half-open like a Python slice, so `[0, 6]` covers bytes 0 through 5 (not including 6), **counted from the beginning of the data part**, not of the file.
     The data part begins right after the header, at byte $8 + n$ of the file.
 
     /// admonition | 🧰 Toolbox: reading a file
-    - `with open(path, "rb") as f:` opens a file for reading bytes (`"rb"`: read, binary). The indented lines can use `f`, and the file is closed when they end.
+    - `with open(path, "rb") as f:` opens a file for reading bytes (`"rb"`: read, binary). The indented block can use `f`, and the file closes automatically when the block ends.
     - `f.read(4)` gives the next 4 bytes and moves on: a second `f.read(4)` gives the 4 after those.
     - `f.seek(100)` jumps to byte 100 of the file, so that the next `read` starts there.
     - `json.loads(data)` turns JSON text, or its bytes, into Python dictionaries and lists: `json.loads('{"a": [1, 2]}')` is `{"a": [1, 2]}`. `json` is already loaded.
@@ -180,14 +184,14 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Four small whole numbers, or two larger ones ($128 + 63 \times 256 = 16256$), or the single number 1.0 in chapter 10's 32-bit format. Read with the wrong dtype, a weight file is noise. That's why every entry of the header names its dtype.
+    Four small whole numbers, or two larger ones (the first two bytes `[0, 0]` give `0`, and `[128, 63]` gives $128 + 63 \times 256 = 16256$), or the single number 1.0 in chapter 10's 32-bit format. Read with the wrong dtype, a weight file is noise. That's why every entry of the header names its dtype.
 
     Weight files have their own short names for dtypes, and `TYPES` translates them to PyTorch's: `TYPES["F32"]` is `torch.float32`, and `TYPES["BF16"]` is `torch.bfloat16`, chapter 22's 16-bit format with float32's range.
     Models are published in 16 bits to halve the download. Chapter 22 also measured that a CPU computes slowly in 16 bits, so we'll turn everything into 32 bits as we read it.
 
     ## By hand: find a tensor
 
-    A file's first 8 bytes say 100. Its header has the entry `{"dtype": "BF16", "shape": [2, 2], "data_offsets": [40, 48]}`. At which byte of the file does this tensor start? How many bytes does it take? And how many bytes is that for each of its numbers?
+    A file's first 8 bytes say 100. Its header has the entry `{"dtype": "BF16", "shape": [2, 2], "data_offsets": [40, 48]}` (half-open like a Python slice, so it stops before byte 48). At which byte of the file does this tensor start? How many bytes does it take? And how many bytes is that for each of its numbers?
     """)
     return
 
@@ -352,7 +356,8 @@ def _():
 
     ## New thing 2: heads that share
 
-    Look at the shapes the header gave. In your model every head had its own queries, keys and values. Here the query matrix makes $16 \times 128 = 2048$ numbers per token: 16 heads of 128. But the key and value matrices make only $8 \times 128 = 1024$: **8 heads**.
+    Look at the shapes the header gave. Notice a difference from the model you built earlier: there, the number of heads times the size per head equaled `hidden_size`. Qwen3 instead widens its 16 query heads to $16 \times 128 = 2048$ (double `hidden_size = 1024`), and then projects back down to 1,024 with the `out` matrix at the end of attention.
+    Meanwhile, the key and value matrices make only $8 \times 128 = 1024$ numbers per token: **8 heads**.
 
     The 16 query heads share the 8 key and value heads in pairs: query heads 0 and 1 both look at key head 0, query heads 2 and 3 at key head 1, and so on. This is **grouped-query attention**, GQA.
     It was found that models lose very little this way. What it saves matters less here than in the next chapter, where the keys and values of everything read so far are kept in memory.
@@ -430,7 +435,9 @@ def _():
 
     **From earlier chapters.** The folded cells below hold chapter 20's `rms_norm`, `rope` and `attend`. `rope` now takes the base of its speeds as an input, because Qwen uses 1,000,000, which suits longer texts, where we used 10,000.
 
-    Then comes one block and the whole model. `layer_knobs(knobs, i)` picks block `i`'s eleven tensors out of `knobs` and gives them short names. Where your earlier models called an `nn.Linear`, this code multiplies by the matrix itself: `y @ L["q"].T`, which is all an `nn.Linear` without a bias does (chapter 10).
+    Then comes one block and the whole model. `layer_knobs(knobs, i)` picks block `i`'s eleven tensors out of `knobs` and gives them short names. Remember chapter 10's convention: weight matrices are stored with shape `(out_size, in_size)`, so multiplying an input on the right needs `.T`—`y @ L["q"].T` is all an `nn.Linear` without a bias does.
+
+    Following the shapes through `block`: input `x` enters with shape `(1, words, 1024)`; projecting queries and splitting into 16 heads gives `(1, 16, words, 128)` (`rms_norm` always normalizes along the last dimension, so calling it on `q` and `k` normalizes each head's 128 numbers); after attention, the 16 heads merge into `(1, words, 2048)`, and multiplying by `L["out"].T` brings it back to `(1, words, 1024)` so it can be added back to `x`.
     """)
     return
 
