@@ -143,12 +143,9 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Here's the model. It's chapter 14's `Reader` in two halves. The encoder gives back its states `K`, one
-    vector for each word read, and its final memory. The decoder starts from that final memory and gives its own states `Q`, one for each word to write.
+    Here's the model — chapter 14's `Reader` split into two halves. The encoder gives back one state vector for each word read, plus its final memory. The decoder starts from that final memory and gives its own state vector for each word to write. For now we'll call the encoder states `K` and the decoder states `Q` — we'll explain what those two letters stand for as soon as we build attention below.
 
-    `use` is a function we hand in, as with `step` in chapter 11's `Block`: it says what to do with `Q` and `K`. It gives back two things, the vectors to score and the shares (more on those soon),
-    and `[0]` takes the first. `no_attention` returns `Q` untouched and no shares, ignoring `K` entirely, so
-    the final memory is all that passes from encoder to decoder. `size` is the memory size, and `width` is how many numbers go into the last layer.
+    `use` is a function we hand in, as with `step` in chapter 11's `Block`: it says what to do with `Q` and `K`. It gives back two things: the vectors to score and the attention weights (which we'll call shares shortly), and `[0]` takes the first. `no_attention` returns `Q` untouched and `None` for the weights, ignoring `K` entirely, so the final memory is all that passes from encoder to decoder. `size` is the memory size, and `width` is how many numbers go into the last layer.
     """)
     return
 
@@ -336,7 +333,7 @@ def _():
     ## Exercise 2: weighted_average
 
     Write `weighted_average(a, V)`, for shares `a` of shape `(n,)` and a matrix `V` of shape `(n, d)` whose rows are the vectors. It gives back one
-    vector of `d` numbers. You don't need a loop: chapter 05 has an operation that multiplies each row of a matrix by one number of a vector and adds up the results.
+    vector of `d` numbers. You don't need a loop: putting a 1D vector `(n,)` on the left of a `(n, d)` matrix with `@` multiplies each row by its weight and adds the rows up (the vector-matrix product from chapter 05).
 
     On the table above, the shares `[0.5, 0.3, 0.2]` must give `[7, 5]`.
     """)
@@ -410,7 +407,7 @@ def _():
 
     The result is a fresh summary of the input, made for this one step of writing. The terms for the three parts come from looking
     things up. The **query** `q` is what you're looking for, the **keys** `K` are the labels you compare it with, and
-    the **values** `V` are what you get back. In a library, the query is your question, the keys are the titles on the spines, and the values are the books.
+    the **values** `V` are what you get back — that's why we named the decoder states `Q` and the encoder states `K` above. In a library, the query is your question, the keys are the titles on the spines, and the values are the books.
     Here the keys and the values are the same encoder states, but they needn't be, and in the next chapter they won't be.
 
     Why would a decoder state and an encoder state have a big dot product? At first, they don't. Training makes the useful ones large, as you'll see below.
@@ -521,11 +518,13 @@ def _():
     - `torch.softmax(M, dim=2)` makes the numbers add up to 1 along the last dimension, that is along each row of each matrix.
     ///
 
+    Why does the order flip from `K @ q`? With a single query, `q` was a 1D vector of shape `(d,)`, so we wrote `K @ q`. Now we stack multiple queries as rows of `Q` with shape `(batch, writes, d)`, and each query row needs a dot product with every key row of `K` with shape `(batch, reads, d)`. Transposing the last two dimensions of `K` into `(batch, d, reads)` and putting it on the right gives `Q @ K.transpose(1, 2)`, whose shape is `(batch, writes, reads)`.
+
     In one text, with the queries as the rows of $Q$, the keys as the rows of $K$ and the values as the rows of $V$, the three steps are:
 
     > $$\text{scores} = Q K^\top \qquad A = \text{softmax}(\text{scores}) \qquad \text{blended} = A V$$
 
-    $K^\top$ is $K$ with rows and columns swapped (chapter 07), so that row $i$ of the scores holds the dot products of query $i$ with every key.
+    $K^\top$ is $K$ with rows and columns swapped, so that row $i$ of the scores holds the dot products of query $i$ with every key.
 
     Write `attend(Q, K, V)`. It gives back two things, the blended vectors and the shares `A`:
 
