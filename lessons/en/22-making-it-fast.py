@@ -112,7 +112,15 @@ def _():
     Write `matmul_flops(n, k, m)`, that formula: the FLOPs of multiplying a matrix of shape `(n, k)` by one of shape `(k, m)`. Your hand answer is the check: `matmul_flops(2, 3, 4)` gives `48`.
 
     The cell after the check uses it to measure your computer: it times the product of two $1024 \times 1024$ matrices and divides the FLOPs by the seconds. A **gigaFLOP** is a billion FLOPs.
-    (This cell needs Exercises 1 and 2, and shows an error until they pass. That's normal, and the same goes for later cells that use your functions.)
+    Because this chapter deals with large numbers of operations and bytes, here is a quick reference for the prefixes you'll see:
+
+    | size | in words | prefix / unit |
+    |---|---|---|
+    | $10^6$ | 1 million | **mega** (MB = million bytes) |
+    | $10^9$ | 1 billion | **giga** (gigaFLOP, GB = billion bytes) |
+    | $10^{12}$ | 1 trillion | **tera** (teraFLOP) |
+
+    (The cell below needs Exercises 1 and 2, and shows an error until they pass. That's normal, and the same goes for later cells that use your functions.)
     """)
     return
 
@@ -159,8 +167,7 @@ def _():
     ## The cost of training
 
     For a model with $N$ knobs, here's a rule that's close enough to plan with. In the forward pass, each knob takes part in about one multiplication and one addition per token:
-    2 FLOPs. The backward pass needs about twice that: one product for the slopes of the knobs, and one for the blame passed back to the layer's input (chapter 08's
-    two products). That makes 4 more.
+    2 FLOPs. The backward pass needs about twice that: one product for the weight gradients (the slopes of the knobs), and one for the input gradients (the blame passed back to the layer's input) — chapter 08's two products. That makes 4 more.
 
     ## By hand: a tiny training run
 
@@ -230,9 +237,13 @@ def _():
 
     > $$\text{seconds} = \frac{\text{FLOPs}}{\text{speed} \times \text{utilisation}}$$
 
+    /// admonition | 🧰 Toolbox: big numbers, written short
+    In Python, `30e12` means $30 \times 10^{12}$: the number after the `e` says how many places to move the point to the right. So `7e9` is 7 billion. A minus sign moves the point left, as in chapter 09's `1e-8`.
+    ///
+
     ## By hand: how long?
 
-    A run needs 30 teraFLOPs, which is $30 \times 10^{12}$ FLOPs, on a computer whose best speed is 100 gigaFLOPs per second, $100 \times 10^9$. How many seconds would it take at full speed? And at a utilisation of 0.5?
+    A run needs 30 teraFLOPs — that is $30 \times 10^{12}$ FLOPs (`30e12` in Python) — on a computer whose best speed is 100 gigaFLOPs per second, $100 \times 10^9$ (`100e9`). How many seconds would it take at full speed? And at a utilisation of 0.5?
     """)
     return
 
@@ -259,10 +270,6 @@ def _():
 
     Write `run_seconds(flops, speed, utilisation)`, the formula above. `flops` is the arithmetic of a run, `speed` the computer's best speed in FLOPs per second, and `utilisation` a share between 0 and 1.
     `run_seconds(30e12, 100e9, 0.5)` gives `600.0`.
-
-    /// admonition | 🧰 Toolbox: big numbers, written short
-    `30e12` means $30 \times 10^{12}$: the number after the `e` says how many places to move the point to the right. So `7e9` is 7 billion. A minus sign moves the point left, as in chapter 09's `1e-8`.
-    ///
 
     Chapter 21's run read about 2 million tokens twice with about 1.17 million knobs. The cell after the check works out its arithmetic in teraFLOPs (a teraFLOP is $10^{12}$), and how many seconds it would take at your computer's best speed.
     """)
@@ -451,30 +458,35 @@ def _():
     On the test machine, bfloat16 ran **over 100 times slower** than float32, because its processor has no 16-bit hardware and imitates it step by step. Your numbers may differ:
     some newer processors and Apple chips do have it. That's the lesson: a speed-up is a claim about particular hardware, and the only way to know is to measure. On GPUs, mixed precision is the norm.
 
-    ## Speed-up 2: don't build what you don't need
+    ## Speed-up 2: don't build the whole score table
 
     Attention builds a table of scores, one for every pair of words: for a window of 1,024 tokens, 4 heads and a batch of 8, that's about 33.5 million numbers, 134 MB, written to
-    memory and read back several times (mask, softmax, product). Memory, not arithmetic, becomes the limit: a processor computes far faster than it can fetch numbers
-    from main memory. Its small **cache**, the fast memory right next to it, is where speed lives.
+    main memory and read back several times (mask, softmax, product). Memory traffic, not arithmetic, becomes the limit: a processor computes far faster than it can fetch numbers
+    from main memory. Its small **cache** — the fast memory right next to the processor — is what keeps things fast, so we want to finish each chunk inside the cache.
 
     **Tiled attention** never builds the whole table. For each query, it walks along the keys in small tiles, keeping a running result. The trick is in softmax: it needs the
-    maximum and the total of all the scores, which we don't know until the end. But both can be kept as running values and fixed up as we go:
+    maximum and the total of all the scores, which we don't know until the end. Both can be kept as running values and rescaled as we go:
 
     - keep a running maximum `best`, a running total `total` of $e^{\text{score} - \text{best}}$, and a running weighted sum `acc` of values;
-    - when a new tile brings a bigger maximum, everything accumulated so far was computed against the old one, so multiply `total` and `acc` by $e^{\text{old best} - \text{new best}}$ (chapter 07: $e^{a-b}$ rescales correctly);
-    - at the end, `acc / total` is exactly softmax's weighted average.
+    - when a new tile brings a bigger maximum, every earlier term was computed against the old one, so multiply `total` and `acc` by the **scaling factor** $e^{\text{old best} - \text{new best}}$. Why does that fix every earlier score $s$ at once? One line of exponent arithmetic shows the old maximum cancels straight out:
+
+    > $$e^{s - \text{old best}} \times e^{\text{old best} - \text{new best}} = e^{s - \text{new best}}$$
+
+    - at the end, `acc / total` is exact softmax weighted average.
+
+    Start with `best` at $-\infty$ (minus infinity), and `total` and `acc` at 0. On tile 1, every score beats $-\infty$, and the scaling factor is $e^{-\infty - \text{new best}} = e^{-\infty} = 0$, which automatically ignores the empty running totals — so tile 1 follows the exact same formula as every later tile.
 
     This is the idea of **FlashAttention**.
 
     Here it is on a small case: 1 number per vector, scores $[1, 3, 2]$, values $[10, 20, 30]$ and tiles of 1.
 
-    | tile | `best` | fix | `total` | `acc` |
+    | tile | `best` | scaling factor | `total` | `acc` |
     |---|---|---|---|---|
-    | 1 | 1 | 0 | 1 | 10 |
+    | 1 | 1 | $e^{-\infty} = 0$ | $0 \times 0 + e^{1 - 1} = 1$ | $0 \times 0 + 1 \times 10 = 10$ |
     | 2 | 3 | $e^{1 - 3} \approx 0.135$ | $1 \times 0.135 + 1 = 1.135$ | $10 \times 0.135 + 20 = 21.35$ |
     | 3 | 3 | $e^{3 - 3} = 1$ | $1.135 + e^{2 - 3} = 1.503$ | $21.35 + 0.368 \times 30 = 32.39$ |
 
-    And $32.39 / 1.503 \approx 21.55$, the same as softmax over all three scores at once. In the second tile the maximum grew, so everything before it was scaled down. In the third it didn't, so the fix was 1.
+    And $32.39 / 1.503 \approx 21.55$, the same as softmax over all three scores at once. On tile 1, the scaling factor is 0 because `best` started at $-\infty$. On tile 2 the maximum grew, so everything before it was scaled down. On tile 3 it didn't change, so the scaling factor was 1.
 
     ## By hand: four scores in two tiles
 
@@ -482,8 +494,8 @@ def _():
     The scores are $[0, 1, 2, 0]$ and the values $[10, 20, 30, 40]$, in tiles of 2: first scores $[0, 1]$ with values $[10, 20]$, then scores $[2, 0]$ with values $[30, 40]$.
     You'll need $e^0 = 1$, $e^{-1} = 0.368$ and $e^{-2} = 0.135$.
 
-    For each tile: the new `best` is the largest score so far. Each weight is $e^{\text{score} - \text{best}}$. What was accumulated before gets multiplied by $e^{\text{old best} - \text{new best}}$, and then the tile's weights are added to `total`, and its weights times its values to `acc`.
-    In the first tile nothing was accumulated before, so just add.
+    For each tile: the new `best` is the largest score so far. Each weight is $e^{\text{score} - \text{best}}$. What was accumulated before gets multiplied by the scaling factor $e^{\text{old best} - \text{new best}}$, and then the tile's weights are added to `total`, and its weights times its values to `acc`.
+    On tile 1, `best` starts at $-\infty$ so the scaling factor is 0 — nothing was accumulated before, so just add.
     """)
     return
 
@@ -518,26 +530,26 @@ def _():
     Write `tiled_attention(q, K, V, tile)` for one query `q` of shape `(d,)`, keys `K` of shape `(n, d)` and values `V` of shape `(n, v)`, with no mask, and scores scaled by $\sqrt{d}$ as in chapter 16. `tile` is how many keys to take at a time.
     It gives back a tensor of shape `(v,)`, the same answer as `torch.softmax(K @ q / np.sqrt(d), dim=0) @ V`, without ever holding more than `tile` scores.
 
-    Start with three running values: `best` as `-np.inf` (minus infinity, so that any score beats it, and $e^{-\infty}$ is 0, which makes the first tile work like the others), `total` as `0.0`, and `acc` as a tensor of `v` zeros.
+    Start with three running values: `best` as `-np.inf` (so any score beats it, and the first tile's scaling factor $e^{-\infty} = 0$ automatically ignores the empty totals), `total` as `0.0`, and `acc` as a tensor of `v` zeros of shape `(v,)`.
     The loop over tiles is given, since slicing by steps is chapter 09's tool:
 
     ```
     for start in range(0, len(K), tile):
     ```
 
-    Inside it, the tile's keys are `K[start:start + tile]` and its values `V[start:start + tile]`. Do what you did by hand:
+    Inside the loop, slice out `K_tile = K[start:start + tile]` of shape `(tile, d)` and `V_tile = V[start:start + tile]` of shape `(tile, v)` (the last tile may have fewer rows than `tile`). Follow the exact steps you did by hand, checking the tensor shapes as you go:
 
-    | step | in math |
-    |---|---|
-    | the tile's scores | $\text{keys} \cdot q / \sqrt{d}$ |
-    | the new best | the larger of `best` and the tile's largest score |
-    | the fix for what came before | $e^{\text{best} - \text{new best}}$ |
-    | the tile's weights | $e^{\text{scores} - \text{new best}}$ |
-    | `total` | $\text{total} \times \text{fix} + \text{the sum of the weights}$ |
-    | `acc` | $\text{acc} \times \text{fix} + \text{weights} \cdot \text{values}$ |
-    | `best` | becomes the new best |
+    | step | in math | shape |
+    |---|---|---|
+    | the tile's `scores` | $\text{K\_tile} \cdot q / \sqrt{d}$ | `scores`: `(tile,)` |
+    | the new best | the larger of `best` and the tile's largest score | plain number |
+    | the scaling factor for earlier tiles | $e^{\text{best} - \text{new best}}$ | plain number |
+    | the tile's `weights` | $e^{\text{scores} - \text{new best}}$ | `weights`: `(tile,)` |
+    | `total` | $\text{total} \times \text{scale} + \text{the sum of weights}$ | plain number |
+    | `acc` | $\text{acc} \times \text{scale} + \text{weights} \cdot \text{V\_tile}$ | `weights @ V_tile`: `(v,)`, `acc`: `(v,)` |
+    | `best` | becomes the new best | plain number |
 
-    After the loop, the answer is `acc` divided by `total`. `torch.max(scores).item()` and `torch.sum(weights).item()` give plain numbers, `torch.exp` works on tensors, and `np.exp` on plain numbers.
+    After the loop, return `acc / total`. `torch.max(scores).item()` and `torch.sum(weights).item()` give plain numbers, `torch.exp` works on tensors, and `np.exp` on plain numbers.
     """)
     return
 
@@ -557,8 +569,8 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""Seven lines inside the loop, one for each row of the table, in that order. `best` must be updated last: the fix needs the old `best` and the new one. The dot product of a tile's keys with `q` is `@`, and so is the weights with the tile's values.""",
-        r"""The first two lines inside the loop are `scores = K[start:start + tile] @ q / np.sqrt(len(q))` and `new_best = max(best, torch.max(scores).item())`. If the check with big scores fails, you're taking $e$ to a score without subtracting the best first.""",
+        r"""Seven lines inside the loop, one for each row of the table, in that order. `best` must be updated last: the scaling factor needs both the old `best` and the new one. Both matrix-vector products use `@`: `K_tile @ q` gives shape `(tile,)`, and `weights @ V_tile` gives shape `(v,)`.""",
+        r"""The first two lines inside the loop are `scores = K[start:start + tile] @ q / np.sqrt(len(q))` and `new_best = max(best, torch.max(scores).item())`. If the check with big scores fails, you're calling `torch.exp` on `scores` without subtracting `new_best` first.""",
     ], LOCALE)
     return
 
@@ -624,7 +636,7 @@ def _():
 def _():
     mo.md(r"""
     The table is dense, so read only the names and the `CPU total` column. Matrix products (names with `mm` in them, such as `aten::mm` and `AddmmBackward0`) usually lead. If something else does, that's
-    where to look first. A row's total includes the operations it calls, so the same time can appear on several rows. (`print` shows text as it is, with its columns lined up, which is why it's used here.)
+    where to look first. Each row's `CPU total` includes the time spent inside the sub-operations it calls, so the same milliseconds can show up on several rows. (`print` shows text as it is, with its columns lined up, which is why it's used here.)
 
     ## By hand: read a profile
 
