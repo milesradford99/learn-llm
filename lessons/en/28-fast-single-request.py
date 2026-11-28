@@ -286,7 +286,7 @@ def _(mask_boxes):
 def _():
     mo.md(r"""
     /// admonition | 🧰 Toolbox: `torch.triu` on any table
-    Chapter 16 used `torch.triu(table, diagonal=1)` on a square table. It works on any table, and `diagonal` can be any whole number: `diagonal=2` keeps the cells that are at least 2 columns to the right of their row's number.
+    Chapter 16 used `torch.triu(table, diagonal=1)` on a square table. It works on any rectangular table, and `diagonal` can be any whole number: it keeps every cell $(i, j)$ where the column index $j$ is at least `diagonal` ahead of the row index $i$ (that is, $j - i \ge \text{diagonal}$).
     For `torch.triu(torch.ones(2, 4), diagonal=2)` the rows are `[0, 0, 1, 1]` and `[0, 0, 0, 1]`.
     ///
 
@@ -295,9 +295,22 @@ def _():
     Write `attend_new(Q, K, V)`. `Q` has the shape (batch, heads, new, numbers): the queries of the newest tokens. `K` and `V` have the shape (batch, heads, total, numbers): the keys and values of all tokens so far, the newest at the end.
     It gives back the blend for each new token, with the shape (batch, heads, new, numbers).
 
-    It's chapter 16's attention with one difference, the mask. The mask has `new` rows and `total` columns. Row $i$ belongs to token number $\text{total} - \text{new} + i$, and it blocks every key with a higher number than that.
+    It's chapter 16's attention with one difference: the mask is now rectangular, with `new` rows and `total` columns. Here is the $2 \times 5$ mask from your hand exercise (`total = 5`, `new = 2`), where `0` means visible and `1` means blocked:
 
-    With 5 tokens of which 2 are new, the mask is your hand exercise: one blocked cell, at the end of row 0. With 1 new token nothing is blocked. With `new` equal to `total`, the result is the same as chapter 16's.
+    | Row (token) | Col 0 (token 0) | Col 1 (token 1) | Col 2 (token 2) | Col 3 (token 3) | Col 4 (token 4) |
+    | --- | :---: | :---: | :---: | :---: | :---: |
+    | Row 0 (token 3) | 0 | 0 | 0 | 0 | **1** |
+    | Row 1 (token 4) | 0 | 0 | 0 | 0 | 0 |
+
+    In general, row $i$ belongs to token $\text{total} - \text{new} + i$, so it must block every column $j$ with a larger token number:
+
+    > $$j > \text{total} - \text{new} + i$$
+
+    Because $i$ and $j$ are whole numbers, being strictly greater means being at least $1$ larger. Moving $i$ to the left gives
+
+    > $$j - i \ge \text{total} - \text{new} + 1$$
+
+    That matches `torch.triu`'s rule exactly, with `diagonal` equal to $\text{total} - \text{new} + 1$. Checking our $2 \times 5$ table: $5 - 2 + 1 = 4$, which blocks only row $0$, col $4$ ($4 - 0 = 4$). With 1 new token nothing is blocked; with `new` equal to `total`, the result matches chapter 16's square mask.
     """)
     return
 
@@ -330,7 +343,7 @@ def _():
 
     Each block's cache is a pair `(K, V)`. Both tensors have the shape (1, 8, seen, 128): 1 text, 8 key heads, one entry for each token seen so far, 128 numbers. They're stored with 8 heads, before `share_heads` copies them to 16. Copies needn't be kept.
 
-    Before any token has been fed, `seen` is 0. PyTorch allows that: `torch.zeros(1, 8, 0, 128)` is a tensor that holds no numbers and still has a shape, and `torch.cat` can join real keys onto it. So the cache needs no special case for the first token.
+    Before any token has been fed, `seen` is 0. PyTorch allows that: `torch.zeros(1, 8, 0, 128)` is an empty tensor with length 0 along the token axis — it holds no numbers yet, but already has the right 4D shape for `torch.cat` to append real keys onto it. So the cache needs no special case for the first token.
 
     ## Exercise 2: remember
 
@@ -462,7 +475,7 @@ def qwen_step(knobs, new_ids, caches, product):
 def _():
     mo.md(r"""
     Does the memory work? A test: feed the story question all at once, and feed it in two parts, 60 tokens and then the rest. If your `attend_new` and `remember` are right, the last block's keys come out the same both ways.
-    The cell shows their shape and the largest difference between the two (`torch.abs` makes every number positive, like chapter 09's `np.abs`).
+    The cell shows their shape and the largest difference between the two (`torch.abs` takes the absolute value of each number, like chapter 09's `np.abs`).
     """)
     return
 
@@ -651,11 +664,11 @@ def _():
 
     This is **quantization**: $w$ is the knob, $q$ the whole number that's stored. Reading it back gives the knob only roughly, because of the rounding. The error is at most half a scale.
 
-    The scale is chosen so that the largest knob lands on the largest whole number. With $b$ bits we use the whole numbers from $-(2^{b-1} - 1)$ to $2^{b-1} - 1$, the same distance both ways: −127 to 127 for 8 bits, −7 to 7 for 4 bits. So
+    The scale is chosen so that the knob with the largest absolute value lands on the largest whole number. A signed $b$-bit whole number has $2^b$ bit patterns: $1$ bit records the sign, and the remaining $b - 1$ bits record the magnitude, covering $0$ through $2^{b-1} - 1$. To keep both sides symmetric (leaving the extra endpoint $-2^{b-1}$ unused), we use the integers from $-(2^{b-1} - 1)$ to $2^{b-1} - 1$: for $8$ bits that's $2^7 - 1 = 127$ ($-127$ to $127$), and for $4$ bits that's $2^3 - 1 = 7$ ($-7$ to $7$). So
 
-    > $$\text{scale} = \frac{\text{the largest size among the knobs}}{2^{b-1} - 1}$$
+    > $$\text{scale} = \frac{\text{the largest absolute value among the knobs}}{2^{b-1} - 1}$$
 
-    where the size of a knob is the knob without its sign.
+    Taking the absolute value drops the minus sign, so a large negative knob sets the scale just like a large positive one.
 
     ## By hand: quantize three knobs
 
@@ -673,7 +686,7 @@ def _():
 @app.cell(hide_code=True)
 def _(quant_boxes):
     hand.marked(quant_boxes, {'scale': 0.2, 'stored for −0.66': -3, 'stored for 0.25': 1, '−0.66 read back': -0.6, '0.25 read back': 0.2}, {
-        'scale': r"""the largest size is 1.4, and the largest whole number is 7""",
+        'scale': r"""the largest absolute value is 1.4, and the largest whole number is 7""",
         'stored for −0.66': r"""$-0.66 / 0.2 = -3.3$, rounded""",
         'stored for 0.25': r"""$0.25 / 0.2 = 1.25$, rounded""",
         '−0.66 read back': r"""the stored number times the scale""",
@@ -687,11 +700,11 @@ def _():
     mo.md(r"""
     The knob 0.25 comes back as 0.2. With only 15 whole numbers to choose from, the steps are coarse.
 
-    **One scale per row.** A matrix has knobs of very different sizes. If the whole matrix shared one scale, a single large knob would set it, and thousands of small knobs would all round to 0 or ±1.
-    So each **row** of the matrix gets its own scale, from its own largest knob. A row is the set of knobs that make one output number. The price is one extra number to store per row, next to a thousand or more knobs.
+    **One scale per row.** Knobs across a matrix can span very different ranges. If the whole matrix shared one scale, a single large knob would set it, and thousands of smaller knobs would all round to 0 or ±1.
+    So each **row** of the matrix gets its own scale, from its own largest absolute value. A row is the set of knobs that make one output number. The price is one extra number to store per row, next to a thousand or more knobs.
 
-    /// admonition | 🧰 Toolbox: sizes, the largest in each row, rounding, small whole numbers
-    - `x.abs()` makes every number positive, like `torch.abs(x)`.
+    /// admonition | 🧰 Toolbox: absolute values, the largest in each row, rounding, small whole numbers
+    - `x.abs()` takes the absolute value of each number (dropping any minus sign), like `torch.abs(x)`.
     - `x.amax(dim=1)` is the largest number in each row: for `x = torch.tensor([[1.0, 5.0], [2.5, 0.4]])` it's `[5, 2.5]`.
     - `torch.round(x)` rounds every number to the nearest whole number: `torch.round(torch.tensor([2.4, -1.6]))` is `[2, -2]`. They're still stored as floats.
     - `torch.int8` is a dtype: whole numbers from −128 to 127, one byte each. `x.to(torch.int8)` turns a tensor into it, the way `.float()` turns one into 32-bit floats.
@@ -702,7 +715,7 @@ def _():
     Write `quantize(W, bits)`. `W` is a matrix of floats with the shape (rows, columns). It gives back a pair:
 
     - `q`, with the shape of `W` and the dtype `torch.int8`: each knob divided by its row's scale, and rounded;
-    - `scale`, a vector with one number per row: the largest size in that row, divided by $2^{\text{bits} - 1} - 1$.
+    - `scale`, a vector with one number per row: the largest absolute value in that row, divided by $2^{\text{bits} - 1} - 1$.
 
     For the matrix with the two rows `[1.4, -0.66, 0.25]` and `[-0.07, 0.03, 0.012]` and 4 bits, `q` has the rows `[7, -3, 1]` and `[-7, 3, 1]`, and `scale` is `[0.2, 0.01]`.
 
@@ -726,7 +739,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     hand.stuck([
-        r"""Three steps, as in your hand exercise: the largest whole number, from `bits`; the scale of each row, with `.abs()` and `.amax(dim=1)`; then divide, round, and turn into `torch.int8`. The second row of the example has its largest size on a negative knob: that's what `.abs()` is for.""",
+        r"""Three steps, as in your hand exercise: the largest whole number, from `bits`; the scale of each row, with `.abs()` and `.amax(dim=1)`; then divide, round, and turn into `torch.int8`. The second row of the example has its largest absolute value on a negative knob: that's what `.abs()` is for.""",
         r"""It's 3 lines. `levels = 2 ** (bits - 1) - 1`, then `scale = W.abs().amax(dim=1) / levels`, then give back `torch.round(W / scale[:, None]).to(torch.int8)` and `scale`.""",
     ], LOCALE)
     return
@@ -735,7 +748,7 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    How much is lost? The cell quantizes the matrix `W` from the timing test with 8, 6 and 4 bits, reads it back, and shows the typical size of the error as a share of the typical size of the knobs (chapter 09's typical size: the square root of the mean square).
+    How much is lost? The cell quantizes the matrix `W` from the timing test with 8, 6 and 4 bits, reads it back, and shows the **typical size** of the error as a share of the typical size of the knobs (chapter 09's RMS: square each number, take the mean, then the square root — a way to measure how far a mix of positive and negative numbers sits from 0).
     The last column does the same with one scale for the whole matrix.
     """)
     return
@@ -800,9 +813,12 @@ def _():
     Write `quantized_matmul(x, q, scale)`. `q` and `scale` are a matrix as `quantize` gives it: `q` with the shape (outputs, inputs) and the dtype `torch.int8`, `scale` with one number per output.
     `x` holds vectors of floats, and its last dimension has the size `inputs`. It gives back what `plain(x, W)` would give for the matrix `W` that `q` and `scale` stand for, but without building `W`: the product with the whole numbers first, then the scales.
 
-    The result's last dimension has the size `outputs`, so multiplying it by the vector `scale` scales each output by its own number, with no `None` needed.
+    Compare how the shapes line up with `quantize` above:
 
-    PyTorch's `@` won't mix dtypes (chapter 10), and it has no product for `int8` with floats. So `q` has to be turned into floats for the product: `q.float()`. Keep that in mind for the next section.
+    - In `quantize`, you divided `(rows, columns)` by a `scale` of shape `(rows,)`. Their last dimensions didn't match, so you needed `scale[:, None]` to make `(rows, 1)` and broadcast across each row.
+    - Here, multiplying `x` by the transposed `q` gives shape `(..., outputs)`, and `scale` has shape `(outputs,)`. Their last dimensions already match, so multiplying by `scale` scales each output directly, with no `None` needed.
+
+    PyTorch's `@` requires matching dtypes on both sides (chapter 10) and doesn't directly multiply floats with `int8`. So `q` has to be cast to 32-bit floats first: `q.float()`. Keep that in mind — the next section shows what it costs.
 
     On your hand exercise, `x = [1, 2, 4]`, the single row `[3, -1, 2]` and the scale `[0.5]`, it must give `[4.5]`.
     """)
@@ -885,7 +901,7 @@ def _():
     The matrices of the blocks went from 1.76 GB to 0.44 GB, a quarter. And on the test machine the model wrote the same sentence, word for word, with every one of its 440 million matrix knobs off by about 1%.
     (If yours differs by a word, that's the rounding landing differently on your processor. It should be as good a sentence.)
 
-    A model survives this because of how it computes. Each output is a sum over a thousand or more knobs, and their rounding errors point in random directions, so most of the error cancels (chapter 09: the sizes of random parts add up far more slowly than their number).
+    A model survives this because of how it computes. Each output sums over a thousand or more knobs: some round up and some round down, so most of the positive and negative errors cancel out. Just like the random steps in chapter 09, $n$ random errors combine to a total size that grows like $\sqrt{n}$, far more slowly than $n$.
 
     How far can it go? The same question at 8, 6 and 4 bits:
     """)
@@ -933,15 +949,20 @@ def _():
     mo.md(r"""
     Seconds for one token in 32 bits, and in 8 bits. On the test machine: 0.12 and 0.16. The small model is **slower**.
 
-    You wrote the reason yourself: `q.float()`. For every product, PyTorch first copies the whole matrix of small numbers into 32-bit floats, 4 bytes each, and then multiplies with the copy. The bytes we saved are spent again on every token, and the copying comes on top.
+    You wrote the reason yourself: `q.float()`. For every product, PyTorch first converts the entire `int8` matrix into a temporary 32-bit float copy (4 bytes per number, 4 times the size), writes it to memory, and then reads that copy back out to multiply. All the memory bandwidth we hoped to save is eaten up by that temporary copy — plus the extra trip to create it.
 
     ## Fused operations
 
-    Count how many times something the size of the matrix goes through memory, for three ways of computing the same product:
+    Count how many full-matrix trips between main memory and the processor three ways of computing the same product take:
 
-    - **read back, then multiply**: copy `q` to floats, multiply the copy by the scales, multiply by the vector. Three times.
-    - **your `quantized_matmul`**: copy `q` to floats, multiply by the vector. Two times. The scales touch only the small result.
-    - **32-bit floats**, as in chapter 27: once, but 4 bytes a knob.
+    - **32-bit floats (1 trip)**: read the 32-bit matrix from memory once and multiply as it arrives. Just **1 trip**, at 4 bytes per knob.
+    - **Your `quantized_matmul` (2 trips)**:
+      1. Trip 1: read the `int8` matrix `q` (1 byte per knob), convert it to 32-bit floats, and write that 4 times larger temporary copy back to memory.
+      2. Trip 2: read that 32-bit copy back out to multiply by the vector (multiplying by `scale` at the end only touches the tiny output vector).
+    - **Dequantize first, then multiply (3 trips)**:
+      1. Trip 1: read `q`, convert it to 32-bit floats, and write the temporary copy to memory.
+      2. Trip 2: read that copy, multiply each row by `scale`, and write a second 32-bit matrix back to memory.
+      3. Trip 3: read the second 32-bit matrix back out to multiply by the vector.
     """)
     return
 
